@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src https://world.openfoodfacts.org https://api.nal.usda.gov;">
+<title>🌿 مرشدك الصحي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════
+   ROOT & RESET
+════════════════════════════════ */
+:root{
+  --bg-deep:#071a0f; --bg-mid:#0d2a18; --bg-card:rgba(14,42,26,.72);
+  --g1:#10b981; --g2:#059669; --g3:#047857; --g4:#065f46;
+  --glow:rgba(16,185,129,.28); --glow2:rgba(16,185,129,.12);
+  --gold:#f59e0b; --red:#ef4444; --red2:#fca5a5;
+  --cream:#f0faf5; --muted:#6ee7b7; --muted2:#9ca3af;
+  --border:rgba(16,185,129,.22); --border2:rgba(16,185,129,.1);
+  --shadow:0 8px 32px rgba(0,0,0,.35); --shadow-sm:0 2px 12px rgba(0,0,0,.2);
+  --r:18px; --r-sm:12px; --tr:all .25s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Tajawal',sans-serif;
+  background:var(--bg-deep);
+  color:var(--cream);
+  min-height:100vh;
+  overflow-x:hidden;
+  line-height:1.6;
+}
+
+/* ── animated bg mesh ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 20%, rgba(16,185,129,.13) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 70% at 85% 75%, rgba(4,120,87,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(5,150,105,.06) 0%,transparent 70%),
+    repeating-linear-gradient(60deg,transparent,transparent 60px,rgba(16,185,129,.025) 60px,rgba(16,185,129,.025) 61px);
+}
+
+/* ════════════════════════════════
+   LAYOUT
+════════════════════════════════ */
+.wrap{max-width:1200px;margin:0 auto;padding:1rem 1rem 3rem}
+
+/* ════════════════════════════════
+   HEADER
+════════════════════════════════ */
+.hdr{
+  background:linear-gradient(135deg,var(--bg-mid) 0%,rgba(5,150,105,.35) 100%);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1.6rem 2rem;
+  margin-bottom:1.5rem;
+  text-align:center;
+  backdrop-filter:blur(20px);
+  position:relative;
+  overflow:hidden;
+  box-shadow:var(--shadow), 0 0 60px var(--glow2);
+}
+.hdr::before{
+  content:'🌿';
+  position:absolute;top:-20px;right:-20px;
+  font-size:8rem;opacity:.06;pointer-events:none;
+}
+.hdr h1{
+  font-size:clamp(1.5rem,4vw,2.3rem);
+  font-weight:900;
+  background:linear-gradient(135deg,#6ee7b7,#10b981,#f59e0b);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-.5px;margin-bottom:.3rem;
+}
+.hdr p{color:var(--muted);font-size:.9rem;opacity:.85}
+
+/* ════════════════════════════════
+   TABS
+════════════════════════════════ */
+.tabs{
+  display:flex;gap:.4rem;margin-bottom:1.5rem;
+  overflow-x:auto;padding-bottom:.4rem;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  padding:.6rem 1.1rem;border-radius:50px;
+  cursor:pointer;white-space:nowrap;font-family:inherit;
+  font-weight:700;font-size:.85rem;color:var(--muted);
+  transition:var(--tr);backdrop-filter:blur(10px);
+  box-shadow:var(--shadow-sm);flex-shrink:0;
+}
+.tab-btn:hover{background:rgba(16,185,129,.15);color:#fff}
+.tab-btn.active{
+  background:linear-gradient(135deg,var(--g1),var(--g3));
+  color:#fff;border-color:var(--g1);
+  box-shadow:0 4px 20px var(--glow);
+}
+.tab{display:none;animation:fadeUp .3s ease}
+.tab.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ════════════════════════════════
+   CARD
+════════════════════════════════ */
+.card{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--r);padding:1.4rem;
+  margin-bottom:1.25rem;
+  backdrop-filter:blur(16px);
+  box-shadow:var(--shadow-sm);
+}
+.card-title{
+  font-size:1.05rem;font-weight:800;
+  margin-bottom:1rem;
+  display:flex;align-items:center;gap:.5rem;
+  color:#6ee7b7;
+}
+
+/* ════════════════════════════════
+   GRID
+════════════════════════════════ */
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:1rem}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.85rem}
+
+/* ════════════════════════════════
+   FIELDS
+════════════════════════════════ */
+.field{margin-bottom:.85rem}
+.field label{display:block;margin-bottom:.35rem;font-weight:600;font-size:.83rem;color:var(--muted)}
+input,select,textarea{
+  width:100%;padding:.62rem .9rem;
+  border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-size:.93rem;font-family:inherit;
+  background:rgba(13,43,29,.7);color:var(--cream);
+  transition:var(--tr);outline:none;
+}
+input:focus,select:focus{border-color:var(--g1);box-shadow:0 0 0 3px var(--glow2)}
+select option{background:#0d2a18;color:var(--cream)}
+input[type=range]{
+  accent-color:var(--g1);padding:0;height:6px;
+  background:rgba(255,255,255,.1);border:none;border-radius:99px;cursor:pointer;
+}
+input[type=range]:focus{box-shadow:none;border:none}
+
+/* ════════════════════════════════
+   BUTTONS
+════════════════════════════════ */
+.btn{
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  color:#fff;border:none;padding:.65rem 1.4rem;
+  border-radius:50px;cursor:pointer;
+  font-family:inherit;font-weight:700;font-size:.9rem;
+  transition:var(--tr);display:inline-flex;align-items:center;gap:.4rem;
+  box-shadow:0 4px 14px var(--glow);
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px var(--glow)}
+.btn:active{transform:translateY(0)}
+.btn-sec{background:var(--bg-card);border:1.5px solid var(--border);color:var(--muted);box-shadow:none}
+.btn-sec:hover{background:rgba(16,185,129,.12);color:#fff}
+.btn-red{background:linear-gradient(135deg,var(--red),#dc2626);box-shadow:0 4px 14px rgba(239,68,68,.3)}
+.btn-red:hover{box-shadow:0 6px 20px rgba(239,68,68,.4)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#d97706);box-shadow:0 4px 14px rgba(245,158,11,.3)}
+.btn-sm{padding:.38rem .85rem;font-size:.8rem}
+.btn-icon{padding:.38rem .65rem;font-size:1rem;min-width:36px;justify-content:center}
+
+/* ════════════════════════════════
+   STAT BOX
+════════════════════════════════ */
+.sbox{
+  background:rgba(4,120,87,.18);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:.9rem;text-align:center;
+}
+.sbox .val{font-size:1.5rem;font-weight:900;color:var(--g1)}
+.sbox .lbl{font-size:.75rem;color:var(--muted2);margin-top:.2rem}
+
+/* ════════════════════════════════
+   PROGRESS BARS
+════════════════════════════════ */
+.prog-wrap{background:rgba(255,255,255,.08);height:10px;border-radius:99px;overflow:hidden;margin:.35rem 0}
+.prog{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.prog-g{background:linear-gradient(90deg,var(--g1),#6ee7b7)}
+.prog-u{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.prog-w{background:linear-gradient(90deg,var(--gold),#fbbf24)}
+.prog-ob{background:linear-gradient(90deg,var(--red),#f87171)}
+.prog-cal{background:linear-gradient(90deg,var(--g1),#6ee7b7)}
+.prog-cal.over{background:linear-gradient(90deg,var(--gold),var(--red))}
+
+/* ════════════════════════════════
+   FOOD GRID
+════════════════════════════════ */
+.food-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(145px,1fr));
+  gap:.8rem;margin-top:.85rem;
+  max-height:480px;overflow-y:auto;padding-left:2px;
+}
+.food-grid::-webkit-scrollbar{width:4px}
+.food-grid::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+.food-card{
+  background:rgba(13,43,29,.6);border:1px solid var(--border2);
+  border-radius:var(--r-sm);padding:.85rem;text-align:center;
+  cursor:pointer;transition:var(--tr);
+}
+.food-card:hover{
+  border-color:var(--g1);transform:translateY(-3px);
+  box-shadow:0 8px 24px var(--glow2);background:rgba(16,185,129,.1);
+}
+.food-card .ico{font-size:1.75rem;margin-bottom:.35rem;display:block}
+.food-card .nm{font-weight:700;font-size:.82rem;margin-bottom:.2rem;color:var(--cream)}
+.food-card .kc{font-size:.75rem;color:var(--muted)}
+.tags-row{display:flex;flex-wrap:wrap;gap:.2rem;justify-content:center;margin-top:.35rem}
+.tag{font-size:.63rem;padding:.1rem .4rem;border-radius:99px;font-weight:700}
+.tag.حرق{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3)}
+.tag.ألياف{background:rgba(59,130,246,.2);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.tag.بروتين{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+.tag.منخفض{background:rgba(167,139,250,.2);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
+.tag.تحذير_سكر{background:rgba(239,68,68,.2);color:#fca5a8;border:1px solid rgba(239,68,68,.3)}
+.tag.تحذير_ضغط{background:rgba(245,158,11,.25);color:#fde68a;border:1px solid rgba(245,158,11,.4)}
+
+/* ════════════════════════════════
+   FILTER BAR
+════════════════════════════════ */
+.filters{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem}
+.filter-btn{
+  background:rgba(13,43,29,.6);border:1px solid var(--border2);
+  padding:.38rem .85rem;border-radius:50px;cursor:pointer;
+  font-size:.8rem;font-weight:700;transition:var(--tr);
+  color:var(--muted);font-family:inherit;
+}
+.filter-btn:hover{background:rgba(16,185,129,.12);color:#fff}
+.filter-btn.active{background:var(--g1);color:#fff;border-color:var(--g1)}
+
+/* ════════════════════════════════
+   SEARCH
+════════════════════════════════ */
+.search-wrap{position:relative;margin-bottom:.85rem}
+.search-wrap input{padding-right:2.5rem}
+.search-wrap::before{
+  content:'🔍';position:absolute;right:.8rem;top:50%;
+  transform:translateY(-50%);font-size:.9rem;pointer-events:none;
+}
+
+/* ════════════════════════════════
+   MEAL SLOTS
+════════════════════════════════ */
+.meal-slot{
+  background:rgba(13,43,29,.55);border:1px solid var(--border2);
+  border-radius:var(--r-sm);padding:.9rem;margin-bottom:.85rem;
+  transition:var(--tr);
+}
+.meal-slot:hover{border-color:var(--border)}
+.meal-hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:.6rem;padding-bottom:.55rem;
+  border-bottom:1px solid var(--border2);
+}
+.meal-name{font-weight:800;font-size:.95rem;display:flex;align-items:center;gap:.4rem}
+.meal-time{font-size:.72rem;color:var(--muted2);margin-top:.08rem}
+.meal-kcal{font-weight:800;color:var(--g1);font-size:.9rem}
+.m-item{
+  display:flex;align-items:center;background:rgba(4,120,87,.1);
+  padding:.42rem .7rem;border-radius:8px;font-size:.85rem;
+  gap:.4rem;margin-bottom:.4rem;border:1px solid var(--border2);
+}
+.m-item .det{flex:1;font-weight:500}
+.m-item .kc{color:var(--g1);font-weight:700;font-size:.82rem;margin:0 .3rem}
+.m-item-actions{display:flex;gap:.25rem;flex-shrink:0}
+.add-to-slot{
+  width:100%;background:rgba(16,185,129,.06);border:1px dashed var(--border);
+  border-radius:8px;padding:.38rem;color:var(--muted);
+  font-family:inherit;font-size:.8rem;cursor:pointer;transition:var(--tr);
+  display:flex;align-items:center;justify-content:center;gap:.3rem;margin-top:.3rem;
+}
+.add-to-slot:hover{background:rgba(16,185,129,.14);color:#fff;border-style:solid}
+
+/* ════════════════════════════════
+   TRACKER SUMMARY
+════════════════════════════════ */
+.tracker-summary{
+  background:linear-gradient(135deg,rgba(4,120,87,.35),rgba(5,150,105,.2));
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:1.2rem;margin-bottom:1.25rem;
+}
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:.6rem;text-align:center}
+.sum-item .v{font-size:1.5rem;font-weight:900;color:#6ee7b7}
+.sum-item .l{font-size:.72rem;color:var(--muted2)}
+
+/* ════════════════════════════════
+   PLAN DAY (WEEKLY)
+════════════════════════════════ */
+.plan-day{
+  background:rgba(13,43,29,.55);border:1px solid var(--border2);
+  border-radius:var(--r-sm);margin-bottom:.85rem;overflow:hidden;
+}
+.plan-day-hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.85rem 1rem;cursor:pointer;transition:var(--tr);
+  border-bottom:1px solid var(--border2);
+}
+.plan-day-hdr:hover{background:rgba(16,185,129,.07)}
+.plan-day-hdr h3{font-size:.95rem;font-weight:800;color:#6ee7b7}
+.plan-day-body{padding:.85rem 1rem;display:none}
+.plan-day-body.open{display:block}
+.plan-row{
+  display:grid;grid-template-columns:140px 1fr auto;gap:.7rem;
+  padding:.55rem 0;border-bottom:1px solid var(--border2);align-items:start;
+}
+.plan-row:last-child{border-bottom:none}
+.plan-row .time-lbl{font-size:.78rem;color:var(--muted);font-weight:700}
+.plan-row .meal-txt{font-size:.85rem;color:var(--cream);line-height:1.5}
+.plan-row .kcal-badge{
+  font-size:.72rem;font-weight:800;color:var(--gold);
+  background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);
+  border-radius:50px;padding:.15rem .55rem;white-space:nowrap;
+}
+
+/* ════════════════════════════════
+   PLANNER RESULT
+════════════════════════════════ */
+.plan-meal-row{
+  background:rgba(4,120,87,.12);border-right:3px solid var(--g1);
+  border-radius:8px;padding:.75rem 1rem;margin-bottom:.6rem;
+}
+.plan-meal-row h4{font-size:.88rem;font-weight:800;color:#6ee7b7;margin-bottom:.3rem}
+.plan-meal-row p{font-size:.83rem;color:var(--cream);margin-bottom:.15rem}
+.plan-meal-row .plan-kcal{font-size:.78rem;color:var(--muted2)}
+
+/* ════════════════════════════════
+   TIPS
+════════════════════════════════ */
+.tip{
+  background:rgba(13,43,29,.55);border-right:3px solid var(--g1);
+  border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;
+  border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);
+  border-left:1px solid var(--border2);
+}
+.tip h4{color:#6ee7b7;margin-bottom:.3rem;font-size:.93rem;font-weight:800}
+.tip p{font-size:.83rem;color:var(--muted2);line-height:1.6}
+
+/* ════════════════════════════════
+   MODAL
+════════════════════════════════ */
+.modal{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.65);z-index:1000;
+  align-items:center;justify-content:center;padding:1rem;
+  backdrop-filter:blur(6px);
+}
+.modal.show{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{
+  background:var(--bg-mid);border:1px solid var(--border);
+  border-radius:var(--r);padding:1.5rem;width:100%;max-width:460px;
+  max-height:88vh;overflow-y:auto;
+  animation:modalIn .25s ease;box-shadow:0 24px 80px rgba(0,0,0,.5);
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.modal-hdr h3{font-size:1.1rem;font-weight:800;color:#6ee7b7}
+.close-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted2);transition:var(--tr)}
+.close-btn:hover{color:var(--red);transform:scale(1.2)}
+
+/* ════════════════════════════════
+   HEALTH WARNING
+════════════════════════════════ */
+.health-warn{
+  background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);
+  border-radius:var(--r-sm);padding:.9rem 1rem;
+  margin-top:.85rem;display:none;
+}
+.health-warn.show{display:block}
+.health-warn p{color:#fca5a8;font-size:.85rem;font-weight:600;line-height:1.6}
+
+.plan-health-note{
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);
+  border-radius:8px;padding:.75rem 1rem;margin-bottom:.7rem;
+}
+.plan-health-note p{color:#fca5a8;font-size:.83rem;font-weight:600;line-height:1.6}
+
+/* ════════════════════════════════
+   EMPTY STATE
+════════════════════════════════ */
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--muted2)}
+.empty .e-ico{font-size:2.8rem;margin-bottom:.75rem;opacity:.45}
+
+/* ════════════════════════════════
+   TOAST
+════════════════════════════════ */
+.toast{
+  position:fixed;bottom:1.5rem;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--g4);border:1px solid var(--g2);
+  color:#fff;padding:.62rem 1.4rem;
+  border-radius:50px;font-weight:700;font-size:.88rem;
+  z-index:9999;transition:transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 8px 30px rgba(0,0,0,.35);pointer-events:none;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ════════════════════════════════
+   AI RESULT
+════════════════════════════════ */
+.ai-result{
+  background:rgba(13,43,29,.6);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:1.2rem;
+  white-space:pre-wrap;font-size:.87rem;line-height:1.75;
+  color:var(--cream);display:none;max-height:500px;overflow-y:auto;
+}
+.ai-result::-webkit-scrollbar{width:4px}
+.ai-result::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+/* ════════════════════════════════
+   CUSTOM FOOD LIST
+════════════════════════════════ */
+.custom-item{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(13,43,29,.5);border:1px solid var(--border2);
+  border-radius:8px;padding:.5rem .8rem;margin-bottom:.5rem;font-size:.85rem;
+}
+
+/* ════════════════════════════════
+   DEV FOOTER
+════════════════════════════════ */
+.dev-footer{
+  text-align:center;margin-top:2.5rem;padding:1.2rem;
+  border-top:1px solid var(--border2);
+  font-size:.85rem;color:var(--muted2);
+}
+.dev-footer strong{color:var(--g1)}
+
+/* ════════════════════════════════
+   RESPONSIVE
+════════════════════════════════ */
+@media(max-width:680px){
+  .wrap{padding:.5rem .5rem 2.5rem}
+  .g2,.g3,.g4{grid-template-columns:1fr 1fr}
+  .food-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .plan-row{grid-template-columns:1fr;gap:.3rem}
+  .plan-row .time-lbl{font-weight:800}
+}
+@media(max-width:420px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .food-grid{grid-template-columns:repeat(2,1fr)}
+  .tabs{gap:.3rem}
+  .tab-btn{padding:.5rem .85rem;font-size:.8rem}
+}
+
+/* ════════════════════════════════
+   PRINT
+════════════════════════════════ */
+@media print{
+  body{background:#fff;color:#000}
+  .hdr,.tabs,.btn,.modal,.toast,.dev-footer{display:none!important}
+  .tab{display:block!important}
+  .card,.plan-day{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid}
+  .plan-day-body{display:block!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══ HEADER ═══ -->
+<div class="hdr">
+  <h1>🌿 مرشدك الصحي</h1>
+  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك</p>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="profile">👤 ملفي</button>
+  <button class="tab-btn" data-tab="library">📚 المكتبة</button>
+  <button class="tab-btn" data-tab="tracker">📅 تتبع اليوم</button>
+  <button class="tab-btn" data-tab="planner">🧮 مخطط الوجبات</button>
+  <button class="tab-btn" data-tab="ai">✨ خطة ذكية</button>
+  <button class="tab-btn" data-tab="week">📋 أسبوعي</button>
+  <button class="tab-btn" data-tab="tips">🔥 نصائح</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 1 — PROFILE
+══════════════════════════════════════ -->
+<div id="profile" class="tab active">
+  <div class="card">
+    <div class="card-title">⚙️ بياناتك الأساسية</div>
+    <div class="g3">
+      <div class="field"><label>الوزن الحالي (كجم)</label><input type="number" id="weight" min="30" max="300" step=".1" placeholder="85"></div>
+      <div class="field"><label>الوزن المستهدف (كجم)</label><input type="number" id="targetWeight" min="30" max="300" step=".1" placeholder="75"></div>
+      <div class="field"><label>الطول (سم)</label><input type="number" id="height" min="100" max="250" placeholder="175"></div>
+      <div class="field"><label>العمر</label><input type="number" id="age" min="15" max="100" placeholder="30"></div>
+      <div class="field"><label>الجنس</label>
+        <select id="gender">
+          <option value="male">ذكر 👨</option>
+          <option value="female">أنثى 👩</option>
+        </select>
+      </div>
+      <div class="field"><label>مستوى النشاط</label>
+        <select id="activity">
+          <option value="1.2">قليل جداً — مكتبي</option>
+          <option value="1.375">قليل — رياضة 1-3 أيام</option>
+          <option value="1.55" selected>متوسط — رياضة 3-5 أيام</option>
+          <option value="1.725">عالي — رياضة 6-7 أيام</option>
+          <option value="1.9">عالي جداً — عمل شاق</option>
+        </select>
+      </div>
+      <div class="field"><label>🩸 مرض السكر؟</label>
+        <select id="diabetes" onchange="updateHealthWarning()">
+          <option value="no">لا — بدون سكر</option>
+          <option value="yes">نعم — مريض سكر</option>
+        </select>
+      </div>
+      <div class="field"><label>💊 ارتفاع الضغط؟</label>
+        <select id="hypertension" onchange="updateHealthWarning()">
+          <option value="no">لا — ضغط طبيعي</option>
+          <option value="yes">نعم — مريض ضغط</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="updateProfile()">💾 حفظ وحساب</button>
+    <div class="health-warn" id="healthWarnBox">
+      <p>⚠️ <strong>تنبيه صحي مهم:</strong> ننصحك باستشارة طبيبك المعالج قبل البدء في أي نظام غذائي، خصوصاً مع حالتك الصحية. هذه الخطة ليست بديلاً عن الاستشارة الطبية.</p>
+    </div>
+  </div>
+
+  <div class="card" id="statsCard" style="display:none">
+    <div class="card-title">📊 مؤشراتك الصحية</div>
+    <div class="g4">
+      <div class="sbox"><div class="val" id="bmrVal">—</div><div class="lbl">BMR السعرات الأساسية</div></div>
+      <div class="sbox"><div class="val" id="tdeeVal">—</div><div class="lbl">TDEE الاحتياج اليومي</div></div>
+      <div class="sbox"><div class="val" id="bmiVal">—</div><div class="lbl">BMI مؤشر الكتلة</div></div>
+      <div class="sbox"><div class="val" id="bmiStatus">—</div><div class="lbl">التصنيف</div></div>
+    </div>
+    <div style="margin-top:.85rem">
+      <div style="font-size:.78rem;color:var(--muted2);margin-bottom:.3rem">شريط BMI (15 — 40)</div>
+      <div class="prog-wrap"><div class="prog prog-g" id="bmiBar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted2)">
+        <span>نحافة</span><span>طبيعي</span><span>زيادة</span><span>سمنة</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="goalCard" style="display:none">
+    <div class="card-title">🎯 هدفك اليومي</div>
+    <div class="field">
+      <label>العجز اليومي: <strong id="deficitLbl" style="color:var(--g1)">500</strong> سعرة</label>
+      <input type="range" id="deficit" min="200" max="1000" step="50" value="500">
+    </div>
+    <div class="g2" style="margin-top:.75rem">
+      <div class="sbox"><div class="val" id="targetKcalVal">—</div><div class="lbl">السعرات المستهدفة / يوم</div></div>
+      <div class="sbox"><div class="val" id="weeksVal">—</div><div class="lbl">المدة المتوقعة لتحقيق الهدف</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 2 — LIBRARY
+══════════════════════════════════════ -->
+<div id="library" class="tab">
+  <div class="card">
+    <div class="card-title">📚 مكتبة الأغذية — <span id="foodCount" style="color:var(--gold)">0</span> صنف</div>
+    <div class="search-wrap"><input type="text" id="searchFood" placeholder="ابحث عن طعام..."></div>
+    <div class="filters" id="filterBar"></div>
+    <div class="food-grid" id="foodGrid"></div>
+  </div>
+
+  <!-- ── بحث أونلاين ── -->
+  <div class="card" id="onlineSearchCard">
+    <div class="card-title">🌐 بحث عن طعام على الإنترنت</div>
+    <p style="color:var(--muted2);font-size:.83rem;margin-bottom:.85rem">ابحث عن أي طعام وأضف سعراته للمكتبة مباشرة — يبحث في Open Food Facts أولاً ثم USDA</p>
+    <div style="display:flex;gap:.6rem;margin-bottom:.85rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <input type="text" id="onlineSearch" placeholder="مثال: أرز، banana، تشيكن..." style="width:100%">
+      </div>
+      <button class="btn" id="onlineSearchBtn" onclick="searchFoodOnline()">🔍 بحث</button>
+      <div style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--muted2)">
+        <span>USDA Key:</span>
+        <input type="text" id="usdaKey" placeholder="اختياري" style="width:130px;font-size:.82rem;padding:.4rem .7rem" title="احصل على مفتاح مجاني من fdc.nal.usda.gov">
+        <span title="سجّل مجاناً في fdc.nal.usda.gov للحصول على مفتاح" style="cursor:help">❓</span>
+      </div>
+    </div>
+    <!-- نتائج البحث -->
+    <div id="onlineResults" style="display:none">
+      <div style="font-size:.82rem;color:var(--muted2);margin-bottom:.6rem" id="onlineResultsLabel"></div>
+      <div class="food-grid" id="onlineResultsGrid" style="max-height:380px"></div>
+    </div>
+    <!-- loading -->
+    <div id="onlineLoading" style="display:none;text-align:center;padding:1.5rem;color:var(--muted2)">
+      <div style="font-size:1.8rem;margin-bottom:.5rem">⏳</div>
+      <div id="onlineLoadingTxt" style="font-size:.88rem">جاري البحث...</div>
+    </div>
+    <!-- error -->
+    <div id="onlineError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:var(--r-sm);padding:.85rem;font-size:.85rem;color:#fca5a8;margin-top:.6rem"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">➕ إضافة صنف مخصص</div>
+    <div class="g3">
+      <div class="field"><label>اسم الصنف *</label><input type="text" id="cfName" placeholder="مثال: شوربة خاصة"></div>
+      <div class="field"><label>إيموجي</label><input type="text" id="cfEmoji" placeholder="🍽️" maxlength="4"></div>
+      <div class="field"><label>التصنيف</label>
+        <select id="cfCat">
+          <option>خضروات</option><option>فواكه</option><option>بروتين</option>
+          <option>بقوليات</option><option>حبوب</option><option>ألبان</option>
+          <option>مكسرات</option><option>مشروبات صحية</option><option>زيوت وتوابل</option>
+          <option>أكل مصري</option><option>سناكات</option>
+        </select>
+      </div>
+      <div class="field"><label>السعرات (لكل 100) *</label><input type="number" id="cfKcal" placeholder="200" min="0"></div>
+      <div class="field"><label>بروتين (جم)</label><input type="number" id="cfP" placeholder="0" min="0" step=".1"></div>
+      <div class="field"><label>كارب (جم)</label><input type="number" id="cfC" placeholder="0" min="0" step=".1"></div>
+      <div class="field"><label>دهون (جم)</label><input type="number" id="cfF" placeholder="0" min="0" step=".1"></div>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <button class="btn" onclick="addCustomFood()">💾 حفظ الصنف</button>
+      <button class="btn btn-sec" onclick="toggleCustomList()" id="manageCustomBtn" style="display:none">📋 إدارة المضافة</button>
+    </div>
+    <div id="customList" style="margin-top:1rem;display:none"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 3 — TRACKER
+══════════════════════════════════════ -->
+<div id="tracker" class="tab">
+  <div class="tracker-summary" id="trackerSummary">
+    <div class="sum-grid">
+      <div class="sum-item"><div class="v" id="totKcal">0</div><div class="l">سعرات</div></div>
+      <div class="sum-item"><div class="v" id="totPro">0</div><div class="l">بروتين(جم)</div></div>
+      <div class="sum-item"><div class="v" id="totCarb">0</div><div class="l">كارب(جم)</div></div>
+      <div class="sum-item"><div class="v" id="totFat">0</div><div class="l">دهون(جم)</div></div>
+      <div class="sum-item"><div class="v" id="totRemain">—</div><div class="l">متبقي</div></div>
+    </div>
+    <div style="margin-top:.85rem">
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted2);margin-bottom:.3rem">
+        <span>التقدم نحو الهدف</span><span id="calPct">0%</span>
+      </div>
+      <div class="prog-wrap"><div class="prog prog-cal" id="calBar" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:.85rem">
+    <button class="btn btn-red btn-sm" onclick="clearDay()">🗑️ مسح جميع الوجبات</button>
+  </div>
+  <div id="mealSlots"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 4 — PLANNER
+══════════════════════════════════════ -->
+<div id="planner" class="tab">
+  <div class="card">
+    <div class="card-title">🧮 مخطط الوجبات الذكي</div>
+    <div class="g3">
+      <div class="field"><label>السعرات المستهدفة</label><input type="number" id="planKcal" value="1500" min="800" max="5000"></div>
+      <div class="field"><label>الوجبات الرئيسية (1-4)</label>
+        <select id="mainMeals"><option>1</option><option>2</option><option value="3" selected>3</option><option>4</option></select>
+      </div>
+      <div class="field"><label>السناكات (0-3)</label>
+        <select id="snacks"><option>0</option><option>1</option><option value="2" selected>2</option><option>3</option></select>
+      </div>
+      <div class="field"><label>المشروبات (0-3)</label>
+        <select id="drinks"><option>0</option><option>1</option><option value="2" selected>2</option><option>3</option></select>
+      </div>
+      <div class="field"><label>التفضيل الغذائي</label>
+        <select id="pref">
+          <option value="any">بدون تفضيل</option>
+          <option value="highpro">عالي البروتين</option>
+          <option value="lowcarb">منخفض الكارب</option>
+          <option value="veg">نباتي</option>
+        </select>
+      </div>
+      <div class="field"><label>أكلات ممنوعة (افصل بفاصلة)</label><input type="text" id="forbidden" placeholder="مثال: تمر, عسل"></div>
+    </div>
+    <button class="btn" onclick="generatePlan()">🔄 توليد الخطة</button>
+  </div>
+
+  <div id="planResult" style="display:none">
+    <div class="card">
+      <div class="card-title">📋 الخطة المقترحة — إجمالي: <span id="planTotal" style="color:var(--gold)">0</span> سعرة</div>
+      <div id="planItems"></div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
+        <button class="btn" onclick="applyPlan()">✅ تطبيق على تتبع اليوم</button>
+        <button class="btn btn-gold" onclick="savePlan()">⭐ حفظ كمفضلة</button>
+        <button class="btn btn-sec" onclick="generatePlan()">🔄 توليد مختلف</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="savedPlansCard" style="display:none">
+    <div class="card-title">⭐ الخطط المفضلة</div>
+    <div id="savedPlans"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 5 — AI PLAN
+══════════════════════════════════════ -->
+<div id="ai" class="tab">
+  <div class="card">
+    <div class="card-title">✨ الخطة الذكية المخصصة</div>
+    <div class="g3">
+      <div class="field"><label>نوع النظام الغذائي</label>
+        <select id="dietType">
+          <option value="متوازن">متوازن ومتنوع</option>
+          <option value="عالي بروتين">عالي البروتين 💪</option>
+          <option value="منخفض الكارب">منخفض الكارب 🥑</option>
+          <option value="نظام الصيام المتقطع">صيام متقطع 16/8 ⏰</option>
+          <option value="نباتي">نباتي 🌱</option>
+        </select>
+      </div>
+      <div class="field"><label>عدد الوجبات اليومية</label>
+        <select id="aiMeals">
+          <option value="3">3 وجبات</option>
+          <option value="4">4 وجبات</option>
+          <option value="5" selected>5 وجبات</option>
+          <option value="6">6 وجبات</option>
+        </select>
+      </div>
+      <div class="field"><label>أكلات أتجنبها</label><input type="text" id="aiAvoid" placeholder="مثال: مكسرات، حليب"></div>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <button class="btn" onclick="generateAIPlan()">✨ توليد الخطة</button>
+      <button class="btn btn-sec" onclick="copyAIPlan()">📋 نسخ الخطة</button>
+    </div>
+    <div class="ai-result" id="aiResult"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 6 — WEEKLY
+══════════════════════════════════════ -->
+<div id="week" class="tab">
+  <div class="card">
+    <div class="card-title">📋 النظام الأسبوعي الجاهز</div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">
+      <button class="btn btn-sec" onclick="window.print()">🖨️ طباعة</button>
+      <button class="btn btn-sec btn-sm" onclick="toggleAllDays(true)">⬇️ فتح الكل</button>
+      <button class="btn btn-sec btn-sm" onclick="toggleAllDays(false)">⬆️ إغلاق الكل</button>
+    </div>
+    <div id="weeklyPlan"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 7 — TIPS
+══════════════════════════════════════ -->
+<div id="tips" class="tab">
+  <div class="card">
+    <div class="card-title">🔥 نصائح تسريع حرق الدهون</div>
+    <div id="tipsList"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🌟 أفضل أكلات الحرق من المكتبة</div>
+    <div class="food-grid" id="burnFoods"></div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<!-- ═══ DEV FOOTER ═══ -->
+<div class="dev-footer">
+  <p>💚 تم التطوير بواسطة <strong>محمد الغطريفي</strong> — تطوعاً لخدمة صحتك</p>
+  <p style="font-size:.75rem;margin-top:.3rem">جميع الحقوق محفوظة © 2026</p>
+</div>
+
+<!-- ═══ MODAL: ADD FOOD ═══ -->
+<div class="modal" id="addFoodModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="modalFoodName">إضافة طعام</h3>
+      <button class="close-btn" onclick="closeModal('addFoodModal')">✕</button>
+    </div>
+    <div id="modalFoodInfo" style="font-size:.82rem;color:var(--muted2);margin-bottom:1rem"></div>
+    <div class="field"><label>الكمية</label><input type="number" id="modalQty" value="100" min="1" oninput="updateModalCalc()"></div>
+    <div class="field"><label>الوحدة</label>
+      <select id="modalUnit" onchange="updateModalCalc()">
+        <option value="g">جرام</option>
+        <option value="piece">حبة/قطعة</option>
+        <option value="cup">كوب (240مل)</option>
+        <option value="tbsp">ملعقة كبيرة (15جم)</option>
+        <option value="tsp">ملعقة صغيرة (5جم)</option>
+        <option value="ml">مليلتر</option>
+      </select>
+    </div>
+    <div id="modalCalcResult" style="background:rgba(4,120,87,.12);border:1px solid var(--border);border-radius:var(--r-sm);padding:.75rem;margin-bottom:1rem;font-size:.85rem;color:var(--g1);font-weight:700;text-align:center"></div>
+    <div class="field"><label>أضف إلى وجبة</label>
+      <select id="modalSlot">
+        <option value="wake">مشروب الاستيقاظ</option>
+        <option value="break">الفطار</option>
+        <option value="coffee">قهوة + بلح</option>
+        <option value="morn">سناك صباحي</option>
+        <option value="pre">مشروب قبل الغداء</option>
+        <option value="lunch">الغداء</option>
+        <option value="after">سناك العصر</option>
+        <option value="din">العشاء</option>
+        <option value="night">قبل النوم</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:.6rem">
+      <button class="btn" onclick="confirmAddFood()" style="flex:1;justify-content:center">✅ إضافة</button>
+      <button class="btn btn-sec" onclick="closeModal('addFoodModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDIT ITEM ═══ -->
+<div class="modal" id="editItemModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="editItemName">تعديل الكمية</h3>
+      <button class="close-btn" onclick="closeModal('editItemModal')">✕</button>
+    </div>
+    <div class="field"><label>الكمية الجديدة (جرام)</label><input type="number" id="editQty" min="1" oninput="updateEditCalc()"></div>
+    <div id="editCalcResult" style="background:rgba(4,120,87,.12);border:1px solid var(--border);border-radius:var(--r-sm);padding:.75rem;margin-bottom:1rem;font-size:.85rem;color:var(--g1);font-weight:700;text-align:center"></div>
+    <div style="display:flex;gap:.6rem">
+      <button class="btn" onclick="confirmEditItem()" style="flex:1;justify-content:center">✅ تحديث</button>
+      <button class="btn btn-sec" onclick="closeModal('editItemModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: APPLY PLAN ═══ -->
+<div class="modal" id="applyModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3>تطبيق الخطة</h3>
+      <button class="close-btn" onclick="closeModal('applyModal')">✕</button>
+    </div>
+    <p style="margin-bottom:1rem;color:var(--muted2);font-size:.9rem">لديك وجبات محفوظة اليوم. كيف تريد تطبيق الخطة؟</p>
+    <div style="display:flex;gap:.6rem;flex-direction:column">
+      <button class="btn btn-red" onclick="_doApply(true);closeModal('applyModal')">🔄 استبدال الوجبات الحالية</button>
+      <button class="btn" onclick="_doApply(false);closeModal('applyModal')">➕ إضافة إلى الوجبات الحالية</button>
+      <button class="btn btn-sec" onclick="closeModal('applyModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ONLINE FOOD PREVIEW ═══ -->
+<div class="modal" id="onlinePreviewModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 id="previewFoodName">معاينة الصنف</h3>
+      <button class="close-btn" onclick="closeModal('onlinePreviewModal')">✕</button>
+    </div>
+    <div style="background:rgba(16,185,129,.07);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem;margin-bottom:1rem;font-size:.85rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+        <div>🔥 سعرات: <strong id="pvKcal" style="color:var(--g1)">—</strong></div>
+        <div>💪 بروتين: <strong id="pvP">—</strong>جم</div>
+        <div>🌾 كارب: <strong id="pvC">—</strong>جم</div>
+        <div>🫙 دهون: <strong id="pvF">—</strong>جم</div>
+      </div>
+      <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted2)" id="pvSource"></div>
+    </div>
+    <div class="field"><label>التصنيف في مكتبتك</label>
+      <select id="pvCat">
+        <option>خضروات</option><option>فواكه</option><option>بروتين</option>
+        <option>بقوليات</option><option>حبوب</option><option>ألبان</option>
+        <option>مكسرات</option><option>مشروبات صحية</option><option>زيوت وتوابل</option>
+        <option>أكل مصري</option><option>سناكات</option><option>متنوع</option>
+      </select>
+    </div>
+    <div class="field"><label>الإيموجي</label>
+      <input type="text" id="pvEmoji" maxlength="4" placeholder="🍽️">
+    </div>
+    <div style="display:flex;gap:.6rem">
+      <button class="btn" onclick="confirmAddOnlineFood()" style="flex:1;justify-content:center">✅ إضافة للمكتبة</button>
+      <button class="btn btn-sec" onclick="closeModal('onlinePreviewModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+// ════════════════════════════════════════════════════════
+// SECURITY
+// ════════════════════════════════════════════════════════
+function escapeHtml(t){
+  const d=document.createElement('div');
+  d.textContent=String(t==null?'':t);
+  return d.innerHTML;
+}
+
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let S={
+  profile:{weight:80,targetWeight:70,height:170,age:25,gender:'male',activity:1.55,deficit:500,diabetes:false,hypertension:false},
+  tracker:{},
+  savedPlans:[],
+  custom:[],
+  currentPlan:null,
+  _editSlot:null,_editUid:null,_editFood:null,
+  _addFood:null,_defaultSlot:null
+};
+
+const MEAL_SLOTS=[
+  {id:'wake', name:'مشروب الاستيقاظ', time:'٥:٣٠ ص', ico:'🌅'},
+  {id:'break',name:'الفطار',           time:'٧:٣٠ ص', ico:'🍳'},
+  {id:'coffee',name:'قهوة + بلح',      time:'٨:٠٠ ص', ico:'☕'},
+  {id:'morn', name:'سناك صباحي',       time:'١٠:٠٠ ص',ico:'🍎'},
+  {id:'pre',  name:'مشروب قبل الغداء', time:'١٢:٣٠ ظ',ico:'🥤'},
+  {id:'lunch',name:'الغداء',           time:'٢:٠٠ - ٣:٠٠ ظ',ico:'🍗'},
+  {id:'after',name:'سناك العصر',       time:'٤:٣٠ - ٥:٠٠ ع',ico:'🥜'},
+  {id:'din',  name:'العشاء',           time:'٧:٣٠ - ٨:٠٠ م',ico:'🥗'},
+  {id:'night',name:'قبل النوم',        time:'قبل النوم ٣٠د',ico:'🌙'}
+];
+
+// ════════════════════════════════════════════════════════
+// FOOD DATABASE — 210+ items
+// ════════════════════════════════════════════════════════
+const FOODS=[
+// ── خضروات (30) ──
+{id:1,  name:'خيار',           emoji:'🥒',kcal:16, p:.7, c:3.6,f:.1, cat:'خضروات',     tags:['ألياف','منخفض']},
+{id:2,  name:'خس',             emoji:'🥬',kcal:15, p:1.4,c:2.9,f:.2, cat:'خضروات',     tags:['ألياف','منخفض']},
+{id:3,  name:'طماطم',          emoji:'🍅',kcal:18, p:.9, c:3.9,f:.2, cat:'خضروات',     tags:['ألياف','حرق']},
+{id:4,  name:'جرجير',          emoji:'🥗',kcal:25, p:2.6,c:3.7,f:.7, cat:'خضروات',     tags:['حرق','ألياف']},
+{id:5,  name:'فلفل ألوان',     emoji:'🫑',kcal:31, p:1,  c:6,  f:.3, cat:'خضروات',     tags:['حرق','ألياف']},
+{id:6,  name:'بروكلي',         emoji:'🥦',kcal:34, p:2.8,c:7,  f:.4, cat:'خضروات',     tags:['حرق','ألياف']},
+{id:7,  name:'كرنب',           emoji:'🥬',kcal:25, p:1.3,c:5.8,f:.1, cat:'خضروات',     tags:['ألياف','منخفض']},
+{id:8,  name:'سبانخ',          emoji:'🌿',kcal:23, p:2.9,c:3.6,f:.4, cat:'خضروات',     tags:['حرق','ألياف','بروتين']},
+{id:9,  name:'كوسة',           emoji:'🥒',kcal:17, p:1.2,c:3.1,f:.3, cat:'خضروات',     tags:['منخفض']},
+{id:10, name:'جزر',            emoji:'🥕',kcal:41, p:.9, c:10, f:.2, cat:'خضروات',     tags:['ألياف','حرق']},
+{id:11, name:'فاصوليا خضراء',  emoji:'🫘',kcal:31, p:1.8,c:7,  f:.2, cat:'خضروات',     tags:['ألياف']},
+{id:12, name:'بامية',          emoji:'🫛',kcal:33, p:2,  c:7.5,f:.2, cat:'خضروات',     tags:['ألياف']},
+{id:13, name:'باذنجان',        emoji:'🍆',kcal:25, p:1,  c:5.9,f:.2, cat:'خضروات',     tags:['ألياف']},
+{id:14, name:'بصل',            emoji:'🧅',kcal:40, p:1.1,c:9.3,f:.1, cat:'خضروات',     tags:['حرق']},
+{id:15, name:'ثوم',            emoji:'🧄',kcal:149,p:6.4,c:33, f:.5, cat:'خضروات',     tags:['حرق']},
+{id:16, name:'فجل',            emoji:'🌱',kcal:16, p:.7, c:3.4,f:.1, cat:'خضروات',     tags:['منخفض','حرق']},
+{id:17, name:'خرشوف',          emoji:'🌿',kcal:47, p:3.3,c:10.5,f:.2,cat:'خضروات',     tags:['ألياف']},
+{id:18, name:'بروكلي روماني',  emoji:'🥦',kcal:35, p:2.8,c:7.4,f:.4, cat:'خضروات',     tags:['ألياف']},
+{id:19, name:'ملوخية',         emoji:'🌿',kcal:35, p:3.8,c:5.4,f:.5, cat:'خضروات',     tags:['حرق','ألياف']},
+{id:20, name:'نعناع طازج',     emoji:'🌿',kcal:70, p:3.8,c:14.9,f:.9,cat:'خضروات',     tags:['حرق']},
+{id:21, name:'بقدونس',         emoji:'🌿',kcal:36, p:3,  c:6.3,f:.8, cat:'خضروات',     tags:['حرق','ألياف']},
+{id:22, name:'كراث',           emoji:'🥬',kcal:61, p:1.5,c:14.2,f:.3,cat:'خضروات',     tags:['ألياف']},
+{id:23, name:'كرفس',           emoji:'🥬',kcal:16, p:.7, c:3,  f:.2, cat:'خضروات',     tags:['منخفض','حرق']},
+{id:24, name:'قرع عسل',        emoji:'🎃',kcal:45, p:1,  c:11.7,f:.1,cat:'خضروات',     tags:['ألياف']},
+{id:25, name:'شمر',            emoji:'🌿',kcal:31, p:1.2,c:7.3,f:.2, cat:'خضروات',     tags:['حرق']},
+{id:26, name:'بنجر نيئ',       emoji:'🟣',kcal:43, p:1.6,c:9.6,f:.2, cat:'خضروات',     tags:['ألياف','حرق']},
+{id:27, name:'طماطم كرز',      emoji:'🍅',kcal:18, p:.9, c:3.9,f:.2, cat:'خضروات',     tags:['ألياف','منخفض']},
+{id:28, name:'فلفل أخضر حار',  emoji:'🌶️',kcal:40, p:2,  c:8.8,f:.4, cat:'خضروات',     tags:['حرق']},
+{id:29, name:'بطاطا حلوة',     emoji:'🍠',kcal:86, p:1.6,c:20, f:.1, cat:'خضروات',     tags:['ألياف']},
+{id:30, name:'جرجير البحر',    emoji:'🥗',kcal:20, p:1.5,c:3,  f:.5, cat:'خضروات',     tags:['منخفض','حرق']},
+// ── فواكه (25) ──
+{id:31, name:'تفاح',           emoji:'🍎',kcal:52, p:.3, c:14, f:.2, cat:'فواكه',       tags:['ألياف','حرق']},
+{id:32, name:'موز',            emoji:'🍌',kcal:89, p:1.1,c:23, f:.3, cat:'فواكه',       tags:['ألياف']},
+{id:33, name:'برتقال',         emoji:'🍊',kcal:47, p:.9, c:12, f:.1, cat:'فواكه',       tags:['ألياف','حرق']},
+{id:34, name:'جريب فروت',      emoji:'🍊',kcal:42, p:.8, c:10.7,f:.1,cat:'فواكه',       tags:['حرق','منخفض']},
+{id:35, name:'كيوي',           emoji:'🥝',kcal:61, p:1.1,c:15, f:.5, cat:'فواكه',       tags:['حرق','ألياف']},
+{id:36, name:'فراولة',         emoji:'🍓',kcal:32, p:.7, c:7.7,f:.3, cat:'فواكه',       tags:['حرق','ألياف','منخفض']},
+{id:37, name:'بطيخ',           emoji:'🍉',kcal:30, p:.6, c:7.6,f:.2, cat:'فواكه',       tags:['منخفض']},
+{id:38, name:'تين طازج',       emoji:'🫐',kcal:74, p:.8, c:19, f:.3, cat:'فواكه',       tags:['ألياف']},
+{id:39, name:'رمان',           emoji:'🔴',kcal:83, p:1.7,c:19, f:1.2,cat:'فواكه',       tags:['ألياف','حرق']},
+{id:40, name:'مانجو',          emoji:'🥭',kcal:60, p:.8, c:15, f:.4, cat:'فواكه',       tags:['ألياف']},
+{id:41, name:'بابايا',         emoji:'🍈',kcal:43, p:.5, c:11, f:.3, cat:'فواكه',       tags:['حرق','ألياف']},
+{id:42, name:'توت أزرق',       emoji:'🫐',kcal:57, p:.7, c:14, f:.3, cat:'فواكه',       tags:['حرق','ألياف']},
+{id:43, name:'عنب أخضر',       emoji:'🍇',kcal:67, p:.6, c:17, f:.4, cat:'فواكه',       tags:['ألياف']},
+{id:44, name:'تمر',            emoji:'🟤',kcal:277,p:1.8,c:75, f:.2, cat:'فواكه',       tags:['ألياف','تحذير_سكر']},
+{id:45, name:'خوخ',            emoji:'🍑',kcal:39, p:.9, c:10, f:.3, cat:'فواكه',       tags:['ألياف']},
+{id:46, name:'برقوق',          emoji:'🍑',kcal:46, p:.7, c:11, f:.3, cat:'فواكه',       tags:['ألياف']},
+{id:47, name:'أناناس',         emoji:'🍍',kcal:50, p:.5, c:13, f:.1, cat:'فواكه',       tags:['حرق','ألياف']},
+{id:48, name:'جوافة',          emoji:'🍐',kcal:68, p:2.6,c:14, f:1,  cat:'فواكه',       tags:['ألياف','بروتين']},
+{id:49, name:'أفوكادو',        emoji:'🥑',kcal:160,p:2,  c:9,  f:15, cat:'فواكه',       tags:['حرق','ألياف']},
+{id:50, name:'ليمون',          emoji:'🍋',kcal:29, p:1.1,c:9.3,f:.3, cat:'فواكه',       tags:['حرق']},
+{id:51, name:'كمثرى',          emoji:'🍐',kcal:57, p:.4, c:15, f:.1, cat:'فواكه',       tags:['ألياف']},
+{id:52, name:'مشمش طازج',      emoji:'🍑',kcal:48, p:1.4,c:11, f:.4, cat:'فواكه',       tags:['ألياف']},
+{id:53, name:'توت بري',        emoji:'🍓',kcal:43, p:.4, c:10, f:.3, cat:'فواكه',       tags:['حرق','ألياف']},
+{id:54, name:'الدراق',         emoji:'🍑',kcal:39, p:.9, c:10, f:.3, cat:'فواكه',       tags:['ألياف']},
+{id:55, name:'شمام',           emoji:'🍈',kcal:34, p:.8, c:8.2,f:.2, cat:'فواكه',       tags:['منخفض']},
+// ── بروتين (30) ──
+{id:56, name:'صدر دجاج مشوي',  emoji:'🍗',kcal:165,p:31, c:0,  f:3.6,cat:'بروتين',     tags:['بروتين','حرق']},
+{id:57, name:'سمك بلطي مشوي',  emoji:'🐟',kcal:128,p:26, c:0,  f:2.7,cat:'بروتين',     tags:['بروتين','حرق']},
+{id:58, name:'تونة بالماء',    emoji:'🐟',kcal:116,p:25.5,c:0, f:1,  cat:'بروتين',     tags:['بروتين','حرق']},
+{id:59, name:'سلمون مشوي',     emoji:'🐟',kcal:208,p:20, c:0,  f:13, cat:'بروتين',     tags:['بروتين','حرق']},
+{id:60, name:'بيضة كاملة',     emoji:'🥚',kcal:78, p:6,  c:.6, f:5,  cat:'بروتين',     tags:['بروتين']},
+{id:61, name:'بياض بيض',       emoji:'🥚',kcal:52, p:11, c:.7, f:.2, cat:'بروتين',     tags:['بروتين','منخفض']},
+{id:62, name:'لحم بقري قليل دهن',emoji:'🥩',kcal:215,p:26,c:0, f:12, cat:'بروتين',     tags:['بروتين']},
+{id:63, name:'صدر ديك رومي',   emoji:'🍗',kcal:135,p:30, c:0,  f:1,  cat:'بروتين',     tags:['بروتين','حرق']},
+{id:64, name:'جمبري',          emoji:'🦐',kcal:99, p:24, c:.2, f:.3, cat:'بروتين',     tags:['بروتين','منخفض']},
+{id:65, name:'سردين معلب',     emoji:'🐟',kcal:208,p:25, c:0,  f:11, cat:'بروتين',     tags:['بروتين']},
+{id:66, name:'كبدة دجاج',      emoji:'🍗',kcal:172,p:25, c:.9, f:7,  cat:'بروتين',     tags:['بروتين']},
+{id:67, name:'لحم خروف قليل دهن',emoji:'🥩',kcal:218,p:23,c:0, f:14, cat:'بروتين',     tags:['بروتين']},
+{id:68, name:'سمك مكريل',      emoji:'🐟',kcal:205,p:19, c:0,  f:13, cat:'بروتين',     tags:['بروتين','حرق']},
+{id:69, name:'جبنة قريش',      emoji:'🧀',kcal:72, p:12, c:2.7,f:1,  cat:'بروتين',     tags:['بروتين','منخفض']},
+{id:70, name:'بيض مسلوق',      emoji:'🥚',kcal:78, p:6,  c:.6, f:5,  cat:'بروتين',     tags:['بروتين']},
+{id:71, name:'دجاج مسلوق كامل',emoji:'🍗',kcal:239,p:27, c:0,  f:14, cat:'بروتين',     tags:['بروتين']},
+{id:72, name:'سمك بوري',       emoji:'🐟',kcal:117,p:20, c:0,  f:4,  cat:'بروتين',     tags:['بروتين','منخفض']},
+{id:73, name:'كفتة لحم مشوي',  emoji:'🥩',kcal:230,p:20, c:5,  f:15, cat:'بروتين',     tags:['بروتين']},
+{id:74, name:'صدر فراخ مسلوق', emoji:'🍗',kcal:165,p:31, c:0,  f:3.6,cat:'بروتين',     tags:['بروتين','حرق']},
+{id:75, name:'سمك قاروص',      emoji:'🐟',kcal:124,p:24, c:0,  f:2.7,cat:'بروتين',     tags:['بروتين','حرق']},
+{id:76, name:'أسقلوب',         emoji:'🦪',kcal:111,p:23, c:2,  f:.7, cat:'بروتين',     tags:['بروتين','منخفض']},
+{id:77, name:'دجاج تكا',       emoji:'🍗',kcal:185,p:28, c:3,  f:7,  cat:'بروتين',     tags:['بروتين']},
+{id:78, name:'سمك مشوي ببهارات',emoji:'🐟',kcal:150,p:28,c:0,  f:4,  cat:'بروتين',     tags:['بروتين','حرق']},
+{id:79, name:'لحمة مفرومة لين', emoji:'🥩',kcal:218,p:23, c:0,  f:14, cat:'بروتين',     tags:['بروتين']},
+{id:80, name:'كبدة مشوية',     emoji:'🍖',kcal:175,p:26, c:3.9,f:5,  cat:'بروتين',     tags:['بروتين','حرق']},
+{id:81, name:'تونة طازجة',     emoji:'🐟',kcal:144,p:23, c:0,  f:5,  cat:'بروتين',     tags:['بروتين','حرق']},
+{id:82, name:'بيض مقلي بدون زيت',emoji:'🥚',kcal:90,p:6, c:.6, f:6.8,cat:'بروتين',    tags:['بروتين']},
+{id:83, name:'فيلية سمك باستا', emoji:'🐟',kcal:100,p:21, c:0,  f:1.5,cat:'بروتين',    tags:['بروتين','منخفض']},
+{id:84, name:'شيش طاووق',      emoji:'🍗',kcal:180,p:27, c:4,  f:6,  cat:'بروتين',     tags:['بروتين']},
+{id:85, name:'كباب',           emoji:'🍢',kcal:260,p:22, c:3,  f:18, cat:'بروتين',     tags:['بروتين']},
+// ── بقوليات (15) ──
+{id:86, name:'عدس مسلوق',      emoji:'🟤',kcal:116,p:9,  c:20, f:.4, cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:87, name:'فول مدمس',       emoji:'🟤',kcal:110,p:7.6,c:20, f:.5, cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:88, name:'حمص مسلوق',      emoji:'🟡',kcal:164,p:8.9,c:27, f:2.6,cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:89, name:'فاصوليا بيضاء',  emoji:'⚪',kcal:127,p:8.7,c:22.8,f:.5,cat:'بقوليات',   tags:['بروتين','ألياف']},
+{id:90, name:'لوبيا',          emoji:'⚫',kcal:132,p:8.9,c:24, f:.5, cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:91, name:'بازلاء خضراء',   emoji:'🟢',kcal:81, p:5,  c:14, f:.4, cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:92, name:'عدس أخضر',       emoji:'🟢',kcal:116,p:9,  c:20, f:.4, cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:93, name:'فاصوليا حمراء',  emoji:'🔴',kcal:127,p:8.7,c:22.8,f:.5,cat:'بقوليات',   tags:['بروتين','ألياف']},
+{id:94, name:'ترمس',           emoji:'🟡',kcal:119,p:16, c:11, f:3,  cat:'بقوليات',    tags:['بروتين','ألياف']},
+{id:95, name:'طحينة',          emoji:'🟤',kcal:595,p:17, c:21, f:54, cat:'بقوليات',    tags:['بروتين']},
+{id:96, name:'توفو',           emoji:'🟧',kcal:76, p:8,  c:1.9,f:4.8,cat:'بقوليات',   tags:['بروتين','منخفض']},
+{id:97, name:'حليب الصويا',    emoji:'🥛',kcal:54, p:3.3,c:6.3,f:1.8,cat:'بقوليات',   tags:['بروتين']},
+{id:98, name:'حمص وطحينة',     emoji:'🟡',kcal:177,p:4.9,c:20, f:9.6,cat:'بقوليات',   tags:['ألياف','بروتين']},
+{id:99, name:'فول بالزيت',     emoji:'🟤',kcal:150,p:8,  c:18, f:6,  cat:'بقوليات',   tags:['بروتين','ألياف']},
+{id:100,name:'شوربة عدس',      emoji:'🍲',kcal:130,p:8,  c:22, f:2,  cat:'بقوليات',   tags:['ألياف','بروتين']},
+// ── حبوب (20) ──
+{id:101,name:'أرز بني مطبوخ',  emoji:'🍚',kcal:111,p:2.6,c:23, f:.9, cat:'حبوب',       tags:['ألياف']},
+{id:102,name:'أرز أبيض مطبوخ', emoji:'🍚',kcal:130,p:2.7,c:28, f:.3, cat:'حبوب',       tags:[]},
+{id:103,name:'شوفان',          emoji:'🌾',kcal:389,p:17, c:66, f:7,  cat:'حبوب',       tags:['ألياف','بروتين']},
+{id:104,name:'خبز أسمر',       emoji:'🍞',kcal:247,p:13, c:41, f:4,  cat:'حبوب',       tags:['ألياف']},
+{id:105,name:'خبز أبيض',       emoji:'🍞',kcal:265,p:9,  c:49, f:3.2,cat:'حبوب',       tags:[]},
+{id:106,name:'كينوا مطبوخة',   emoji:'🌾',kcal:120,p:4.4,c:22, f:1.9,cat:'حبوب',       tags:['ألياف','بروتين']},
+{id:107,name:'مكرونة مطبوخة',  emoji:'🍝',kcal:158,p:5.8,c:31, f:.9, cat:'حبوب',       tags:[]},
+{id:108,name:'برغل مطبوخ',     emoji:'🌾',kcal:83, p:3.1,c:18.6,f:.2,cat:'حبوب',       tags:['ألياف']},
+{id:109,name:'أرز بسمتي',      emoji:'🍚',kcal:130,p:3,  c:28, f:.4, cat:'حبوب',       tags:[]},
+{id:110,name:'بطاطا مسلوقة',   emoji:'🥔',kcal:87, p:1.9,c:20, f:.1, cat:'حبوب',       tags:['ألياف']},
+{id:111,name:'شعير',           emoji:'🌾',kcal:354,p:12.5,c:73.5,f:2.3,cat:'حبوب',     tags:['ألياف']},
+{id:112,name:'ذرة مطبوخة',     emoji:'🌽',kcal:96, p:3.4,c:21, f:1.5,cat:'حبوب',       tags:['ألياف']},
+{id:113,name:'رقاق الشوفان',   emoji:'🌾',kcal:389,p:17, c:66, f:7,  cat:'حبوب',       tags:['ألياف','بروتين']},
+{id:114,name:'خبز الصمون',     emoji:'🥖',kcal:274,p:9,  c:54, f:3,  cat:'حبوب',       tags:[]},
+{id:115,name:'خبز بلدي',       emoji:'🫓',kcal:270,p:9,  c:55, f:3,  cat:'حبوب',       tags:['ألياف']},
+{id:116,name:'توست القمح',     emoji:'🍞',kcal:247,p:13, c:41, f:4,  cat:'حبوب',       tags:['ألياف']},
+{id:117,name:'أرز بالشعيرية',  emoji:'🍚',kcal:200,p:4,  c:42, f:4,  cat:'حبوب',       tags:[]},
+{id:118,name:'مكرونة سمراء',   emoji:'🍝',kcal:124,p:5.3,c:25, f:.8, cat:'حبوب',       tags:['ألياف']},
+{id:119,name:'فريك مطبوخ',     emoji:'🌾',kcal:130,p:5,  c:27, f:1,  cat:'حبوب',       tags:['ألياف']},
+{id:120,name:'كسكسي مطبوخ',    emoji:'🌾',kcal:112,p:3.8,c:23, f:.2, cat:'حبوب',       tags:[]},
+// ── ألبان (15) ──
+{id:121,name:'حليب قليل الدسم',emoji:'🥛',kcal:42, p:3.4,c:5,  f:1,  cat:'ألبان',      tags:['بروتين']},
+{id:122,name:'زبادي لايت',     emoji:'🫙',kcal:59, p:3.5,c:5,  f:1.6,cat:'ألبان',      tags:['بروتين']},
+{id:123,name:'زبادي يوناني',   emoji:'🫙',kcal:59, p:10, c:3.6,f:.4, cat:'ألبان',      tags:['بروتين','حرق']},
+{id:124,name:'جبنة بيضاء خفيفة',emoji:'🧀',kcal:160,p:11,c:2,  f:12, cat:'ألبان',     tags:['بروتين']},
+{id:125,name:'جبنة موتزاريلا', emoji:'🧀',kcal:280,p:28, c:2.2,f:17, cat:'ألبان',      tags:['بروتين']},
+{id:126,name:'لبن رائب',       emoji:'🥛',kcal:98, p:3.5,c:4.7,f:3.3,cat:'ألبان',      tags:['بروتين']},
+{id:127,name:'جبنة كوتيج',     emoji:'🧀',kcal:98, p:11, c:3.4,f:4.3,cat:'ألبان',      tags:['بروتين','منخفض']},
+{id:128,name:'حليب لوز',       emoji:'🥛',kcal:17, p:.6, c:.6, f:1.4,cat:'ألبان',      tags:['منخفض']},
+{id:129,name:'حليب كامل الدسم',emoji:'🥛',kcal:61, p:3.2,c:4.8,f:3.3,cat:'ألبان',      tags:['بروتين']},
+{id:130,name:'جبنة ريكوتا',    emoji:'🧀',kcal:174,p:11.3,c:3, f:13, cat:'ألبان',      tags:['بروتين']},
+{id:131,name:'زبادي بالفاكهة', emoji:'🫙',kcal:102,p:5,  c:19, f:1,  cat:'ألبان',      tags:['بروتين']},
+{id:132,name:'كيفر',           emoji:'🥛',kcal:60, p:3.8,c:7.4,f:.5, cat:'ألبان',      tags:['بروتين','حرق']},
+{id:133,name:'بودنج اللبن',    emoji:'🍮',kcal:120,p:4,  c:20, f:3,  cat:'ألبان',      tags:['بروتين']},
+{id:134,name:'حليب نيدو قليل دسم',emoji:'🥛',kcal:490,p:27,c:57,f:17,cat:'ألبان',     tags:['بروتين']},
+{id:135,name:'أيس كريم لايت',  emoji:'🍦',kcal:130,p:3,  c:22, f:3,  cat:'ألبان',      tags:[]},
+// ── مكسرات (12) ──
+{id:136,name:'لوز',            emoji:'🌰',kcal:579,p:21, c:22, f:50, cat:'مكسرات',     tags:['بروتين','حرق']},
+{id:137,name:'جوز',            emoji:'🌰',kcal:654,p:15, c:14, f:65, cat:'مكسرات',     tags:['بروتين','حرق']},
+{id:138,name:'فستق',           emoji:'🟢',kcal:560,p:20, c:27, f:46, cat:'مكسرات',     tags:['بروتين']},
+{id:139,name:'فول سوداني',     emoji:'🥜',kcal:567,p:25.8,c:16,f:49, cat:'مكسرات',    tags:['بروتين','حرق']},
+{id:140,name:'كاجو',           emoji:'🌰',kcal:553,p:18, c:30, f:44, cat:'مكسرات',     tags:['بروتين']},
+{id:141,name:'بذور الشيا',     emoji:'⚫',kcal:486,p:17, c:42, f:31, cat:'مكسرات',     tags:['بروتين','ألياف','حرق']},
+{id:142,name:'بذور الكتان',    emoji:'🟤',kcal:534,p:18, c:29, f:42, cat:'مكسرات',     tags:['ألياف','حرق']},
+{id:143,name:'سمسم',           emoji:'⚪',kcal:573,p:18, c:23, f:50, cat:'مكسرات',     tags:['بروتين']},
+{id:144,name:'بذور القرع',     emoji:'🟢',kcal:559,p:30, c:11, f:49, cat:'مكسرات',     tags:['بروتين']},
+{id:145,name:'بذور عباد الشمس',emoji:'🌻',kcal:584,p:20.8,c:20,f:51.5,cat:'مكسرات',  tags:['بروتين']},
+{id:146,name:'جوز هند',        emoji:'🥥',kcal:354,p:3.3,c:15, f:33, cat:'مكسرات',    tags:['حرق']},
+{id:147,name:'مكسرات مشكلة',   emoji:'🌰',kcal:607,p:15, c:21, f:54, cat:'مكسرات',    tags:['بروتين']},
+// ── مشروبات صحية (25) ──
+{id:148,name:'ماء',            emoji:'💧',kcal:0,  p:0,  c:0,  f:0,  cat:'مشروبات صحية',tags:['منخفض','حرق']},
+{id:149,name:'شاي أخضر',       emoji:'🍵',kcal:2,  p:0,  c:.5, f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:150,name:'قهوة سادة',      emoji:'☕',kcal:5,  p:.3, c:0,  f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:151,name:'شاي أخضر بنعناع',emoji:'🍵',kcal:3,  p:0,  c:.5, f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:152,name:'ماء دافئ+ليمون', emoji:'🍋',kcal:10, p:.2, c:2.4,f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:153,name:'زنجبيل مغلي',    emoji:'🫚',kcal:8,  p:.2, c:1.8,f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:154,name:'شاي القرفة',     emoji:'🍵',kcal:6,  p:0,  c:1.5,f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:155,name:'بروتين شيك لايت',emoji:'🥤',kcal:120,p:20, c:8,  f:2,  cat:'مشروبات صحية',tags:['بروتين']},
+{id:156,name:'عصير برتقال طازج',emoji:'🍊',kcal:112,p:1.7,c:26, f:.5, cat:'مشروبات صحية',tags:['ألياف']},
+{id:157,name:'عصير جزر طازج',  emoji:'🥕',kcal:94, p:2.2,c:22, f:.4, cat:'مشروبات صحية',tags:['ألياف','حرق']},
+{id:158,name:'ماء جوز الهند',  emoji:'🥥',kcal:45, p:1.7,c:8.9,f:.5, cat:'مشروبات صحية',tags:['منخفض']},
+{id:159,name:'لبن زبادي مخفوق',emoji:'🥛',kcal:98, p:3.5,c:4.7,f:3.3,cat:'مشروبات صحية',tags:['بروتين']},
+{id:160,name:'سموذي الموز',    emoji:'🍌',kcal:130,p:3,  c:28, f:1,  cat:'مشروبات صحية',tags:['ألياف']},
+{id:161,name:'ماتشا',          emoji:'🍵',kcal:5,  p:.5, c:1,  f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:162,name:'كمون مغلي',      emoji:'🫘',kcal:8,  p:0,  c:2,  f:0,  cat:'مشروبات صحية',tags:['حرق']},
+{id:163,name:'يانسون مغلي',    emoji:'🌿',kcal:3,  p:0,  c:.5, f:0,  cat:'مشروبات صحية',tags:['منخفض']},
+{id:164,name:'بابونج بالنعناع',emoji:'🌼',kcal:2,  p:0,  c:.4, f:0,  cat:'مشروبات صحية',tags:['منخفض','حرق']},
+{id:165,name:'كوكتيل حمضيات',  emoji:'🍊',kcal:65, p:1,  c:15, f:0,  cat:'مشروبات صحية',tags:['حرق','ألياف']},
+{id:166,name:'عصير قصب',       emoji:'🥤',kcal:120,p:0,  c:30, f:0,  cat:'مشروبات صحية',tags:['تحذير_سكر']},
+{id:167,name:'كركديه بارد',    emoji:'🌺',kcal:5,  p:0,  c:1.2,f:0,  cat:'مشروبات صحية',tags:['حرق','منخفض']},
+{id:168,name:'عرقسوس',         emoji:'🧋',kcal:30, p:0,  c:7,  f:0,  cat:'مشروبات صحية',tags:['تحذير_ضغط']},
+{id:169,name:'شاي رويبوس',     emoji:'🍵',kcal:2,  p:0,  c:.3, f:0,  cat:'مشروبات صحية',tags:['منخفض']},
+{id:170,name:'حلبة مغلية',     emoji:'🌱',kcal:12, p:1,  c:2.5,f:.2, cat:'مشروبات صحية',tags:['حرق']},
+{id:171,name:'شاي أسود سادة',  emoji:'🍵',kcal:2,  p:0,  c:.5, f:0,  cat:'مشروبات صحية',tags:['منخفض']},
+{id:172,name:'ماء الشعير',     emoji:'🥤',kcal:43, p:1,  c:9,  f:.3, cat:'مشروبات صحية',tags:['ألياف']},
+// ── زيوت وتوابل (10) ──
+{id:173,name:'زيت زيتون',      emoji:'🫒',kcal:884,p:0,  c:0,  f:100,cat:'زيوت وتوابل', tags:['حرق']},
+{id:174,name:'خل التفاح',      emoji:'🍎',kcal:22, p:0,  c:.9, f:0,  cat:'زيوت وتوابل', tags:['حرق','منخفض']},
+{id:175,name:'قرفة مطحونة',    emoji:'🟤',kcal:247,p:4,  c:81, f:1.2,cat:'زيوت وتوابل', tags:['حرق']},
+{id:176,name:'كركم',           emoji:'🟡',kcal:354,p:8,  c:65, f:10, cat:'زيوت وتوابل', tags:['حرق']},
+{id:177,name:'زنجبيل مطحون',   emoji:'🟡',kcal:335,p:8.7,c:72, f:4.2,cat:'زيوت وتوابل', tags:['حرق']},
+{id:178,name:'فلفل حار',       emoji:'🌶️',kcal:40, p:1.9,c:8.8,f:.4, cat:'زيوت وتوابل', tags:['حرق']},
+{id:179,name:'زيت جوز الهند',  emoji:'🥥',kcal:862,p:0,  c:0,  f:100,cat:'زيوت وتوابل', tags:['حرق']},
+{id:180,name:'خردل',           emoji:'🟡',kcal:66, p:4.4,c:5.8,f:3.3,cat:'زيوت وتوابل', tags:['منخفض']},
+{id:181,name:'كمون',           emoji:'🟤',kcal:375,p:18, c:44, f:22, cat:'زيوت وتوابل', tags:['حرق']},
+{id:182,name:'فلفل أسود',      emoji:'⚫',kcal:251,p:10, c:64, f:3.3,cat:'زيوت وتوابل', tags:['حرق']},
+// ── أكل مصري (25) ──
+{id:183,name:'كشري',           emoji:'🍲',kcal:350,p:12, c:65, f:6,  cat:'أكل مصري',   tags:['ألياف']},
+{id:184,name:'فول بالزيت',     emoji:'🫘',kcal:180,p:10, c:25, f:6,  cat:'أكل مصري',   tags:['بروتين','ألياف']},
+{id:185,name:'طعمية (3 حبات)', emoji:'🟡',kcal:170,p:7,  c:18, f:8,  cat:'أكل مصري',   tags:['بروتين']},
+{id:186,name:'ملوخية بالدجاج', emoji:'🥬',kcal:210,p:22, c:8,  f:8,  cat:'أكل مصري',   tags:['بروتين']},
+{id:187,name:'شوربة عدس مصري', emoji:'🍲',kcal:130,p:8,  c:22, f:2,  cat:'أكل مصري',   tags:['ألياف','بروتين']},
+{id:188,name:'بيض بالطماطم',   emoji:'🍳',kcal:185,p:12, c:6,  f:13, cat:'أكل مصري',   tags:['بروتين']},
+{id:189,name:'رقاق باللحم',    emoji:'🥙',kcal:320,p:15, c:35, f:14, cat:'أكل مصري',   tags:[]},
+{id:190,name:'فطائر جبنة لايت',emoji:'🥟',kcal:190,p:10, c:22, f:7,  cat:'أكل مصري',   tags:['بروتين']},
+{id:191,name:'بشاميل لايت',    emoji:'🍝',kcal:310,p:14, c:42, f:8,  cat:'أكل مصري',   tags:[]},
+{id:192,name:'جلاش باللحمة',   emoji:'🥙',kcal:280,p:16, c:30, f:11, cat:'أكل مصري',   tags:['بروتين']},
+{id:193,name:'كفتة أرز',       emoji:'🍘',kcal:180,p:9,  c:24, f:5,  cat:'أكل مصري',   tags:[]},
+{id:194,name:'دجاج بالصور',    emoji:'🍗',kcal:260,p:28, c:5,  f:14, cat:'أكل مصري',   tags:['بروتين']},
+{id:195,name:'مسقعة بشاميل لايت',emoji:'🍆',kcal:210,p:8,c:22, f:10, cat:'أكل مصري',  tags:['ألياف']},
+{id:196,name:'طاجن خضار بالفراخ',emoji:'🥘',kcal:185,p:20,c:12,f:7,  cat:'أكل مصري',  tags:['بروتين','ألياف']},
+{id:197,name:'شوربة حرية',     emoji:'🥣',kcal:120,p:3,  c:14, f:6,  cat:'أكل مصري',   tags:['ألياف']},
+{id:198,name:'كبدة إسكندراني', emoji:'🍖',kcal:210,p:24, c:7,  f:9,  cat:'أكل مصري',   tags:['بروتين']},
+{id:199,name:'ملوخية بالثوم',  emoji:'🍲',kcal:45, p:3,  c:7,  f:1,  cat:'أكل مصري',   tags:['حرق','ألياف']},
+{id:200,name:'ورق عنب محشي',   emoji:'🍃',kcal:240,p:6,  c:35, f:9,  cat:'أكل مصري',   tags:['ألياف']},
+{id:201,name:'شكشوكة',         emoji:'🍳',kcal:220,p:14, c:12, f:12, cat:'أكل مصري',   tags:['بروتين']},
+{id:202,name:'بابا غنوج',      emoji:'🍆',kcal:90, p:2,  c:9,  f:5,  cat:'أكل مصري',   tags:['ألياف']},
+{id:203,name:'سمك بلطي مقلي',  emoji:'🐟',kcal:220,p:24, c:5,  f:12, cat:'أكل مصري',   tags:['بروتين']},
+{id:204,name:'كوارع',          emoji:'🍖',kcal:200,p:25, c:0,  f:10, cat:'أكل مصري',   tags:['بروتين']},
+{id:205,name:'شوربة فريك',     emoji:'🥣',kcal:150,p:7,  c:28, f:2,  cat:'أكل مصري',   tags:['ألياف']},
+{id:206,name:'فتة',            emoji:'🥣',kcal:420,p:18, c:55, f:14, cat:'أكل مصري',   tags:[]},
+{id:207,name:'محشي كرنب',      emoji:'🥬',kcal:95, p:3,  c:18, f:2,  cat:'أكل مصري',   tags:['ألياف']},
+// ── سناكات (10) ──
+{id:208,name:'فيشار بدون زيت', emoji:'🍿',kcal:387,p:13, c:78, f:4,  cat:'سناكات',     tags:['ألياف']},
+{id:209,name:'خيار بالليمون',  emoji:'🥒',kcal:18, p:.7, c:4,  f:.1, cat:'سناكات',     tags:['منخفض','حرق']},
+{id:210,name:'زبادي بالعسل',   emoji:'🫙',kcal:130,p:10, c:18, f:.5, cat:'سناكات',     tags:['بروتين']},
+{id:211,name:'تمر (3 حبات)',   emoji:'🟤',kcal:100,p:.7, c:27, f:.1, cat:'سناكات',     tags:['ألياف','تحذير_سكر']},
+{id:212,name:'تفاح بالقرفة',   emoji:'🍎',kcal:58, p:.3, c:15, f:.2, cat:'سناكات',     tags:['حرق','ألياف']},
+{id:213,name:'بسكويت شوفان',   emoji:'🍪',kcal:120,p:2,  c:20, f:4,  cat:'سناكات',     tags:['ألياف']},
+{id:214,name:'شوكولاتة داكنة 85%',emoji:'🍫',kcal:170,p:3,c:14,f:13, cat:'سناكات',   tags:['حرق']},
+{id:215,name:'رايس كيك',       emoji:'🍘',kcal:70, p:1.4,c:15, f:.5, cat:'سناكات',     tags:['منخفض']},
+{id:216,name:'لوز محمص خفيف',  emoji:'🌰',kcal:170,p:6,  c:6,  f:15, cat:'سناكات',     tags:['بروتين','حرق']},
+{id:217,name:'جزر خام بالحمص', emoji:'🥕',kcal:80, p:3,  c:12, f:2.5,cat:'سناكات',    tags:['ألياف']},
+];
+
+// ════════════════════════════════════════════════════════
+// WEEKLY PLAN DATA
+// ════════════════════════════════════════════════════════
+const WEEKLY=[
+  {day:'السبت',total:1530,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون + زنجبيل',kcal:0},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٢ بيضة مسلوقة | بطاطس مسلوقة ١٥٠جم + زيت زيتون صغيرة | خيار + فلفل رومي',kcal:380},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'تفاحة متوسطة',kcal:80},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي القرفة — يمنع تخزين الدهون',kcal:6},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر فراخ مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم + زيت زيتون | سلطة خضراء كبيرة',kcal:550},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'زبادي لايت + قرفة',kcal:80},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة مسلوقة | جبنة قريش ٥٠جم | خيار + فلفل رومي',kcal:280},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'٥ حبات لوز | شاي زنجبيل',kcal:74}]},
+  {day:'الأحد',total:1530,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون',kcal:5},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'فول مدمس كوب صغير + زيت زيتون | فلفل رومي + خيار | رغيف بلدي واحد',kcal:400},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'برتقالة متوسطة',kcal:70},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر بارد — محرق للدهون',kcal:2},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'سمك بلطي مشوي ٢٥٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:530},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'لبن رائب كوب',kcal:100},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة عيون بـ spray | خيار + فلفل رومي',kcal:240},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'٥ حبات جوز | شاي النعناع',kcal:80}]},
+  {day:'الاثنين',total:1480,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + زنجبيل',kcal:5},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٢ بيضة مقلية بـ spray | بطاطس مسلوقة ٢٠٠جم + زيت زيتون | خيار',kcal:400},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'١٥ حبة لوز',kcal:100},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي القرفة — يمنع تخزين الدهون',kcal:6},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'كبدة مشوية ١٥٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:500},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'تفاحة صغيرة',kcal:70},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'زبادي لايت | خيار + نعناع | ٢ رقاقة رايس كيك',kcal:250},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي اليانسون',kcal:3}]},
+  {day:'الثلاثاء',total:1480,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون + زنجبيل',kcal:10},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'فول مدمس + بيضة | فلفل رومي + خيار | رغيف بلدي',kcal:400},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'برتقالة متوسطة',kcal:70},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر ساخن — محرق',kcal:2},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'تونة بالماء علبة | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:480},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'لبن رائب + قرفة',kcal:100},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة مسلوقة | جبنة قريش ٥٠جم | خيار + فلفل رومي',kcal:280},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي الزنجبيل',kcal:8}]},
+  {day:'الأربعاء',total:1530,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون',kcal:5},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٣ بيض مسلوق | جبنة قريش ٥٠جم | خيار + فلفل رومي',kcal:380},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'١٥ حبة لوز',kcal:100},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي القرفة',kcal:6},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر دجاج مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:530},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'زبادي لايت',kcal:80},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة عيون بـ spray | خيار + فلفل رومي',kcal:240},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'بابونج بالنعناع',kcal:2}]},
+  {day:'الخميس',total:1590,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + زنجبيل + ليمون',kcal:10},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٢ بيضة مسلوقة | بطاطس مسلوقة ١٥٠جم | خيار + فلفل رومي',kcal:380},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'تفاحة + ٥ حبات لوز',kcal:120},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر بارد — محرق',kcal:2},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر دجاج مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:550},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'ترمس كوب صغير',kcal:120},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'زبادي لايت | خيار + نعناع',kcal:200},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي اليانسون',kcal:3}]},
+  {day:'الجمعة',total:1580,meals:[
+    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون',kcal:5},
+    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'فول + بيضة | جبنة بيضاء خفيفة | رغيف بلدي',kcal:420},
+    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
+    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'برتقالة متوسطة',kcal:70},
+    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر ساخن — محرق',kcal:2},
+    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر دجاج مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:550},
+    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'زبادي لايت + قرفة',kcal:80},
+    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة مسلوقة | جبنة قريش ٥٠جم | خيار',kcal:280},
+    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي الزنجبيل بليمون',kcal:8}]},
+];
+
+const TIPS_DATA=[
+  {ico:'💧',title:'الماء أساس الحرق',body:'اشرب 2-3 لتر ماء يومياً. الماء البارد يُجبر جسمك على حرق سعرات إضافية لتسخينه. كوب قبل كل وجبة يقلل الشهية 13%.'},
+  {ico:'🍵',title:'الشاي الأخضر — المحرق الطبيعي',body:'يحتوي على EGCG يرفع معدل الأيض 4-8%. اشرب 3-4 أكواب يومياً بدون سكر لتأثير أفضل.'},
+  {ico:'☕',title:'القهوة — وقود الحرق',body:'الكافيين يرفع الأيض 3-11% ويُحسّن أداء التمارين 12-15%. اشرب كوباً قبل التمرين.'},
+  {ico:'🌶️',title:'الكابسيسين — حرارة طبيعية',body:'مادة الكابسيسين في الفلفل الحار ترفع حرارة الجسم وتُسرّع الحرق 30-40 دقيقة بعد الأكل.'},
+  {ico:'🥚',title:'بروتين الفطار — مفتاح الإشباع',body:'وجبة فطار بروتينية تقلل الجوع 60% وتُقلل السعرات الكلية 441 سعرة يومياً في الدراسات.'},
+  {ico:'😴',title:'النوم — تعلاج غياب الأيض',body:'قلة النوم ترفع هرمون الجوع (غريلين) 28% وتخفض هرمون الشبع (ليبتين). 7-9 ساعات ضرورية.'},
+  {ico:'💪',title:'رياضة المقاومة — حرق بعد التمرين',body:'الوزن يبني عضلات تستمر بحرق السعرات حتى 38 ساعة بعد التمرين (EPOC effect).'},
+  {ico:'🍽️',title:'أكل آخر وجبة — التوقيت مهم',body:'توقف عن الأكل 3 ساعات قبل النوم. الأكل المتأخر يرفع احتمالية تخزين الدهون 73%.'},
+];
+
+// ════════════════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════════════════
+const STORE='mrshd_v5';
+function save(){
+  try{
+    localStorage.setItem(STORE,JSON.stringify({
+      profile:S.profile,tracker:S.tracker,
+      savedPlans:S.savedPlans,custom:S.custom,
+      tDate:new Date().toDateString()
+    }));
+  }catch(e){console.warn('save error',e);}
+}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem(STORE)||'{}');
+    if(d.profile) S.profile={...S.profile,...d.profile};
+    if(d.savedPlans) S.savedPlans=d.savedPlans;
+    if(d.custom) S.custom=d.custom;
+    if(d.tracker && d.tDate===new Date().toDateString()) S.tracker=d.tracker;
+  }catch(e){console.warn('load error',e);}
+  MEAL_SLOTS.forEach(m=>{if(!S.tracker[m.id]) S.tracker[m.id]=[];});
+}
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+function $(id){return document.getElementById(id);}
+function setVal(id,v){const el=$(id);if(el&&v!=null)el.value=v;}
+function getNum(id){return parseFloat($(id)?.value)||0;}
+function getStr(id){return $(id)?.value||'';}
+function setText(id,v){const el=$(id);if(el)el.textContent=v;}
+function allFoods(){return [...FOODS,...S.custom];}
+
+function toGrams(qty,unit){
+  if(unit==='g'||unit==='ml') return qty;
+  if(unit==='piece') return qty*100;
+  if(unit==='cup')   return qty*240;
+  if(unit==='tbsp')  return qty*15;
+  if(unit==='tsp')   return qty*5;
+  return qty;
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function init(){
+  load();
+  buildTabs();
+  fillProfileForm();
+  renderFilters();
+  renderFoodGrid();
+  renderMealSlots();
+  renderTrackerSummary();
+  renderSavedPlans();
+  renderWeekly();
+  renderTips();
+  renderBurnFoods();
+  renderCustomList();
+  updateFoodCount();
+  $('deficit').addEventListener('input',e=>{
+    setText('deficitLbl',e.target.value);
+    updateProfile();
+  });
+  // debounce للبحث — مش بيشغل render كل حرف
+  let _searchTimer=null;
+  $('searchFood').addEventListener('input',()=>{
+    clearTimeout(_searchTimer);
+    _searchTimer=setTimeout(renderFoodGrid,280);
+  });
+}
+
+function buildTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+function fillProfileForm(){
+  const p=S.profile;
+  setVal('weight',p.weight);setVal('targetWeight',p.targetWeight);
+  setVal('height',p.height);setVal('age',p.age);
+  setVal('gender',p.gender);setVal('activity',p.activity);
+  setVal('deficit',p.deficit);setText('deficitLbl',p.deficit);
+  setVal('diabetes',p.diabetes?'yes':'no');
+  setVal('hypertension',p.hypertension?'yes':'no');
+  updateHealthWarning();
+  if(p.weight&&p.height&&p.age) updateProfile(false);
+}
+
+// ════════════════════════════════════════════════════════
+// PROFILE
+// ════════════════════════════════════════════════════════
+function validateProfile(w,tw,h,age){
+  if(!w||w<30||w>300){toast('⚠️ الوزن الحالي يجب أن يكون بين 30 و 300 كجم');return false;}
+  if(tw&&(tw<30||tw>300)){toast('⚠️ الوزن المستهدف يجب أن يكون بين 30 و 300 كجم');return false;}
+  if(tw&&tw>=w){toast('⚠️ الوزن المستهدف يجب أن يكون أقل من وزنك الحالي');return false;}
+  if(!h||h<100||h>250){toast('⚠️ الطول يجب أن يكون بين 100 و 250 سم');return false;}
+  if(!age||age<15||age>100){toast('⚠️ العمر يجب أن يكون بين 15 و 100 سنة');return false;}
+  return true;
+}
+
+function updateProfile(doSave=true){
+  const w=getNum('weight'),tw=getNum('targetWeight'),h=getNum('height'),
+        age=getNum('age'),gender=getStr('gender'),
+        activity=parseFloat(getStr('activity'))||1.55,
+        deficit=getNum('deficit'),
+        diabetes=getStr('diabetes')==='yes',
+        hypertension=getStr('hypertension')==='yes';
+  if(doSave && !validateProfile(w,tw,h,age)) return;
+  if(doSave){
+    S.profile={weight:w,targetWeight:tw,height:h,age,gender,activity,deficit,diabetes,hypertension};
+    save();updateHealthWarning();
+  }
+  if(!w||!h||!age) return;
+  const bmr=gender==='male'?10*w+6.25*h-5*age+5:10*w+6.25*h-5*age-161;
+  const tdee=bmr*activity;
+  const bmi=h>0?w/((h/100)**2):0;
+  let bmiLbl='طبيعي',bmiCls='prog-g';
+  if(bmi<18.5){bmiLbl='نحافة';bmiCls='prog-u';}
+  else if(bmi<25){bmiLbl='طبيعي';bmiCls='prog-g';}
+  else if(bmi<30){bmiLbl='زيادة وزن';bmiCls='prog-w';}
+  else{bmiLbl='سمنة';bmiCls='prog-ob';}
+  const bmiPct=Math.min(100,Math.max(0,(bmi-15)/25*100));
+  setText('bmrVal',Math.round(bmr));setText('tdeeVal',Math.round(tdee));
+  setText('bmiVal',bmi.toFixed(1));setText('bmiStatus',bmiLbl);
+  const bar=$('bmiBar');
+  bar.style.width=bmiPct+'%';
+  bar.className='prog '+bmiCls;
+  const targetKcal=Math.max(1200,Math.round(tdee-deficit));
+  const kgLeft=Math.max(0,w-tw);
+  const weeks=kgLeft>0&&deficit>0?Math.ceil(kgLeft/(deficit*7/7700)):0;
+  setText('targetKcalVal',targetKcal);
+  setText('weeksVal',weeks>0?weeks+' أسبوع':'—');
+  $('statsCard').style.display='block';
+  $('goalCard').style.display='block';
+  // update tracker goal
+  S._targetKcal=targetKcal;
+  renderTrackerSummary();
+}
+
+function updateHealthWarning(){
+  const d=getStr('diabetes')==='yes';
+  const h=getStr('hypertension')==='yes';
+  $('healthWarnBox').classList.toggle('show',d||h);
+}
+
+// ════════════════════════════════════════════════════════
+// LIBRARY
+// ════════════════════════════════════════════════════════
+function updateFoodCount(){
+  setText('foodCount',allFoods().length);
+}
+
+function renderFilters(){
+  const cats=['الكل',...new Set(allFoods().map(f=>f.cat))];
+  $('filterBar').innerHTML=cats.map(c=>
+    `<button class="filter-btn${c==='الكل'?' active':''}" onclick="filterCat(this,'${escapeHtml(c)}')">${escapeHtml(c)}</button>`
+  ).join('');
+}
+
+let _activeCat='الكل';
+function filterCat(btn,cat){
+  _activeCat=cat;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFoodGrid();
+}
+
+function renderFoodGrid(){
+  const q=(getStr('searchFood')||'').toLowerCase();
+  let list=allFoods();
+  if(_activeCat!=='الكل') list=list.filter(f=>f.cat===_activeCat);
+  if(q) list=list.filter(f=>f.name.toLowerCase().includes(q));
+  if(!list.length){$('foodGrid').innerHTML='<div class="empty"><div class="e-ico">🔍</div><p>لا توجد نتائج</p></div>';return;}
+  $('foodGrid').innerHTML=list.map(f=>`
+    <div class="food-card" onclick="openAddModal(${f.id})">
+      <span class="ico">${f.emoji||'🍽️'}</span>
+      <div class="nm">${escapeHtml(f.name)}</div>
+      <div class="kc">${f.kcal} كيلو/100جم</div>
+      <div class="tags-row">${(f.tags||[]).map(t=>`<span class="tag ${escapeHtml(t)}">${escapeHtml(t.replace('_',' '))}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// ADD FOOD MODAL
+// ════════════════════════════════════════════════════════
+function openAddModal(fid, defaultSlot=null){
+  const f=allFoods().find(x=>x.id===fid);
+  if(!f) return;
+  S._addFood=f;
+  setText('modalFoodName',f.emoji+' '+f.name);
+  $('modalFoodInfo').innerHTML=`<strong>${f.kcal}</strong> كيلو/100جم | بروتين: ${f.p}جم | كارب: ${f.c}جم | دهون: ${f.f}جم`;
+  $('modalQty').value=100;
+  $('modalUnit').value='g';
+  if(defaultSlot) $('modalSlot').value=defaultSlot;
+  updateModalCalc();
+  openModal('addFoodModal');
+}
+
+function updateModalCalc(){
+  const f=S._addFood;if(!f) return;
+  const qty=parseFloat($('modalQty').value)||0;
+  const unit=getStr('modalUnit');
+  const grams=toGrams(qty,unit);
+  const kcal=Math.round(f.kcal*grams/100);
+  const p=(f.p*grams/100).toFixed(1);
+  const c=(f.c*grams/100).toFixed(1);
+  const fat=(f.f*grams/100).toFixed(1);
+  $('modalCalcResult').textContent=`${kcal} سعرة | بروتين: ${p}جم | كارب: ${c}جم | دهون: ${fat}جم`;
+}
+
+function confirmAddFood(){
+  const f=S._addFood;if(!f) return;
+  const qty=parseFloat($('modalQty').value)||0;
+  const unit=getStr('modalUnit');
+  const grams=toGrams(qty,unit);
+  const slot=getStr('modalSlot');
+  if(!grams){toast('⚠️ أدخل كمية صحيحة');return;}
+  S.tracker[slot]=S.tracker[slot]||[];
+  S.tracker[slot].push({
+    uid:Date.now()+Math.random(),
+    fid:f.id,name:f.name,emoji:f.emoji||'🍽️',
+    qty:grams,unit:'جرام',
+    kcal:Math.round(f.kcal*grams/100),
+    p:parseFloat((f.p*grams/100).toFixed(1)),
+    c:parseFloat((f.c*grams/100).toFixed(1)),
+    f:parseFloat((f.f*grams/100).toFixed(1))
+  });
+  save();renderMealSlots();renderTrackerSummary();
+  closeModal('addFoodModal');
+  toast(`✅ ${escapeHtml(f.name)} أُضيف للوجبة`);
+}
+
+// ════════════════════════════════════════════════════════
+// EDIT ITEM MODAL
+// ════════════════════════════════════════════════════════
+function openEditModal(slot,uid){
+  const item=S.tracker[slot]?.find(x=>x.uid===uid);if(!item) return;
+  const f=allFoods().find(x=>x.id===item.fid);
+  S._editSlot=slot;S._editUid=uid;S._editFood=f||null;
+  setText('editItemName','✏️ تعديل: '+item.name);
+  $('editQty').value=item.qty;
+  updateEditCalc();
+  openModal('editItemModal');
+}
+
+function updateEditCalc(){
+  const f=S._editFood;
+  const qty=parseFloat($('editQty').value)||0;
+  if(!f){$('editCalcResult').textContent=qty+'جرام';return;}
+  const kcal=Math.round(f.kcal*qty/100);
+  const p=(f.p*qty/100).toFixed(1);
+  const c=(f.c*qty/100).toFixed(1);
+  const fat=(f.f*qty/100).toFixed(1);
+  $('editCalcResult').textContent=`${kcal} سعرة | بروتين: ${p}جم | كارب: ${c}جم | دهون: ${fat}جم`;
+}
+
+function confirmEditItem(){
+  const slot=S._editSlot,uid=S._editUid,f=S._editFood;
+  const items=S.tracker[slot];if(!items) return;
+  const idx=items.findIndex(x=>x.uid===uid);if(idx===-1) return;
+  const qty=parseFloat($('editQty').value)||0;
+  if(!qty){toast('⚠️ أدخل كمية صحيحة');return;}
+  const item=items[idx];
+  item.qty=qty;
+  if(f){
+    item.kcal=Math.round(f.kcal*qty/100);
+    item.p=parseFloat((f.p*qty/100).toFixed(1));
+    item.c=parseFloat((f.c*qty/100).toFixed(1));
+    item.f=parseFloat((f.f*qty/100).toFixed(1));
+  }
+  save();renderMealSlots();renderTrackerSummary();
+  closeModal('editItemModal');
+  toast('✅ تم تحديث الكمية');
+}
+
+// ════════════════════════════════════════════════════════
+// TRACKER
+// ════════════════════════════════════════════════════════
+function renderMealSlots(){
+  $('mealSlots').innerHTML=MEAL_SLOTS.map(slot=>{
+    const items=S.tracker[slot.id]||[];
+    const total=items.reduce((s,i)=>s+i.kcal,0);
+    return `<div class="meal-slot">
+      <div class="meal-hdr">
+        <div>
+          <div class="meal-name">${slot.ico} ${slot.name}</div>
+          <div class="meal-time">${slot.time}</div>
+        </div>
+        <div class="meal-kcal">${total>0?total+' سعرة':''}</div>
+      </div>
+      <div>${items.map(item=>`
+        <div class="m-item">
+          <span>${item.emoji||'🍽️'}</span>
+          <span class="det">${escapeHtml(item.name)} — ${item.qty}جم</span>
+          <span class="kc">${item.kcal}</span>
+          <div class="m-item-actions">
+            <button class="btn btn-sec btn-icon" onclick="openEditModal('${slot.id}',${item.uid})" title="تعديل">✏️</button>
+            <button class="btn btn-red btn-icon" onclick="removeItem('${slot.id}',${item.uid})" title="حذف">✕</button>
+          </div>
+        </div>`).join('')}
+      </div>
+      <button class="add-to-slot" onclick="switchToLib('${slot.id}')">+ إضافة طعام من المكتبة</button>
+    </div>`;
+  }).join('');
+}
+
+function switchToLib(slotId){
+  S._defaultSlot=slotId;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="library"]').classList.add('active');
+  $('library').classList.add('active');
+  toast('🔍 اختر طعاماً لإضافته للوجبة');
+}
+
+// override openAddModal to handle default slot
+const _origOpenAddModal=openAddModal;
+window.openAddModal=function(fid){
+  const ds=S._defaultSlot;S._defaultSlot=null;
+  _origOpenAddModal(fid,ds);
+};
+
+function removeItem(slot,uid){
+  S.tracker[slot]=(S.tracker[slot]||[]).filter(i=>i.uid!==uid);
+  save();renderMealSlots();renderTrackerSummary();
+}
+
+function clearDay(){
+  if(!confirm('هل تريد مسح جميع وجبات اليوم؟')) return;
+  MEAL_SLOTS.forEach(m=>S.tracker[m.id]=[]);
+  save();renderMealSlots();renderTrackerSummary();
+  toast('🗑️ تم مسح جميع الوجبات');
+}
+
+function renderTrackerSummary(){
+  const all=MEAL_SLOTS.flatMap(m=>S.tracker[m.id]||[]);
+  const kcal=all.reduce((s,i)=>s+i.kcal,0);
+  const pro=all.reduce((s,i)=>s+i.p,0);
+  const carb=all.reduce((s,i)=>s+i.c,0);
+  const fat=all.reduce((s,i)=>s+i.f,0);
+  const goal=S._targetKcal||S.profile.deficit&&S.profile.weight?
+    Math.max(1200,Math.round((S.profile.gender==='male'?
+      10*S.profile.weight+6.25*S.profile.height-5*S.profile.age+5:
+      10*S.profile.weight+6.25*S.profile.height-5*S.profile.age-161)*S.profile.activity-S.profile.deficit)):1500;
+  const pct=goal>0?Math.min(100,Math.round(kcal/goal*100)):0;
+  const remain=Math.max(0,goal-kcal);
+  setText('totKcal',kcal);setText('totPro',pro.toFixed(0));
+  setText('totCarb',carb.toFixed(0));setText('totFat',fat.toFixed(0));
+  setText('totRemain',remain>0?remain:kcal>goal?'تجاوزت!':'0');
+  setText('calPct',pct+'%');
+  const bar=$('calBar');
+  bar.style.width=pct+'%';
+  bar.className='prog prog-cal'+(kcal>goal?' over':'');
+}
+
+// ════════════════════════════════════════════════════════
+// PLANNER
+// ════════════════════════════════════════════════════════
+const NON_VEG=['دجاج','فراخ','لحم','سمك','تونة','جمبري','سردين','كفتة','كباب','كبدة','شاورما','شيش','طيور','بلطي','قاروص','بوري','مكريل','سلمون','أسقلوب','تكا'];
+
+function generatePlan(){
+  const mainN=Math.max(1,Math.min(4,parseInt($('mainMeals').value)||3));
+  const snackN=Math.max(0,Math.min(3,parseInt($('snacks').value)||2));
+  const drinkN=Math.max(0,Math.min(3,parseInt($('drinks').value)||2));
+  const planKcal=parseInt($('planKcal').value)||1500;
+  const pref=getStr('pref');
+  const forbidden=getStr('forbidden').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+  const isDiabetic=S.profile.diabetes===true;
+  const isHyper=S.profile.hypertension===true;
+
+  let pool=allFoods().filter(f=>{
+    if(forbidden.some(fb=>f.name.toLowerCase().includes(fb))) return false;
+    if(isDiabetic  && (f.tags||[]).includes('تحذير_سكر'))  return false;
+    if(isHyper     && (f.tags||[]).includes('تحذير_ضغط'))  return false;
+    return true;
+  });
+  if(pref==='highpro') pool=pool.filter(f=>(f.tags||[]).includes('بروتين')||f.p>10);
+  else if(pref==='lowcarb') pool=pool.filter(f=>f.c<15);
+  else if(pref==='veg') pool=pool.filter(f=>f.cat!=='بروتين'&&!NON_VEG.some(w=>f.name.includes(w)));
+
+  const mainPool=pool.filter(f=>['بروتين','حبوب','بقوليات','أكل مصري'].includes(f.cat));
+  const snackPool=pool.filter(f=>['فواكه','سناكات','مكسرات'].includes(f.cat));
+  const drinkPool=pool.filter(f=>f.cat==='مشروبات صحية');
+
+  const mainKcal=planKcal*.70,snackKcal=planKcal*.20,drinkKcal=planKcal*.10;
+
+  const plan={
+    breakfast:pickFood(mainPool,mainKcal/mainN),
+    snack_am:snackN>0?pickFood(snackPool,snackKcal/Math.max(snackN,1)):null,
+    lunch:mainN>=2?pickFood(mainPool,mainKcal/mainN):null,
+    snack_pm:snackN>1?pickFood(snackPool,snackKcal/Math.max(snackN,1)):null,
+    dinner:mainN>=3?pickFood(mainPool,mainKcal/mainN):null,
+    drink1:drinkN>0?pickFood(drinkPool,drinkKcal/Math.max(drinkN,1),250):null,
+    drink2:drinkN>1?pickFood(drinkPool,drinkKcal/Math.max(drinkN,1),250):null,
+    extra_main:mainN>=4?pickFood(mainPool,mainKcal/mainN):null,
+  };
+  S.currentPlan=plan;
+
+  // Health notes HTML
+  let notes='';
+  if(isDiabetic) notes+=`<div class="plan-health-note"><p>🍬 <strong>مرضى السكر:</strong> تجنب السكريات والعصائر المحلاة، وزّع الكربوهيدرات على اليوم، واستشر طبيبك.</p></div>`;
+  if(isHyper) notes+=`<div class="plan-health-note"><p>❤️ <strong>مرضى الضغط:</strong> قلل الملح والمخللات، تجنب عرقسوس والمشروبات العالية الكافيين.</p></div>`;
+
+  renderPlan(plan,notes);
+}
+
+function pickFood(foods,targetKcal,fixedQty=0){
+  if(!foods||!foods.length) return null;
+  const f=foods[Math.floor(Math.random()*foods.length)];
+  const qty=fixedQty>0?fixedQty:Math.max(50,Math.round((targetKcal/Math.max(f.kcal,1))*100));
+  return{...f,qty,kcal:Math.round(f.kcal*qty/100),pro:parseFloat((f.p*qty/100).toFixed(1)),carb:parseFloat((f.c*qty/100).toFixed(1)),fat:parseFloat((f.f*qty/100).toFixed(1))};
+}
+
+function renderPlan(plan,healthNotes=''){
+  const items=[
+    {label:'🍳 الفطار',key:'breakfast'},{label:'🍎 سناك صباحي',key:'snack_am'},
+    {label:'🍗 الغداء',key:'lunch'},{label:'🥜 سناك العصر',key:'snack_pm'},
+    {label:'🥗 العشاء',key:'dinner'},{label:'🥤 مشروب 1',key:'drink1'},
+    {label:'🥤 مشروب 2',key:'drink2'},{label:'🍽️ وجبة إضافية',key:'extra_main'},
+  ];
+  let html=healthNotes,total=0;
+  items.forEach(({label,key})=>{
+    const item=plan[key];if(!item) return;
+    total+=item.kcal;
+    html+=`<div class="plan-meal-row">
+      <h4>${label}</h4>
+      <p>${item.emoji||'🍽️'} ${escapeHtml(item.name)} — ${item.qty}جم</p>
+      <p class="plan-kcal">${item.kcal} سعرة | بروتين: ${item.pro}جم | كارب: ${item.carb}جم | دهون: ${item.fat}جم</p>
+    </div>`;
+  });
+  $('planItems').innerHTML=html;
+  setText('planTotal',total);
+  $('planResult').style.display='block';
+}
+
+function applyPlan(){
+  if(!S.currentPlan){toast('⚠️ ولّد خطة أولاً');return;}
+  const hasData=MEAL_SLOTS.some(m=>(S.tracker[m.id]||[]).length>0);
+  if(hasData) openModal('applyModal');
+  else _doApply(false);
+}
+
+function _doApply(replace){
+  const map={breakfast:'break',snack_am:'morn',lunch:'lunch',snack_pm:'after',dinner:'din',drink1:'pre',drink2:'wake',extra_main:'coffee'};
+  if(replace) MEAL_SLOTS.forEach(m=>S.tracker[m.id]=[]);
+  Object.entries(S.currentPlan).forEach(([key,item])=>{
+    if(!item) return;
+    const slotId=map[key]||'lunch';
+    if(!S.tracker[slotId]) S.tracker[slotId]=[];
+    S.tracker[slotId].push({uid:Date.now()+Math.random(),fid:item.id,name:item.name,emoji:item.emoji||'🍽️',qty:item.qty,unit:'جرام',kcal:item.kcal,p:item.pro,c:item.carb,f:item.fat});
+  });
+  save();renderMealSlots();renderTrackerSummary();
+  toast(replace?'✅ تم استبدال الوجبات بالخطة':'✅ تم إضافة الخطة للوجبات');
+  document.querySelector('[data-tab="tracker"]').click();
+}
+
+function savePlan(){
+  if(!S.currentPlan){toast('⚠️ ولّد خطة أولاً');return;}
+  const name=prompt('اسم الخطة:');if(!name) return;
+  S.savedPlans.push({id:Date.now(),name:escapeHtml(name),plan:S.currentPlan,date:new Date().toLocaleDateString('ar-EG')});
+  save();renderSavedPlans();
+  $('savedPlansCard').style.display='block';
+  toast('⭐ تم حفظ: '+escapeHtml(name));
+}
+
+function renderSavedPlans(){
+  if(!S.savedPlans.length){$('savedPlansCard').style.display='none';return;}
+  $('savedPlansCard').style.display='block';
+  $('savedPlans').innerHTML=S.savedPlans.map(p=>`
+    <div class="tip" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+      <div><h4>${p.name}</h4><p>${p.date}</p></div>
+      <div style="display:flex;gap:.4rem">
+        <button class="btn btn-sm" onclick="loadPlan(${p.id})">📂 تحميل</button>
+        <button class="btn btn-red btn-sm" onclick="deletePlan(${p.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function loadPlan(id){
+  const p=S.savedPlans.find(x=>x.id===id);if(!p) return;
+  S.currentPlan=p.plan;renderPlan(p.plan);
+  toast('📂 تم تحميل: '+p.name);
+}
+function deletePlan(id){
+  if(!confirm('حذف الخطة؟')) return;
+  S.savedPlans=S.savedPlans.filter(p=>p.id!==id);
+  save();renderSavedPlans();toast('🗑️ تم الحذف');
+}
+
+// ════════════════════════════════════════════════════════
+// AI PLAN (LOCAL)
+// ════════════════════════════════════════════════════════
+function generateAIPlan(){
+  const type=getStr('dietType');
+  const meals=parseInt(getStr('aiMeals'))||5;
+  const avoid=getStr('aiAvoid');
+  const p=S.profile;
+  const bmr=p.gender==='male'?10*p.weight+6.25*p.height-5*p.age+5:10*p.weight+6.25*p.height-5*p.age-161;
+  const tdee=bmr*(p.activity||1.55);
+  const target=Math.max(1200,Math.round(tdee-(p.deficit||500)));
+  const perMeal=Math.round(target/meals);
+
+  let txt=`🎯 خطتك الذكية — ${type}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+  txt+=`📊 السعرات المستهدفة: ${target} سعرة/يوم\n`;
+  txt+=`📊 لكل وجبة تقريباً: ${perMeal} سعرة\n`;
+  if(p.weight && p.targetWeight) txt+=`⚖️ الهدف: إنقاص ${Math.max(0,p.weight-p.targetWeight).toFixed(1)} كجم\n`;
+  txt+=`━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+  // Health notes
+  if(p.diabetes) txt+=`🍬 تنبيه السكر: تجنب السكريات والعصائر المحلاة، وزّع الكربوهيدرات.\n`;
+  if(p.hypertension) txt+=`❤️ تنبيه الضغط: قلل الملح، تجنب عرقسوس والكافيين المرتفع.\n`;
+  if(p.diabetes||p.hypertension) txt+=`━━━━━━━━━━━━━━━━━━━━━━\n`;
+  txt+='\n';
+
+  if(type==='نظام الصيام المتقطع'){
+    txt+=`⏰ فترة الأكل: 12 ظهراً — 8 مساءً (صيام 16 ساعة)\n\n`;
+    txt+=`12:00 — كسر الصيام:\n• 3 بيض مسلوق + خضار خام\n• شوفان 50جم + زبادي يوناني\n• ثمرة فاكهة صغيرة\n\n`;
+    txt+=`3:00 — سناك:\n• زبادي يوناني 200جم + مكسرات 30جم\n\n`;
+    txt+=`6:00 — الغداء:\n• صدر دجاج مشوي 150جم\n• أرز بني 80جم + خضار سوتيه\n• سلطة خضراء كبيرة\n\n`;
+    txt+=`7:45 — آخر وجبة:\n• تونة + سلطة خضراء\n• تفاحة صغيرة\n`;
+  } else if(type==='عالي بروتين'){
+    txt+=`💪 الهدف: ${p.weight?Math.round(p.weight*2):'—'}جم بروتين يومياً (2جم/كجم)\n\n`;
+    txt+=`7:30 — الفطار (30جم بروتين):\n• 4 بياض بيض + بيضة كاملة\n• جبنة قريش 100جم\n• شوفان 40جم\n\n`;
+    txt+=`10:00 — سناك (20جم بروتين):\n• زبادي يوناني 200جم\n\n`;
+    txt+=`2:00 — الغداء (40جم بروتين):\n• صدر دجاج مشوي 200جم\n• بروكلي مشوي + أرز بني 80جم\n\n`;
+    txt+=`5:00 — سناك (20جم بروتين):\n• تونة في الماء + خيار\n\n`;
+    txt+=`8:00 — العشاء (30جم بروتين):\n• سمك مشوي 150جم\n• سلطة خضراء + زيت زيتون\n`;
+  } else if(type==='منخفض الكارب'){
+    txt+=`🥑 الهدف: أقل من 50جم كارب يومياً\n\n`;
+    txt+=`الفطار: 3 بيض + أفوكادو نصف + سبانخ\n`;
+    txt+=`السناك: مكسرات 30جم + خيار\n`;
+    txt+=`الغداء: لحم 150جم + بروكلي مشوي + سلطة\n`;
+    txt+=`سناك عصر: زبادي يوناني + بذور كتان\n`;
+    txt+=`العشاء: سمك 150جم + خضار سوتيه\n`;
+    txt+=`قبل النوم: جبنة قريش\n`;
+  } else if(type==='نباتي'){
+    txt+=`🌱 نظام نباتي متوازن\n\n`;
+    txt+=`الفطار: فول مدمس 150جم + خضار طازجة\n`;
+    txt+=`سناك: تفاحة + لوز 20جم\n`;
+    txt+=`الغداء: عدس 150جم + أرز بني 80جم + سلطة\n`;
+    txt+=`سناك عصر: زبادي لايت + فاكهة\n`;
+    txt+=`العشاء: حمص مسلوق + خضار مشوية\n`;
+    txt+=`قبل النوم: حليب لوز + قرفة\n`;
+  } else {
+    txt+=`5:30 — مشروب الاستيقاظ:\n• ماء دافئ + ليمون + زنجبيل\n\n`;
+    txt+=`7:30 — الفطار:\n• 2 بيض مسلوق + شريحة خبز أسمر\n• طماطم وخيار + زيت زيتون\n\n`;
+    txt+=`10:00 — سناك:\n• تفاحة + 10 حبة لوز\n\n`;
+    txt+=`2:00 — الغداء:\n• صدر دجاج مشوي 120جم\n• أرز بني 80جم + خضار سوتيه\n• سلطة خضراء كبيرة\n\n`;
+    txt+=`5:00 — سناك عصر:\n• زبادي لايت + قرفة\n\n`;
+    txt+=`8:00 — العشاء:\n• تونة بالماء + سلطة\n• شريحة توست أسمر\n\n`;
+    txt+=`قبل النوم:\n• زبادي يوناني + قرفة\n`;
+  }
+
+  txt+=`\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+  txt+=`💧 الماء: 3-4 لتر موزعة على اليوم\n`;
+  txt+=`☕ القهوة: 2-3 كوب سادة\n`;
+  txt+=`🚫 تجنب: ${avoid||'السكر والمقليات والمشروبات الغازية'}\n`;
+  txt+=`🚶 مشي: 30 دقيقة يومياً على الأقل`;
+
+  const el=$('aiResult');
+  el.textContent=txt;
+  el.style.display='block';
+}
+
+function copyAIPlan(){
+  const t=$('aiResult').textContent;
+  if(!t){toast('⚠️ ولّد خطة أولاً');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(()=>toast('📋 تم نسخ الخطة')).catch(()=>fallbackCopy(t));
+  } else fallbackCopy(t);
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.style.cssText='position:fixed;top:-9999px;opacity:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');toast('📋 تم نسخ الخطة');}
+  catch{toast('⚠️ انسخ النص يدوياً');}
+  document.body.removeChild(ta);
+}
+
+// ════════════════════════════════════════════════════════
+// WEEKLY PLAN
+// ════════════════════════════════════════════════════════
+function renderWeekly(){
+  $('weeklyPlan').innerHTML=WEEKLY.map((d,i)=>{
+    const actual=d.meals.reduce((s,m)=>s+m.kcal,0);
+    const diff=Math.abs(actual-d.total);
+    const warn=diff>50?`<span style="color:#f87171;font-size:.75rem"> ⚠️ فرق ${diff} سعرة</span>`:'';
+    return `<div class="plan-day" id="pd${i}">
+      <div class="plan-day-hdr" onclick="toggleDay(${i})">
+        <h3>📅 ${d.day} — ${d.total} سعرة${warn}</h3>
+        <span id="pdArrow${i}" style="color:var(--muted);font-size:1.2rem">${i===0?'▲':'▼'}</span>
+      </div>
+      <div class="plan-day-body${i===0?' open':''}" id="pdb${i}">
+        ${d.meals.map(m=>`
+          <div class="plan-row">
+            <div class="time-lbl">${m.ico} ${m.name}<br><small style="font-size:.7rem;color:var(--muted2)">${m.time}</small></div>
+            <div class="meal-txt">${escapeHtml(m.txt)}</div>
+            <div class="kcal-badge">${m.kcal>0?m.kcal+'ك':'—'}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDay(i){
+  const body=$(`pdb${i}`),arrow=$(`pdArrow${i}`);
+  body.classList.toggle('open');
+  arrow.textContent=body.classList.contains('open')?'▲':'▼';
+}
+function toggleAllDays(open){
+  WEEKLY.forEach((_,i)=>{
+    const body=$(`pdb${i}`),arrow=$(`pdArrow${i}`);
+    if(open){body.classList.add('open');arrow.textContent='▲';}
+    else{body.classList.remove('open');arrow.textContent='▼';}
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// TIPS
+// ════════════════════════════════════════════════════════
+function renderTips(){
+  $('tipsList').innerHTML=TIPS_DATA.map(t=>`
+    <div class="tip">
+      <h4>${t.ico} ${t.title}</h4>
+      <p>${t.body}</p>
+    </div>`).join('');
+}
+
+function renderBurnFoods(){
+  const burnList=allFoods().filter(f=>(f.tags||[]).includes('حرق')).slice(0,12);
+  $('burnFoods').innerHTML=burnList.map(f=>`
+    <div class="food-card" onclick="openAddModal(${f.id})">
+      <span class="ico">${f.emoji||'🔥'}</span>
+      <div class="nm">${escapeHtml(f.name)}</div>
+      <div class="kc">${f.kcal} كيلو/100جم</div>
+      <div class="tags-row"><span class="tag حرق">حرق</span></div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// CUSTOM FOODS
+// ════════════════════════════════════════════════════════
+function addCustomFood(){
+  const name=$('cfName').value.trim();
+  const emoji=$('cfEmoji').value.trim()||'🍽️';
+  const cat=getStr('cfCat');
+  const kcal=parseFloat($('cfKcal').value);
+  const p=parseFloat($('cfP').value)||0;
+  const c=parseFloat($('cfC').value)||0;
+  const f=parseFloat($('cfF').value)||0;
+  if(!name||isNaN(kcal)){toast('⚠️ اكتب اسم الصنف والسعرات على الأقل');return;}
+  if(/<|>|script/i.test(name)){toast('⚠️ اسم غير صالح');return;}
+  if(allFoods().some(x=>x.name===name)){toast('⚠️ هذا الصنف موجود مسبقاً');return;}
+  const newFood={id:Date.now(),name,emoji,kcal,p,c,f,cat,tags:[],custom:true};
+  S.custom.push(newFood);
+  save();
+  ['cfName','cfEmoji','cfKcal','cfP','cfC','cfF'].forEach(id=>$(id).value='');
+  renderFilters();renderFoodGrid();renderCustomList();updateFoodCount();
+  $('manageCustomBtn').style.display='';
+  toast(`✅ تم حفظ "${escapeHtml(name)}" في المكتبة`);
+}
+
+function renderCustomList(){
+  if(!S.custom.length){$('manageCustomBtn').style.display='none';$('customList').style.display='none';return;}
+  $('manageCustomBtn').style.display='';
+  if($('customList').style.display==='none') return;
+  $('customList').innerHTML=S.custom.map(f=>`
+    <div class="custom-item">
+      <span>${f.emoji} ${escapeHtml(f.name)} — ${f.kcal} كيلو/100جم</span>
+      <button class="btn btn-red btn-sm" onclick="deleteCustom(${f.id})">🗑️</button>
+    </div>`).join('');
+}
+
+function toggleCustomList(){
+  const el=$('customList');
+  const show=el.style.display==='none'||!el.style.display;
+  el.style.display=show?'block':'none';
+  if(show) renderCustomList();
+}
+
+function deleteCustom(id){
+  if(!confirm('حذف الصنف؟')) return;
+  S.custom=S.custom.filter(f=>f.id!==id);
+  save();renderFilters();renderFoodGrid();renderCustomList();updateFoodCount();
+  toast('🗑️ تم الحذف');
+}
+
+// ════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ════════════════════════════════════════════════════════
+function openModal(id){$(id).classList.add('show');}
+function closeModal(id){$(id).classList.remove('show');}
+window.addEventListener('keydown',e=>{if(e.key==='Escape') document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'));});
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+function toast(msg){
+  const t=$('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ════════════════════════════════════════════════════════
+// 🌐 ONLINE FOOD SEARCH
+// ════════════════════════════════════════════════════════
+let _onlinePreviewFood = null;
+
+/* ── helpers ── */
+function showOnlineLoading(txt='جاري البحث...'){
+  $('onlineLoading').style.display='block';
+  $('onlineResults').style.display='none';
+  $('onlineError').style.display='none';
+  setText('onlineLoadingTxt',txt);
+}
+function hideOnlineLoading(){ $('onlineLoading').style.display='none'; }
+function showOnlineError(msg){
+  hideOnlineLoading();
+  const el=$('onlineError');
+  el.textContent='❌ '+msg;
+  el.style.display='block';
+}
+
+/* ── رسم نتائج البحث ── */
+function renderOnlineResults(items, source){
+  hideOnlineLoading();
+  if(!items||!items.length){
+    $('onlineError').textContent='لا توجد نتائج، جرّب كلمة بحث مختلفة';
+    $('onlineError').style.display='block';
+    return;
+  }
+  setText('onlineResultsLabel', `📦 ${items.length} نتيجة من ${source} — اضغط على أي صنف لإضافته`);
+  $('onlineResultsGrid').innerHTML = items.map((item,i)=>`
+    <div class="food-card" onclick="openOnlinePreview(${i})" data-idx="${i}">
+      <span class="ico">${item._emoji||'🍽️'}</span>
+      <div class="nm" style="font-size:.78rem">${escapeHtml(item.name.substring(0,45))}${item.name.length>45?'...':''}</div>
+      <div class="kc">${item.kcal} كيلو/100جم</div>
+      <div class="tags-row">
+        ${item.p>15?'<span class="tag بروتين">بروتين</span>':''}
+        ${item.kcal<50?'<span class="tag منخفض">منخفض</span>':''}
+        <span style="font-size:.6rem;color:var(--muted2);padding:.1rem .35rem">${escapeHtml(item._src||'')}</span>
+      </div>
+    </div>`).join('');
+  $('onlineResults').style.display='block';
+  // حفظ النتائج مؤقتاً
+  window._lastOnlineResults = items;
+}
+
+/* ── فتح معاينة صنف ── */
+function openOnlinePreview(idx){
+  const item = window._lastOnlineResults?.[idx];
+  if(!item) return;
+  _onlinePreviewFood = item;
+  setText('previewFoodName', item._emoji+' '+item.name.substring(0,40));
+  setText('pvKcal', item.kcal);
+  setText('pvP', item.p);
+  setText('pvC', item.c);
+  setText('pvF', item.f);
+  setText('pvSource', 'المصدر: '+item._src);
+  $('pvEmoji').value = item._emoji||'🍽️';
+  openModal('onlinePreviewModal');
+}
+
+/* ── تأكيد إضافة الصنف من الإنترنت ── */
+function confirmAddOnlineFood(){
+  const item = _onlinePreviewFood;
+  if(!item) return;
+  const name = item.name.substring(0,60).trim();
+  if(allFoods().some(x=>x.name===name)){
+    toast('⚠️ هذا الصنف موجود مسبقاً في المكتبة');
+    closeModal('onlinePreviewModal');
+    return;
+  }
+  const newFood={
+    id: Date.now(),
+    name,
+    emoji: $('pvEmoji').value.trim()||'🍽️',
+    kcal: item.kcal, p: item.p, c: item.c, f: item.f,
+    cat: getStr('pvCat')||'متنوع',
+    tags:[], custom:true, _src: item._src
+  };
+  S.custom.push(newFood);
+  save();
+  renderFilters(); renderFoodGrid(); renderCustomList(); updateFoodCount();
+  $('manageCustomBtn').style.display='';
+  closeModal('onlinePreviewModal');
+  toast(`✅ تم إضافة "${escapeHtml(name)}" للمكتبة`);
+}
+
+/* ── رقم آمن ── */
+function safeNum(v, def=0){
+  const n=parseFloat(v);
+  return isNaN(n)||!isFinite(n)?def:Math.round(n*10)/10;
+}
+
+/* ── إيموجي تلقائي بالتصنيف ── */
+function guessEmoji(name){
+  const n=name.toLowerCase();
+  if(/chicken|دجاج|فراخ/.test(n)) return '🍗';
+  if(/beef|لحم|meat/.test(n)) return '🥩';
+  if(/fish|سمك|salmon|تونة|tuna/.test(n)) return '🐟';
+  if(/egg|بيض/.test(n)) return '🥚';
+  if(/rice|أرز/.test(n)) return '🍚';
+  if(/bread|خبز/.test(n)) return '🍞';
+  if(/pasta|مكرونة/.test(n)) return '🍝';
+  if(/milk|حليب|dairy|لبن/.test(n)) return '🥛';
+  if(/cheese|جبن/.test(n)) return '🧀';
+  if(/yogurt|زبادي/.test(n)) return '🫙';
+  if(/apple|تفاح/.test(n)) return '🍎';
+  if(/banana|موز/.test(n)) return '🍌';
+  if(/orange|برتقال/.test(n)) return '🍊';
+  if(/water|ماء/.test(n)) return '💧';
+  if(/coffee|قهوة/.test(n)) return '☕';
+  if(/tea|شاي/.test(n)) return '🍵';
+  if(/salad|سلطة/.test(n)) return '🥗';
+  if(/soup|شوربة/.test(n)) return '🍲';
+  if(/nut|مكسرات|almond|لوز/.test(n)) return '🌰';
+  if(/bean|فول|lentil|عدس/.test(n)) return '🫘';
+  if(/oil|زيت/.test(n)) return '🫒';
+  return '🍽️';
+}
+
+/* ════════════════════════════════════════════════════════
+   البحث الرئيسي — OFF + USDA
+════════════════════════════════════════════════════════ */
+async function searchFoodOnline(){
+  const q = $('onlineSearch').value.trim();
+  if(!q){ toast('⚠️ اكتب اسم الطعام أولاً'); return; }
+  if(q.length<2){ toast('⚠️ اكتب كلمتين على الأقل'); return; }
+
+  const btn=$('onlineSearchBtn');
+  btn.disabled=true; btn.textContent='⏳';
+
+  $('onlineError').style.display='none';
+  showOnlineLoading('🔍 جاري البحث في Open Food Facts...');
+
+  let results=[];
+  let source='';
+
+  /* ── 1. Open Food Facts ── */
+  try{
+    const url=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,image_small_url`;
+    const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    if(res.ok){
+      const data=await res.json();
+      if(data.products&&data.products.length){
+        results = data.products
+          .filter(p=>p.product_name&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null)
+          .slice(0,16)
+          .map(p=>({
+            name: p.product_name.substring(0,80),
+            kcal: safeNum(p.nutriments['energy-kcal_100g']),
+            p:    safeNum(p.nutriments['proteins_100g']),
+            c:    safeNum(p.nutriments['carbohydrates_100g']),
+            f:    safeNum(p.nutriments['fat_100g']),
+            _src: 'OFF',
+            _emoji: guessEmoji(p.product_name)
+          }))
+          .filter(x=>x.kcal>0);
+        source='Open Food Facts';
+      }
+    }
+  } catch(e){ console.warn('OFF error:',e.message); }
+
+  /* ── 2. USDA (إذا OFF فارغ أو عند وجود مفتاح) ── */
+  const usdaKey=($('usdaKey').value||'').trim();
+  if(results.length<4 && usdaKey){
+    setText('onlineLoadingTxt','🇺🇸 جاري البحث في USDA...');
+    try{
+      const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=16&api_key=${encodeURIComponent(usdaKey)}`;
+      const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      if(res.ok){
+        const data=await res.json();
+        if(data.foods&&data.foods.length){
+          const usda=data.foods.slice(0,16).map(f=>{
+            const getNut=(n)=>{
+              const nn=f.foodNutrients?.find(x=>x.nutrientName?.toLowerCase().includes(n));
+              return safeNum(nn?.value);
+            };
+            return{
+              name:f.description||f.lowercaseDescription||'Unknown',
+              kcal:getNut('energy')||safeNum(f.foodNutrients?.find(x=>x.unitName==='KCAL')?.value),
+              p:   getNut('protein'),
+              c:   getNut('carbohydrate'),
+              f:   getNut('total lipid'),
+              _src:'USDA',
+              _emoji:guessEmoji(f.description||'')
+            };
+          }).filter(x=>x.kcal>0);
+          if(results.length===0) { results=usda; source='USDA FoodData Central'; }
+          else { results=[...results,...usda].slice(0,20); source='OFF + USDA'; }
+        }
+      }
+    } catch(e){ console.warn('USDA error:',e.message); }
+  }
+
+  /* ── 3. USDA Demo key محدود (بدون مفتاح) ── */
+  if(results.length===0 && !usdaKey){
+    setText('onlineLoadingTxt','🇺🇸 جاري تجربة USDA (Demo)...');
+    try{
+      const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=10&api_key=DEMO_KEY`;
+      const res=await fetch(url,{signal:AbortSignal.timeout(7000)});
+      if(res.ok){
+        const data=await res.json();
+        if(data.foods&&data.foods.length){
+          results=data.foods.slice(0,10).map(f=>{
+            const getNut=(n)=>{
+              const nn=f.foodNutrients?.find(x=>x.nutrientName?.toLowerCase().includes(n));
+              return safeNum(nn?.value);
+            };
+            return{
+              name:f.description||'Unknown',
+              kcal:getNut('energy')||0,
+              p:getNut('protein'),c:getNut('carbohydrate'),f:getNut('total lipid'),
+              _src:'USDA Demo',_emoji:guessEmoji(f.description||'')
+            };
+          }).filter(x=>x.kcal>0);
+          source='USDA (Demo Key)';
+        }
+      }
+    } catch(e){ console.warn('USDA Demo error:',e.message); }
+  }
+
+  btn.disabled=false; btn.textContent='🔍 بحث';
+  hideOnlineLoading();
+
+  if(!results.length){
+    showOnlineError('لم يتم إيجاد نتائج. جرّب باللغة الإنجليزية أو تحقق من الاتصال بالإنترنت.');
+    return;
+  }
+  renderOnlineResults(results, source);
+}
+
+/* ── Enter key للبحث ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  $('onlineSearch')?.addEventListener('keydown',e=>{ if(e.key==='Enter') searchFoodOnline(); });
+  // حفظ USDA key في localStorage
+  const savedKey=localStorage.getItem('usdaKey');
+  if(savedKey) setVal('usdaKey', savedKey);
+  $('usdaKey')?.addEventListener('change',()=>{
+    localStorage.setItem('usdaKey', $('usdaKey').value.trim());
+  });
+});
+
+// ════════════════════════════════════════════════════════
+// START
+// ════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
