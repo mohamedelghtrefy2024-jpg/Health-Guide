@@ -471,7 +471,7 @@ input[type=range]:focus{box-shadow:none;border:none}
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <h1>🌿 مرشدك الصحي</h1>
-  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك</p>
+  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك | v10 🏋️ تمارين + 📊 تحليلات</p>
 </div>
 
 <!-- ═══ TABS ═══ -->
@@ -481,6 +481,7 @@ input[type=range]:focus{box-shadow:none;border:none}
   <button class="tab-btn" data-tab="tracker">📅 تتبع اليوم</button>
   <button class="tab-btn" data-tab="planner">🧮 مخطط الوجبات</button>
   <button class="tab-btn" data-tab="ai">✨ خطة ذكية</button>
+  <button class="tab-btn" data-tab="exercises">🏋️ تمارين</button>
   <button class="tab-btn" data-tab="week">📋 أسبوعي</button>
   <button class="tab-btn" data-tab="tips">🔥 نصائح</button>
 </div>
@@ -558,6 +559,84 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="sbox"><div class="val" id="weeksVal">—</div><div class="lbl">المدة المتوقعة لتحقيق الهدف</div></div>
     </div>
   </div>
+
+  <!-- ═══ MACRO DISTRIBUTION CARD ═══ -->
+  <div class="card" id="macroCard" style="display:none">
+    <div class="card-title">⚖️ توزيع المغذيات الكبرى (Macros)</div>
+    <p style="font-size:.82rem;color:var(--muted2);margin-bottom:1rem">اضبط نسب البروتين والكارب والدهون — المجموع يتوازن تلقائياً. البروتين الكافي يحمي عضلاتك أثناء الرجيم.</p>
+    <div class="field" style="margin-bottom:1.1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+        <label style="margin:0;color:#6ee7b7">💪 البروتين</label>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span id="macroPLbl" style="font-size:1.1rem;font-weight:900;color:#6ee7b7">30%</span>
+          <span id="macroPGram" style="font-size:.78rem;color:var(--muted2)"></span>
+        </div>
+      </div>
+      <input type="range" id="macroProtein" min="10" max="45" value="30" oninput="syncMacros('p')">
+      <div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted2);margin-top:.2rem">
+        <span>10% — حد أدنى</span><span>✅ موصى به: 25–35%</span><span>45% — عالي</span>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:1.1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+        <label style="margin:0;color:#fbbf24">🌾 الكربوهيدرات</label>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span id="macroCLbl" style="font-size:1.1rem;font-weight:900;color:#fbbf24">40%</span>
+          <span id="macroCGram" style="font-size:.78rem;color:var(--muted2)"></span>
+        </div>
+      </div>
+      <input type="range" id="macroCarbs" min="10" max="65" value="40" oninput="syncMacros('c')">
+      <div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted2);margin-top:.2rem">
+        <span>10% — كيتو</span><span>✅ متوازن: 35–50%</span><span>65% — عالي</span>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+        <label style="margin:0;color:#f87171">🫙 الدهون</label>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span id="macroFLbl" style="font-size:1.1rem;font-weight:900;color:#f87171">30%</span>
+          <span id="macroFGram" style="font-size:.78rem;color:var(--muted2)"></span>
+        </div>
+      </div>
+      <input type="range" id="macroFat" min="10" max="55" value="30" disabled
+        style="opacity:.5;cursor:not-allowed">
+      <div style="font-size:.7rem;color:var(--muted2);margin-top:.2rem">🔒 يُحسب تلقائياً = 100% − البروتين − الكارب</div>
+    </div>
+    <div style="margin:.85rem 0">
+      <div style="height:18px;border-radius:99px;overflow:hidden;display:flex">
+        <div id="macroBarP" style="background:linear-gradient(90deg,#10b981,#6ee7b7);width:30%;transition:width .4s"></div>
+        <div id="macroBarC" style="background:linear-gradient(90deg,#f59e0b,#fbbf24);width:40%;transition:width .4s"></div>
+        <div id="macroBarF" style="background:linear-gradient(90deg,#ef4444,#f87171);width:30%;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:.35rem;font-size:.72rem;color:var(--muted2)">
+        <span>🟢 بروتين</span><span>🟡 كارب</span><span>🔴 دهون</span>
+      </div>
+    </div>
+    <div style="background:rgba(16,185,129,.07);border:1px solid var(--border2);border-radius:var(--r-sm);padding:.65rem .9rem;font-size:.82rem;color:var(--muted2)">
+      💡 ستظهر أهداف الجرامات بجانب السعرات في تتبع اليوم
+    </div>
+  </div>
+
+  <!-- ═══ WEIGHT LOG CARD ═══ -->
+  <div class="card" id="weightLogCard" style="display:none">
+    <div class="card-title">📈 سجل الوزن الأسبوعي</div>
+    <p style="font-size:.82rem;color:var(--muted2);margin-bottom:.85rem">سجّل وزنك كل أسبوع وتابع تقدمك بصرياً</p>
+    <div style="display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem">
+      <div class="field" style="margin:0;flex:1;min-width:120px">
+        <label>وزن اليوم (كجم)</label>
+        <input type="number" id="logWeightVal" step=".1" min="30" max="300" placeholder="مثال: 83.5">
+      </div>
+      <div class="field" style="margin:0;flex:1;min-width:130px">
+        <label>التاريخ</label>
+        <input type="date" id="logWeightDate">
+      </div>
+      <button class="btn btn-sm" onclick="addWeightLog()" style="flex-shrink:0">➕ تسجيل</button>
+    </div>
+    <div id="weightChartWrap"></div>
+    <div id="weightLogList" style="margin-top:.6rem;max-height:180px;overflow-y:auto"></div>
+    <!-- Insights -->
+    <div id="insightsBox" style="margin-top:.85rem"></div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -571,7 +650,18 @@ input[type=range]:focus{box-shadow:none;border:none}
     <div class="food-grid" id="foodGrid"></div>
   </div>
 
-  <!-- ── بحث أونلاين ── -->
+  <div class="card" style="margin-bottom:1.25rem">
+    <div class="card-title">💾 Export / Import بياناتك</div>
+    <p style="color:var(--muted2);font-size:.83rem;margin-bottom:.85rem">صدّر بياناتك كنسخة احتياطية أو انقلها لجهاز آخر</p>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sec" onclick="exportData()">📤 Export بيانات</button>
+      <label class="btn btn-sec" style="cursor:pointer;margin:0">
+        📥 Import بيانات
+        <input type="file" id="importFile" accept=".json" onchange="importData(this)" style="display:none">
+      </label>
+      <span style="font-size:.78rem;color:var(--muted2)">ملف JSON — مكتبة مخصصة + خطط + ملف شخصي</span>
+    </div>
+  </div>
   <div class="card" id="onlineSearchCard">
     <div class="card-title">🌐 بحث عن طعام على الإنترنت</div>
     <p style="color:var(--muted2);font-size:.83rem;margin-bottom:.85rem">ابحث عن أي طعام وأضف سعراته للمكتبة مباشرة — يبحث في Open Food Facts أولاً ثم USDA</p>
@@ -640,9 +730,27 @@ input[type=range]:focus{box-shadow:none;border:none}
     </div>
     <div style="margin-top:.85rem">
       <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted2);margin-bottom:.3rem">
-        <span>التقدم نحو الهدف</span><span id="calPct">0%</span>
+        <span>🔥 التقدم نحو هدف السعرات</span><span id="calPct">0%</span>
       </div>
       <div class="prog-wrap"><div class="prog prog-cal" id="calBar" style="width:0%"></div></div>
+    </div>
+    <!-- أشرطة المغذيات -->
+    <div id="macroBarsWrap" style="display:none;margin-top:.75rem">
+      <div style="font-size:.73rem;color:var(--muted2);margin-bottom:.4rem">📊 تقدم المغذيات الكبرى</div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#6ee7b7;margin-bottom:.2rem"><span>💪 بروتين</span><span id="proProgress">—</span></div>
+          <div class="prog-wrap"><div class="prog" id="proBar" style="width:0%;background:linear-gradient(90deg,#10b981,#6ee7b7)"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#fbbf24;margin-bottom:.2rem"><span>🌾 كارب</span><span id="carbProgress">—</span></div>
+          <div class="prog-wrap"><div class="prog" id="carbBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#f87171;margin-bottom:.2rem"><span>🫙 دهون</span><span id="fatProgress">—</span></div>
+          <div class="prog-wrap"><div class="prog" id="fatBar" style="width:0%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div>
+        </div>
+      </div>
     </div>
   </div>
   <div style="display:flex;justify-content:flex-end;margin-bottom:.85rem">
@@ -734,6 +842,39 @@ input[type=range]:focus{box-shadow:none;border:none}
 </div>
 
 <!-- ══════════════════════════════════════
+     TAB — EXERCISES
+══════════════════════════════════════ -->
+<div id="exercises" class="tab">
+  <div class="card">
+    <div class="card-title">🏋️ تمارين منزلية — احسب الحرق الآن</div>
+    <p style="font-size:.83rem;color:var(--muted2);margin-bottom:1rem">اختار التمارين اللي عملتها النهارده واحسب كام سعرة حرقت</p>
+    <div class="g2" style="margin-bottom:1rem">
+      <div class="field">
+        <label>وزنك (كجم) — يُحسب من ملفك تلقائياً</label>
+        <input type="number" id="exWeight" min="30" max="300" step=".1" placeholder="80" value="">
+      </div>
+    </div>
+    <div id="exerciseList" style="display:grid;gap:.7rem"></div>
+    <div style="margin-top:1.25rem;background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(4,120,87,.12));border:1px solid var(--border);border-radius:var(--r-sm);padding:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem">
+      <div>
+        <div style="font-size:.82rem;color:var(--muted2)">🔥 إجمالي الحرق المقدّر</div>
+        <div style="font-size:2rem;font-weight:900;color:var(--g1)" id="exTotalBurn">0</div>
+        <div style="font-size:.75rem;color:var(--muted2)">سعرة حرارية</div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-sec btn-sm" onclick="resetExercises()">🔄 إعادة تعيين</button>
+        <button class="btn btn-sm" onclick="logExerciseBurn()">➕ أضف للتتبع (حرق سلبي)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 دليل التمارين المنزلية</div>
+    <div id="exerciseGuide" style="display:grid;gap:.75rem"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      TAB 6 — WEEKLY
 ══════════════════════════════════════ -->
 <div id="week" class="tab">
@@ -766,8 +907,10 @@ input[type=range]:focus{box-shadow:none;border:none}
 
 <!-- ═══ DEV FOOTER ═══ -->
 <div class="dev-footer">
-  <p>💚 تم التطوير بواسطة <strong>محمد الغطريفي</strong> — تطوعاً لخدمة صحتك</p>
-  <p style="font-size:.75rem;margin-top:.3rem">جميع الحقوق محفوظة © 2026</p>
+  <p>💚 Prepared by: <strong>Mohamed Elghtrefy</strong> — Volunteering for your health</p>
+  <p style="font-size:.75rem;margin-top:.25rem">Version: <strong style="color:var(--g1)">v10.0</strong> &nbsp;|&nbsp; All Rights Reserved © 2026 &nbsp;|&nbsp;
+    <button onclick="openModal('helpModal')" style="background:none;border:none;color:var(--g1);cursor:pointer;font-size:.78rem;text-decoration:underline;font-family:inherit">📖 Help Guide</button>
+  </p>
 </div>
 
 <!-- ═══ MODAL: ADD FOOD ═══ -->
@@ -803,7 +946,9 @@ input[type=range]:focus{box-shadow:none;border:none}
         <option value="night">قبل النوم</option>
       </select>
     </div>
-    <div style="display:flex;gap:.6rem">
+    <!-- بدائل صحية — تظهر تلقائياً لو الصنف عالي السعرات -->
+    <div id="modalAlternatives"></div>
+    <div style="display:flex;gap:.6rem;margin-top:.85rem">
       <button class="btn" onclick="confirmAddFood()" style="flex:1;justify-content:center">✅ إضافة</button>
       <button class="btn btn-sec" onclick="closeModal('addFoodModal')">إلغاء</button>
     </div>
@@ -876,6 +1021,127 @@ input[type=range]:focus{box-shadow:none;border:none}
   </div>
 </div>
 
+<!-- ═══ HELP BUTTON (floating) ═══ -->
+<button onclick="openModal('helpModal')" title="دليل الاستخدام"
+  style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:990;
+    width:52px;height:52px;border-radius:50%;border:2px solid var(--g1);
+    background:var(--bg-mid);color:var(--g1);font-size:1.4rem;cursor:pointer;
+    box-shadow:0 4px 20px var(--glow);transition:all .25s;display:flex;align-items:center;justify-content:center;"
+  onmouseover="this.style.background='var(--g1)';this.style.color='#fff'"
+  onmouseout="this.style.background='var(--bg-mid)';this.style.color='var(--g1)'">
+  ❓
+</button>
+
+<!-- ═══ HELP MODAL ═══ -->
+<div class="modal" id="helpModal">
+  <div class="modal-box" style="max-width:680px">
+    <div class="modal-hdr">
+      <h3>📖 User Guide — دليل الاستخدام الكامل</h3>
+      <button class="close-btn" onclick="closeModal('helpModal')">✕</button>
+    </div>
+    <div style="font-size:.85rem;line-height:1.75;overflow-y:auto;max-height:68vh">
+
+      <!-- App Info -->
+      <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(4,120,87,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;margin-bottom:1rem;text-align:center">
+        <div style="font-size:1.5rem;font-weight:900;color:var(--g1)">🌿 مرشدك الصحي</div>
+        <div style="font-size:.78rem;color:var(--muted2);margin-top:.25rem">Prepared by: <strong style="color:var(--g1)">Mohamed Elghtrefy</strong></div>
+        <div style="font-size:.72rem;color:var(--muted2)">Version: <strong>v10.0</strong> &nbsp;|&nbsp; All data stored locally on your device</div>
+      </div>
+
+      <!-- Section helper -->
+      <div id="helpContent">
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>👤 1. تبويب "ملفي" — Profile</h4>
+          <p>أدخل بياناتك الأساسية: الوزن الحالي والمستهدف، الطول، العمر، الجنس، مستوى النشاط.<br>
+          سيتم حساب <strong>BMR</strong> (الحرق الأساسي) و <strong>TDEE</strong> (احتياجك اليومي الكامل) و <strong>BMI</strong> تلقائياً.<br>
+          اضبط شريط <strong>العجز اليومي</strong> (200-1000 سعرة) ليحسب لك وقت الوصول للهدف.<br>
+          أدخل حالتك الصحية (سكر/ضغط) وستُستبعد الأطعمة الضارة من كل الخطط تلقائياً.<br>
+          💾 اضغط "حفظ وحساب" وكل بياناتك تُحفظ تلقائياً في متصفحك.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>📚 2. تبويب "المكتبة" — Food Library</h4>
+          <p>تحتوي على <strong>228+ صنف غذائي</strong> مع السعرات والمغذيات الكاملة.<br>
+          🔍 <strong>البحث:</strong> اكتب اسم الطعام في خانة البحث.<br>
+          🏷️ <strong>الفلتر:</strong> اضغط على أي تصنيف لعرض أصناف محددة فقط.<br>
+          ➕ <strong>إضافة صنف مخصص:</strong> أضف أي طعام بكميات السعرات المطلوبة واحفظه في مكتبتك.<br>
+          🌐 <strong>البحث الأونلاين:</strong> ابحث عن أي طعام عبر الإنترنت (Open Food Facts + USDA) وأضفه للمكتبة بضغطة واحدة — يعمل بدون مفتاح أو بمفتاح USDA مجاني.<br>
+          📌 <strong>إضافة لوجبة:</strong> اضغط على أي صنف، حدد الكمية والوحدة (جرام/حبة/كوب)، ثم اختر الوجبة.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>📅 3. تبويب "تتبع اليوم" — Daily Tracker</h4>
+          <p>تتبع كل ما تأكله وتشربه خلال اليوم في <strong>9 وجبات</strong> بالتوقيت المصري:<br>
+          مشروب الاستيقاظ ← الفطار ← قهوة+بلح ← سناك ← مشروب قبل الغداء ← الغداء ← سناك عصر ← العشاء ← قبل النوم.<br>
+          📊 يظهر في الأعلى: إجمالي السعرات + البروتين + الكارب + الدهون + المتبقي.<br>
+          ✏️ <strong>تعديل كمية:</strong> اضغط أيقونة القلم على أي صنف.<br>
+          ✕ <strong>حذف صنف:</strong> اضغط الزر الأحمر.<br>
+          🗑️ <strong>مسح اليوم:</strong> زر "مسح جميع الوجبات" أسفل الملخص.<br>
+          💾 البيانات تُحفظ تلقائياً ليوم واحد (تُمسح تلقائياً عند بداية اليوم التالي).</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>🧮 4. تبويب "مخطط الوجبات" — Meal Planner</h4>
+          <p>يولّد لك خطة أكل يومية كاملة بضغطة واحدة.<br>
+          📋 <strong>الإعدادات:</strong> حدد السعرات المستهدفة، عدد الوجبات الرئيسية (1-4)، السناكات (0-3)، المشروبات (0-3).<br>
+          🥗 <strong>التفضيل:</strong> اختر بين: متوازن / عالي البروتين / منخفض الكارب / نباتي.<br>
+          🚫 <strong>الممنوعات:</strong> أكتب أطعمة تتجنبها مفصولة بفاصلة.<br>
+          ✅ <strong>تطبيق الخطة:</strong> أضفها لتتبع اليوم باستبدال أو إضافة.<br>
+          ⭐ <strong>المفضلة:</strong> احفظ الخطة وارجعلها وقت ما تحب.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>✨ 5. تبويب "خطة ذكية" — Smart Plan</h4>
+          <p>يولّد خطة غذائية نصية مخصصة بناءً على بياناتك في الملف الشخصي.<br>
+          اختر: <strong>نوع النظام</strong> (متوازن / عالي بروتين / منخفض كارب / صيام متقطع / نباتي).<br>
+          حدد عدد الوجبات وأي أطعمة تتجنبها.<br>
+          📋 <strong>نسخ الخطة:</strong> زر "نسخ" يضع الخطة في الحافظة مباشرة.<br>
+          🏥 إذا كنت مريض سكر أو ضغط ستظهر توصيات خاصة في بداية الخطة.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>📋 6. تبويب "أسبوعي" — Weekly Plan</h4>
+          <p>خطة أكل جاهزة لـ <strong>7 أيام كاملة</strong>، كل يوم له 9 وجبات مفصلة بالسعرات.<br>
+          🖨️ <strong>طباعة:</strong> اضغط "طباعة" لطباعة الخطة كاملة.<br>
+          ▲▼ يمكنك فتح وإغلاق كل يوم بالضغط عليه، أو فتح/إغلاق الكل دفعة واحدة.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>🔥 7. تبويب "نصائح" — Tips</h4>
+          <p>8 نصائح علمية لتسريع حرق الدهون بشكل طبيعي.<br>
+          عرض لأفضل أكلات الحرق من المكتبة — اضغط على أي صنف لإضافته مباشرة.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>💾 8. حفظ واسترجاع البيانات — Export / Import</h4>
+          <p>📤 <strong>تصدير:</strong> اضغط "Export" لتنزيل ملف JSON بكل بياناتك (مكتبة مخصصة + خطط محفوظة + ملف شخصي).<br>
+          📥 <strong>استيراد:</strong> اضغط "Import" واختر ملف JSON سابق لاسترجاع بياناتك على أي جهاز.<br>
+          🔄 مفيد لنقل البيانات بين أجهزة أو عمل نسخة احتياطية.</p>
+        </div>
+
+        <div class="tip" style="margin-bottom:.7rem">
+          <h4>🌐 9. البحث الأونلاين — Online Food Search</h4>
+          <p>في تبويب المكتبة، قسم "بحث عن طعام على الإنترنت":<br>
+          1. اكتب اسم الطعام (عربي أو إنجليزي)<br>
+          2. اضغط "بحث" — سيبحث في Open Food Facts أولاً (بدون مفتاح)<br>
+          3. لنتائج أفضل: سجّل مجاناً في <strong>fdc.nal.usda.gov</strong> وأدخل مفتاحك<br>
+          4. اضغط على أي نتيجة → راجع البيانات → اختر التصنيف → أضف للمكتبة</p>
+        </div>
+
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:var(--r-sm);padding:.85rem;font-size:.8rem;color:var(--gold)">
+          <strong>⚠️ تنبيه هام:</strong> هذا التطبيق للإرشاد والتوعية الغذائية فقط وليس بديلاً عن الاستشارة الطبية المتخصصة. إذا كنت تعاني من أمراض مزمنة، يرجى استشارة طبيبك قبل اتباع أي نظام غذائي.
+        </div>
+
+      </div><!-- /helpContent -->
+
+      <div style="display:flex;gap:.6rem;justify-content:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="closeModal('helpModal')">✅ فهمت — أبدأ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script>
 // ════════════════════════════════════════════════════════
@@ -895,6 +1161,8 @@ let S={
   tracker:{},
   savedPlans:[],
   custom:[],
+  weightLog:[],            // [{date, weight}] سجل الوزن الأسبوعي
+  macros:{p:30,c:40,f:30}, // نسب المغذيات %
   currentPlan:null,
   _editSlot:null,_editUid:null,_editFood:null,
   _addFood:null,_defaultSlot:null
@@ -909,7 +1177,8 @@ const MEAL_SLOTS=[
   {id:'lunch',name:'الغداء',           time:'٢:٠٠ - ٣:٠٠ ظ',ico:'🍗'},
   {id:'after',name:'سناك العصر',       time:'٤:٣٠ - ٥:٠٠ ع',ico:'🥜'},
   {id:'din',  name:'العشاء',           time:'٧:٣٠ - ٨:٠٠ م',ico:'🥗'},
-  {id:'night',name:'قبل النوم',        time:'قبل النوم ٣٠د',ico:'🌙'}
+  {id:'night',name:'قبل النوم',        time:'قبل النوم ٣٠د',ico:'🌙'},
+  {id:'exercise_burn', name:'🔥 حرق التمارين', time:'', ico:'🏋️'}
 ];
 
 // ════════════════════════════════════════════════════════
@@ -1236,13 +1505,15 @@ const TIPS_DATA=[
 // ════════════════════════════════════════════════════════
 // STORAGE
 // ════════════════════════════════════════════════════════
-const STORE='mrshd_v5';
+const STORE='mrshd_v6';
 function save(){
   try{
     localStorage.setItem(STORE,JSON.stringify({
       profile:S.profile,tracker:S.tracker,
       savedPlans:S.savedPlans,custom:S.custom,
-      tDate:new Date().toDateString()
+      weightLog:S.weightLog,macros:S.macros,
+      tDate:new Date().toDateString(),
+      tTimestamp:Date.now()
     }));
   }catch(e){console.warn('save error',e);}
 }
@@ -1252,7 +1523,15 @@ function load(){
     if(d.profile) S.profile={...S.profile,...d.profile};
     if(d.savedPlans) S.savedPlans=d.savedPlans;
     if(d.custom) S.custom=d.custom;
-    if(d.tracker && d.tDate===new Date().toDateString()) S.tracker=d.tracker;
+    if(d.weightLog) S.weightLog=d.weightLog;
+    if(d.macros) S.macros={...S.macros,...d.macros};
+    // تحقق من اليوم — استخدم tDate كأساس، مع tolerance 28 ساعة للـ timezone
+    if(d.tracker&&d.tTimestamp){
+      const ageHours=(Date.now()-d.tTimestamp)/(1000*60*60);
+      if(ageHours<28) S.tracker=d.tracker;
+    } else if(d.tracker&&d.tDate===new Date().toDateString()){
+      S.tracker=d.tracker;
+    }
   }catch(e){console.warn('load error',e);}
   MEAL_SLOTS.forEach(m=>{if(!S.tracker[m.id]) S.tracker[m.id]=[];});
 }
@@ -1267,12 +1546,37 @@ function getStr(id){return $(id)?.value||'';}
 function setText(id,v){const el=$(id);if(el)el.textContent=v;}
 function allFoods(){return [...FOODS,...S.custom];}
 
-function toGrams(qty,unit){
+// وحدات دقيقة لكل نوع طعام
+const PIECE_WEIGHTS={
+  // بيض
+  'بيضة كاملة':60,'بياض بيض':30,'بيض مسلوق':60,'بيض مقلي بدون زيت':60,
+  // فواكه
+  'تفاح':182,'موز':120,'برتقال':131,'كيوي':76,'فراولة':12,'تمر':8,
+  'مانجو':200,'عنب':5,'بطيخ':300,'شمام':200,'خوخ':130,'مشمش':35,
+  'كمثرى':178,'رمان':280,'أناناس':340,'كيوي':76,'ليمون':58,'جريب فروت':230,
+  // خضروات
+  'خيار':200,'طماطم':123,'جزر':61,'بطاطا مسلوقة':150,'ذرة مطبوخة':90,
+  'فلفل رومي':150,'بروكلي':90,'قرنبيط':50,'باذنجان':130,'كوسة':200,
+  'بطاطس':150,'بصل':110,'ثوم':3,'بامية':7,'فاصوليا خضراء':10,
+  // خبز وحبوب
+  'خبز أسمر':28,'خبز أبيض':28,'خبز بلدي':90,'خبز الصمون':50,
+  'خبز توست':25,'رغيف بلدي':90,'كعك':40,
+  // لحوم ومأكولات بروتينية
+  'صدر دجاج مشوي':150,'صدر فراخ مشوي':150,'فخذ دجاج':100,
+  // مكسرات (حبة)
+  'لوزة':1.2,'جوزة':4,'كاجوة':1.5,'فستقة':0.7,'فول سوداني':0.6,
+  // بقوليات
+  'تمرة':8,
+};
+function toGrams(qty,unit,foodName=''){
   if(unit==='g'||unit==='ml') return qty;
-  if(unit==='piece') return qty*100;
-  if(unit==='cup')   return qty*240;
-  if(unit==='tbsp')  return qty*15;
-  if(unit==='tsp')   return qty*5;
+  if(unit==='piece'){
+    const w=PIECE_WEIGHTS[foodName]||80; // 80 جرام افتراضي لو مش موجود
+    return qty*w;
+  }
+  if(unit==='cup')  return qty*240;
+  if(unit==='tbsp') return qty*15;
+  if(unit==='tsp')  return qty*5;
   return qty;
 }
 
@@ -1293,6 +1597,13 @@ function init(){
   renderBurnFoods();
   renderCustomList();
   updateFoodCount();
+  loadMacroSliders();
+  renderWeightChart();
+  renderInsights();
+  renderExercises();
+  // تعيين تاريخ اليوم كـ default لإدخال الوزن
+  const logDateEl=$('logWeightDate');
+  if(logDateEl) logDateEl.value=new Date().toISOString().slice(0,10);
   $('deficit').addEventListener('input',e=>{
     setText('deficitLbl',e.target.value);
     updateProfile();
@@ -1326,6 +1637,12 @@ function fillProfileForm(){
   setVal('hypertension',p.hypertension?'yes':'no');
   updateHealthWarning();
   if(p.weight&&p.height&&p.age) updateProfile(false);
+  // إظهار كروت الـ macros والوزن لو في بيانات محفوظة
+  if(p.weight&&p.height&&p.age){
+    $('macroCard').style.display='block';
+    if(S.weightLog && S.weightLog.length > 0) $('weightLogCard').style.display='block';
+    syncMacros(null,false);
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1355,13 +1672,16 @@ function updateProfile(doSave=true){
   if(!w||!h||!age) return;
   const bmr=gender==='male'?10*w+6.25*h-5*age+5:10*w+6.25*h-5*age-161;
   const tdee=bmr*activity;
-  const bmi=h>0?w/((h/100)**2):0;
-  let bmiLbl='طبيعي',bmiCls='prog-g';
-  if(bmi<18.5){bmiLbl='نحافة';bmiCls='prog-u';}
-  else if(bmi<25){bmiLbl='طبيعي';bmiCls='prog-g';}
-  else if(bmi<30){bmiLbl='زيادة وزن';bmiCls='prog-w';}
-  else{bmiLbl='سمنة';bmiCls='prog-ob';}
-  const bmiPct=Math.min(100,Math.max(0,(bmi-15)/25*100));
+  const bmi=(h>0&&w>0)?w/((h/100)**2):0;
+  let bmiLbl='—',bmiCls='prog-g';
+  if(bmi>0){
+    if(bmi<18.5){bmiLbl='نحافة';bmiCls='prog-u';}
+    else if(bmi<25){bmiLbl='طبيعي ✅';bmiCls='prog-g';}
+    else if(bmi<30){bmiLbl='زيادة وزن ⚠️';bmiCls='prog-w';}
+    else{bmiLbl='سمنة 🔴';bmiCls='prog-ob';}
+  }
+  // BMI bar: النطاق 15-40، مع guard على bmi>0
+  const bmiPct=bmi>0?Math.min(100,Math.max(0,(bmi-15)/25*100)):0;
   setText('bmrVal',Math.round(bmr));setText('tdeeVal',Math.round(tdee));
   setText('bmiVal',bmi.toFixed(1));setText('bmiStatus',bmiLbl);
   const bar=$('bmiBar');
@@ -1369,11 +1689,16 @@ function updateProfile(doSave=true){
   bar.className='prog '+bmiCls;
   const targetKcal=Math.max(1200,Math.round(tdee-deficit));
   const kgLeft=Math.max(0,w-tw);
-  const weeks=kgLeft>0&&deficit>0?Math.ceil(kgLeft/(deficit*7/7700)):0;
+  // الصيغة الصحيحة: (كجم × 7700 سعرة/كجم) ÷ (عجز × 7 أيام)
+  const weeks=kgLeft>0&&deficit>0?Math.ceil((kgLeft*7700)/(deficit*7)):0;
   setText('targetKcalVal',targetKcal);
   setText('weeksVal',weeks>0?weeks+' أسبوع':'—');
   $('statsCard').style.display='block';
   $('goalCard').style.display='block';
+  $('macroCard').style.display='block';
+  // weightLogCard يظهر بس لو في سجل وزن فعلي، مش مجرد حفظ البروفايل
+  if(S.weightLog && S.weightLog.length > 0) $('weightLogCard').style.display='block';
+  syncMacros(null,false); // تحديث عرض الماكروز بدون حفظ
   // update tracker goal
   S._targetKcal=targetKcal;
   renderTrackerSummary();
@@ -1414,7 +1739,7 @@ function renderFoodGrid(){
   if(q) list=list.filter(f=>f.name.toLowerCase().includes(q));
   if(!list.length){$('foodGrid').innerHTML='<div class="empty"><div class="e-ico">🔍</div><p>لا توجد نتائج</p></div>';return;}
   $('foodGrid').innerHTML=list.map(f=>`
-    <div class="food-card" onclick="openAddModal(${f.id})">
+    <div class="food-card" onclick="openAddModal(${f.id}, S._defaultSlot||null)">
       <span class="ico">${f.emoji||'🍽️'}</span>
       <div class="nm">${escapeHtml(f.name)}</div>
       <div class="kc">${f.kcal} كيلو/100جم</div>
@@ -1428,13 +1753,19 @@ function renderFoodGrid(){
 function openAddModal(fid, defaultSlot=null){
   const f=allFoods().find(x=>x.id===fid);
   if(!f) return;
+  // consume the pending default slot
+  const slot = defaultSlot || S._defaultSlot || null;
+  S._defaultSlot = null;
   S._addFood=f;
   setText('modalFoodName',f.emoji+' '+f.name);
   $('modalFoodInfo').innerHTML=`<strong>${f.kcal}</strong> كيلو/100جم | بروتين: ${f.p}جم | كارب: ${f.c}جم | دهون: ${f.f}جم`;
   $('modalQty').value=100;
   $('modalUnit').value='g';
-  if(defaultSlot) $('modalSlot').value=defaultSlot;
+  if(slot) $('modalSlot').value=slot;
   updateModalCalc();
+  // اقتراح بدائل أقل سعرات لو الصنف عالي
+  const altsEl=$('modalAlternatives');
+  if(altsEl) altsEl.innerHTML=suggestAlternatives(f);
   openModal('addFoodModal');
 }
 
@@ -1442,7 +1773,7 @@ function updateModalCalc(){
   const f=S._addFood;if(!f) return;
   const qty=parseFloat($('modalQty').value)||0;
   const unit=getStr('modalUnit');
-  const grams=toGrams(qty,unit);
+  const grams=toGrams(qty,unit,f.name);
   const kcal=Math.round(f.kcal*grams/100);
   const p=(f.p*grams/100).toFixed(1);
   const c=(f.c*grams/100).toFixed(1);
@@ -1454,7 +1785,7 @@ function confirmAddFood(){
   const f=S._addFood;if(!f) return;
   const qty=parseFloat($('modalQty').value)||0;
   const unit=getStr('modalUnit');
-  const grams=toGrams(qty,unit);
+  const grams=toGrams(qty,unit,f.name);
   const slot=getStr('modalSlot');
   if(!grams){toast('⚠️ أدخل كمية صحيحة');return;}
   S.tracker[slot]=S.tracker[slot]||[];
@@ -1519,7 +1850,9 @@ function confirmEditItem(){
 // TRACKER
 // ════════════════════════════════════════════════════════
 function renderMealSlots(){
-  $('mealSlots').innerHTML=MEAL_SLOTS.map(slot=>{
+  // الـ slots العادية بس — exercise_burn مش وجبة، بتظهر بشكل منفصل
+  const visibleSlots = MEAL_SLOTS.filter(s => s.id !== 'exercise_burn');
+  $('mealSlots').innerHTML = visibleSlots.map(slot=>{
     const items=S.tracker[slot.id]||[];
     const total=items.reduce((s,i)=>s+i.kcal,0);
     return `<div class="meal-slot">
@@ -1544,6 +1877,25 @@ function renderMealSlots(){
       <button class="add-to-slot" onclick="switchToLib('${slot.id}')">+ إضافة طعام من المكتبة</button>
     </div>`;
   }).join('');
+
+  // عرض حرق التمارين لو موجود — كصف مستقل بدون "إضافة طعام"
+  const exItems = S.tracker['exercise_burn'] || [];
+  if(exItems.length > 0){
+    const exBurn = Math.abs(exItems.reduce((s,i) => s + i.kcal, 0));
+    $('mealSlots').innerHTML += `
+      <div class="meal-slot" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.06)">
+        <div class="meal-hdr">
+          <div>
+            <div class="meal-name">🏋️ حرق التمارين</div>
+            <div class="meal-time">🔥 سعرات محروقة</div>
+          </div>
+          <div class="meal-kcal" style="color:#10b981">−${exBurn} سعرة</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:.35rem">
+          <button class="btn btn-red btn-sm btn-icon" onclick="removeExerciseBurn()" title="حذف">🗑️ حذف الحرق</button>
+        </div>
+      </div>`;
+  }
 }
 
 function switchToLib(slotId){
@@ -1555,12 +1907,11 @@ function switchToLib(slotId){
   toast('🔍 اختر طعاماً لإضافته للوجبة');
 }
 
-// override openAddModal to handle default slot
-const _origOpenAddModal=openAddModal;
-window.openAddModal=function(fid){
-  const ds=S._defaultSlot;S._defaultSlot=null;
-  _origOpenAddModal(fid,ds);
-};
+function removeExerciseBurn(){
+  S.tracker['exercise_burn'] = [];
+  save(); renderMealSlots(); renderTrackerSummary();
+  toast('🗑️ تم حذف حرق التمارين');
+}
 
 function removeItem(slot,uid){
   S.tracker[slot]=(S.tracker[slot]||[]).filter(i=>i.uid!==uid);
@@ -1574,16 +1925,26 @@ function clearDay(){
   toast('🗑️ تم مسح جميع الوجبات');
 }
 
+// ── حساب الهدف اليومي بشكل نظيف ──
+function calcDailyGoal(){
+  if(S._targetKcal) return S._targetKcal;
+  const p=S.profile;
+  if(p.weight&&p.height&&p.age&&p.activity){
+    const bmr=p.gender==='male'
+      ?10*p.weight+6.25*p.height-5*p.age+5
+      :10*p.weight+6.25*p.height-5*p.age-161;
+    return Math.max(1200,Math.round(bmr*p.activity-(p.deficit||500)));
+  }
+  return 1500;
+}
+
 function renderTrackerSummary(){
   const all=MEAL_SLOTS.flatMap(m=>S.tracker[m.id]||[]);
   const kcal=all.reduce((s,i)=>s+i.kcal,0);
   const pro=all.reduce((s,i)=>s+i.p,0);
   const carb=all.reduce((s,i)=>s+i.c,0);
   const fat=all.reduce((s,i)=>s+i.f,0);
-  const goal=S._targetKcal||S.profile.deficit&&S.profile.weight?
-    Math.max(1200,Math.round((S.profile.gender==='male'?
-      10*S.profile.weight+6.25*S.profile.height-5*S.profile.age+5:
-      10*S.profile.weight+6.25*S.profile.height-5*S.profile.age-161)*S.profile.activity-S.profile.deficit)):1500;
+  const goal=calcDailyGoal();
   const pct=goal>0?Math.min(100,Math.round(kcal/goal*100)):0;
   const remain=Math.max(0,goal-kcal);
   setText('totKcal',kcal);setText('totPro',pro.toFixed(0));
@@ -1593,6 +1954,26 @@ function renderTrackerSummary(){
   const bar=$('calBar');
   bar.style.width=pct+'%';
   bar.className='prog prog-cal'+(kcal>goal?' over':'');
+
+  // أشرطة المغذيات — تظهر لو الـ macros محددة والهدف موجود
+  const mbWrap=$('macroBarsWrap');
+  if(mbWrap && goal>0 && S.macros){
+    const pGoal  = Math.round(goal * S.macros.p / 100 / 4);
+    const cGoal  = Math.round(goal * S.macros.c / 100 / 4);
+    const fGoal  = Math.round(goal * S.macros.f / 100 / 9);
+    mbWrap.style.display = 'block';
+    const proBar  = $('proBar');
+    const carbBar = $('carbBar');
+    const fatBar  = $('fatBar');
+    if(proBar)  proBar.style.width  = Math.min(100,Math.round(pro / Math.max(pGoal,1)*100))+'%';
+    if(carbBar) carbBar.style.width = Math.min(100,Math.round(carb/ Math.max(cGoal,1)*100))+'%';
+    if(fatBar)  fatBar.style.width  = Math.min(100,Math.round(fat / Math.max(fGoal,1)*100))+'%';
+    if($('proProgress'))  setText('proProgress',  pro.toFixed(0)  +'/'+pGoal+'جم');
+    if($('carbProgress')) setText('carbProgress', carb.toFixed(0) +'/'+cGoal+'جم');
+    if($('fatProgress'))  setText('fatProgress',  fat.toFixed(0)  +'/'+fGoal+'جم');
+  } else if(mbWrap){
+    mbWrap.style.display = 'none';
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1648,9 +2029,29 @@ function generatePlan(){
 
 function pickFood(foods,targetKcal,fixedQty=0){
   if(!foods||!foods.length) return null;
-  const f=foods[Math.floor(Math.random()*foods.length)];
-  const qty=fixedQty>0?fixedQty:Math.max(50,Math.round((targetKcal/Math.max(f.kcal,1))*100));
-  return{...f,qty,kcal:Math.round(f.kcal*qty/100),pro:parseFloat((f.p*qty/100).toFixed(1)),carb:parseFloat((f.c*qty/100).toFixed(1)),fat:parseFloat((f.f*qty/100).toFixed(1))};
+  // اختار من أقرب 5 أصناف لهدف السعرات بدل عشوائي كامل
+  const sorted=[...foods].sort((a,b)=>Math.abs(a.kcal-targetKcal/1.5)-Math.abs(b.kcal-targetKcal/1.5));
+  const pool=sorted.slice(0,Math.min(5,sorted.length));
+  const f=pool[Math.floor(Math.random()*pool.length)];
+  let qty;
+  if(fixedQty>0){
+    qty=fixedQty;
+  } else {
+    qty=Math.round((targetKcal/Math.max(f.kcal,1))*100);
+    // حدود معقولة للكمية
+    if(f.cat==='زيوت وتوابل') qty=Math.min(qty,30);        // زيوت: max 30جم
+    else if(f.cat==='مكسرات') qty=Math.min(qty,60);          // مكسرات: max 60جم
+    else if(f.cat==='مشروبات صحية') qty=Math.min(qty,400);  // مشروبات: max 400مل
+    else qty=Math.min(qty,400);                               // باقي: max 400جم
+    qty=Math.max(qty,30);                                     // minimum 30جم
+  }
+  return{
+    ...f,qty,
+    kcal:Math.round(f.kcal*qty/100),
+    pro:parseFloat((f.p*qty/100).toFixed(1)),
+    carb:parseFloat((f.c*qty/100).toFixed(1)),
+    fat:parseFloat((f.f*qty/100).toFixed(1))
+  };
 }
 
 function renderPlan(plan,healthNotes=''){
@@ -1870,7 +2271,8 @@ function renderTips(){
 }
 
 function renderBurnFoods(){
-  const burnList=allFoods().filter(f=>(f.tags||[]).includes('حرق')).slice(0,12);
+  const burnList=allFoods().filter(f=>(f.tags||[]).includes('حرق'))
+    .sort((a,b)=>a.kcal-b.kcal); // ترتيب من الأقل سعرات للأعلى
   $('burnFoods').innerHTML=burnList.map(f=>`
     <div class="food-card" onclick="openAddModal(${f.id})">
       <span class="ico">${f.emoji||'🔥'}</span>
@@ -1947,6 +2349,60 @@ function toast(msg){
 }
 
 // ════════════════════════════════════════════════════════
+// 💾 EXPORT / IMPORT
+// ════════════════════════════════════════════════════════
+function exportData(){
+  const data={
+    _app:'مرشدك الصحي v10.0',
+    _by:'Mohamed Elghtrefy',
+    _exported:new Date().toLocaleString('ar-EG'),
+    profile:S.profile,
+    custom:S.custom,
+    savedPlans:S.savedPlans,
+    weightLog:S.weightLog,
+    macros:S.macros,
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`health_data_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📤 تم تصدير بياناتك بنجاح');
+}
+
+function importData(input){
+  const file=input.files?.[0];
+  if(!file){return;}
+  if(!file.name.endsWith('.json')){toast('⚠️ يرجى اختيار ملف JSON فقط');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!d.profile&&!d.custom&&!d.savedPlans){
+        toast('⚠️ الملف لا يبدو صحيحاً');return;
+      }
+      if(d.profile)      S.profile={...S.profile,...d.profile};
+      if(d.custom)       S.custom=d.custom;
+      if(d.savedPlans)   S.savedPlans=d.savedPlans;
+      if(d.weightLog)    S.weightLog=d.weightLog;
+      if(d.macros)       S.macros={...S.macros,...d.macros};
+      save();
+      fillProfileForm();
+      renderFilters();renderFoodGrid();renderCustomList();
+      updateFoodCount();renderSavedPlans();
+      renderWeightChart();loadMacroSliders();
+      toast('📥 تم استيراد بياناتك بنجاح!');
+    }catch{
+      toast('❌ خطأ في قراءة الملف — تأكد أنه ملف JSON صحيح');
+    }
+  };
+  reader.readAsText(file);
+  input.value=''; // reset input
+}
+
+// ════════════════════════════════════════════════════════
 // 🌐 ONLINE FOOD SEARCH
 // ════════════════════════════════════════════════════════
 let _onlinePreviewFood = null;
@@ -1975,17 +2431,20 @@ function renderOnlineResults(items, source){
     return;
   }
   setText('onlineResultsLabel', `📦 ${items.length} نتيجة من ${source} — اضغط على أي صنف لإضافته`);
-  $('onlineResultsGrid').innerHTML = items.map((item,i)=>`
+  $('onlineResultsGrid').innerHTML = items.map((item,i)=>{
+    const safeName=escapeHtml(item.name.substring(0,45))+(item.name.length>45?'...':'');
+    const safeSrc=escapeHtml(item._src||'');
+    return `
     <div class="food-card" onclick="openOnlinePreview(${i})" data-idx="${i}">
       <span class="ico">${item._emoji||'🍽️'}</span>
-      <div class="nm" style="font-size:.78rem">${escapeHtml(item.name.substring(0,45))}${item.name.length>45?'...':''}</div>
+      <div class="nm" style="font-size:.78rem">${safeName}</div>
       <div class="kc">${item.kcal} كيلو/100جم</div>
       <div class="tags-row">
         ${item.p>15?'<span class="tag بروتين">بروتين</span>':''}
         ${item.kcal<50?'<span class="tag منخفض">منخفض</span>':''}
-        <span style="font-size:.6rem;color:var(--muted2);padding:.1rem .35rem">${escapeHtml(item._src||'')}</span>
+        <span style="font-size:.6rem;color:var(--muted2);padding:.1rem .35rem">${safeSrc}</span>
       </div>
-    </div>`).join('');
+    </div>`}).join('');
   $('onlineResults').style.display='block';
   // حفظ النتائج مؤقتاً
   window._lastOnlineResults = items;
@@ -2109,7 +2568,12 @@ async function searchFoodOnline(){
 
   /* ── 2. USDA (إذا OFF فارغ أو عند وجود مفتاح) ── */
   const usdaKey=($('usdaKey').value||'').trim();
-  if(results.length<4 && usdaKey){
+  // validation: USDA key يكون 40 حرف تقريباً من أحرف وأرقام
+  const usdaKeyValid=usdaKey.length>=20&&/^[A-Za-z0-9]+$/.test(usdaKey);
+  if(usdaKey&&!usdaKeyValid){
+    toast('⚠️ USDA API Key يبدو غير صحيح — تأكد من نسخه بشكل كامل');
+  }
+  if(results.length<4 && usdaKeyValid){
     setText('onlineLoadingTxt','🇺🇸 جاري البحث في USDA...');
     try{
       const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=16&api_key=${encodeURIComponent(usdaKey)}`;
@@ -2186,6 +2650,392 @@ document.addEventListener('DOMContentLoaded',()=>{
     localStorage.setItem('usdaKey', $('usdaKey').value.trim());
   });
 });
+
+
+// ════════════════════════════════════════════════════════
+// MACRO SLIDERS — توزيع المغذيات الكبرى
+// ════════════════════════════════════════════════════════
+function syncMacros(changed, doSave=true){
+  const goal = calcDailyGoal();
+  let p = parseInt($('macroProtein')?.value||30);
+  let c = parseInt($('macroCarbs')?.value||40);
+  // الدهون = 100 - البروتين - الكارب
+  let f = 100 - p - c;
+
+  // منع أن تصبح الدهون أقل من 10% أو سالبة
+  if(f < 10){
+    if(changed === 'p'){
+      p = Math.min(p, 100 - c - 10);
+    } else {
+      c = Math.min(c, 100 - p - 10);
+    }
+    f = 100 - p - c;
+    if($('macroProtein')) $('macroProtein').value = p;
+    if($('macroCarbs'))   $('macroCarbs').value   = c;
+  }
+
+  if($('macroFat')) $('macroFat').value = f;
+
+  // حساب الجرامات
+  const pG = goal > 0 ? Math.round(goal * p / 100 / 4)   : 0; // 4 kcal/g
+  const cG = goal > 0 ? Math.round(goal * c / 100 / 4)   : 0; // 4 kcal/g
+  const fG = goal > 0 ? Math.round(goal * f / 100 / 9)   : 0; // 9 kcal/g
+
+  // تحديث العرض
+  if($('macroPLbl'))   $('macroPLbl').textContent   = p + '%';
+  if($('macroCLbl'))   $('macroCLbl').textContent   = c + '%';
+  if($('macroFLbl'))   $('macroFLbl').textContent   = f + '%';
+  if($('macroPGram'))  $('macroPGram').textContent  = goal > 0 ? '≈ ' + pG + 'جم' : '';
+  if($('macroCGram'))  $('macroCGram').textContent  = goal > 0 ? '≈ ' + cG + 'جم' : '';
+  if($('macroFGram'))  $('macroFGram').textContent  = goal > 0 ? '≈ ' + fG + 'جم' : '';
+
+  // تحديث الشريط البصري
+  if($('macroBarP')) $('macroBarP').style.width = p + '%';
+  if($('macroBarC')) $('macroBarC').style.width = c + '%';
+  if($('macroBarF')) $('macroBarF').style.width = f + '%';
+
+  // حفظ في الـ state
+  S.macros = {p, c, f};
+  if(doSave) save();
+
+  // تحديث أشرطة الـ tracker
+  renderTrackerSummary();
+}
+
+function loadMacroSliders(){
+  if($('macroProtein')) $('macroProtein').value = S.macros.p || 30;
+  if($('macroCarbs'))   $('macroCarbs').value   = S.macros.c || 40;
+  syncMacros(null, false);
+}
+
+// ════════════════════════════════════════════════════════
+// WEIGHT LOG + CHART — سجل الوزن الأسبوعي
+// ════════════════════════════════════════════════════════
+function addWeightLog(){
+  const val  = parseFloat($('logWeightVal')?.value);
+  const date = $('logWeightDate')?.value;
+  if(!val || val < 30 || val > 300){ toast('⚠️ أدخل وزناً صحيحاً بين 30 و 300 كجم'); return; }
+  if(!date){ toast('⚠️ اختر التاريخ'); return; }
+
+  // إزالة نفس اليوم لو موجود
+  S.weightLog = S.weightLog.filter(e => e.date !== date);
+  S.weightLog.push({date, weight: val});
+  S.weightLog.sort((a,b) => a.date.localeCompare(b.date));
+
+  // الاحتفاظ بآخر 52 إدخال (سنة)
+  if(S.weightLog.length > 52) S.weightLog = S.weightLog.slice(-52);
+
+  save();
+  renderWeightChart();
+  renderInsights();
+  $('weightLogCard').style.display='block';
+  toast('✅ تم تسجيل الوزن: ' + val + ' كجم');
+  $('logWeightVal').value = '';
+}
+
+function renderWeightChart(){
+  const log = S.weightLog;
+  const wrap = $('weightChartWrap');
+  const listEl = $('weightLogList');
+  if(!wrap) return;
+
+  if(!log || log.length < 2){
+    wrap.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--muted2);font-size:.83rem">📊 سجّل وزنك مرتين على الأقل لرسم الرسم البياني</div>';
+    renderWeightLogList();
+    return;
+  }
+
+  const W = 560, H = 200, PAD = {t:20,r:20,b:40,l:48};
+  const cW = W - PAD.l - PAD.r;
+  const cH = H - PAD.t - PAD.b;
+
+  const weights = log.map(e => e.weight);
+  const minW = Math.min(...weights) - 1;
+  const maxW = Math.max(...weights) + 1;
+  const n = log.length;
+
+  // دالة mapping
+  const xPos = i => PAD.l + (i / (n-1)) * cW;
+  const yPos = w => PAD.t + cH - ((w - minW) / (maxW - minW)) * cH;
+
+  // رسم الـ polyline
+  const pts = log.map((e,i) => xPos(i) + ',' + yPos(e.weight)).join(' ');
+  // منطقة تحت الخط
+  const areaPath = 'M' + xPos(0) + ',' + (PAD.t + cH) +
+    ' L' + log.map((e,i) => xPos(i) + ',' + yPos(e.weight)).join(' L') +
+    ' L' + xPos(n-1) + ',' + (PAD.t + cH) + ' Z';
+
+  // Y labels
+  const ySteps = 4;
+  let yLabels = '';
+  for(let i=0; i<=ySteps; i++){
+    const v = minW + (maxW - minW) * i / ySteps;
+    const y = yPos(v);
+    yLabels += '<text x="' + (PAD.l-6) + '" y="' + (y+4) + '" text-anchor="end" fill="#6ee7b7" font-size="10">' + v.toFixed(1) + '</text>';
+    yLabels += '<line x1="' + PAD.l + '" y1="' + y + '" x2="' + (W-PAD.r) + '" y2="' + y + '" stroke="rgba(16,185,129,.1)" stroke-width="1"/>';
+  }
+
+  // X labels — أول وآخر وأوسط
+  let xLabels = '';
+  const xIdxs = n <= 6 ? [...Array(n).keys()] : [0, Math.floor(n/2), n-1];
+  xIdxs.forEach(i => {
+    const d = log[i].date.slice(5); // MM-DD
+    xLabels += '<text x="' + xPos(i) + '" y="' + (H-8) + '" text-anchor="middle" fill="#9ca3af" font-size="10">' + d + '</text>';
+  });
+
+  // نقاط البيانات
+  const dots = log.map((e,i) => {
+    const isLast = i === n-1;
+    return '<circle cx="' + xPos(i) + '" cy="' + yPos(e.weight) + '" r="' + (isLast?5:3.5) + '" fill="' + (isLast?'#f59e0b':'#10b981') + '" stroke="var(--bg-mid)" stroke-width="1.5"/>';
+  }).join('');
+
+  // الاتجاه
+  const diff = (weights[n-1] - weights[0]).toFixed(1);
+  const trend = diff < 0
+    ? '<tspan fill="#10b981">↓ ' + Math.abs(diff) + ' كجم 🎉</tspan>'
+    : diff > 0
+    ? '<tspan fill="#ef4444">↑ ' + diff + ' كجم</tspan>'
+    : '<tspan fill="#9ca3af">ثابت</tspan>';
+
+  wrap.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:220px;display:block">' +
+    '<defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981" stop-opacity=".25"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>' +
+    '<path d="' + areaPath + '" fill="url(#wg)"/>' +
+    yLabels + xLabels +
+    '<polyline points="' + pts + '" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+    dots +
+    '<text x="' + (W/2) + '" y="' + (PAD.t-5) + '" text-anchor="middle" fill="#9ca3af" font-size="11">التغير الكلي: ' + trend + '</text>' +
+    '</svg>';
+
+  renderWeightLogList();
+}
+
+function renderWeightLogList(){
+  const el = $('weightLogList');
+  if(!el) return;
+  if(!S.weightLog.length){el.innerHTML='';return;}
+  const rows = [...S.weightLog].reverse().slice(0,8).map(e =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem .6rem;border-bottom:1px solid var(--border2);font-size:.82rem">' +
+    '<span style="color:var(--muted2)">' + e.date + '</span>' +
+    '<span style="font-weight:700;color:#6ee7b7">' + e.weight + ' كجم</span>' +
+    `<button class="btn btn-red btn-icon btn-sm" onclick="deleteWeightLog('${e.date}')">✕</button>` +
+    '</div>'
+  ).join('');
+  el.innerHTML = '<div style="border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden">' + rows + '</div>';
+}
+
+function deleteWeightLog(date){
+  S.weightLog = S.weightLog.filter(e => e.date !== date);
+  save();
+  renderWeightChart();
+  toast('🗑️ تم حذف التسجيل');
+}
+
+// ════════════════════════════════════════════════════════
+// ALTERNATIVE SUGGESTIONS — اقتراح بدائل صحية
+// ════════════════════════════════════════════════════════
+function suggestAlternatives(food){
+  // عتبة السعرات: لو أكتر من 200 kcal/100g نقترح بدائل
+  if(food.kcal <= 200) return '';
+
+  const alts = allFoods()
+    .filter(f =>
+      f.id !== food.id &&
+      f.cat === food.cat &&
+      f.kcal < food.kcal * 0.75 // أقل من 75% من سعرات الأصل
+    )
+    .sort((a,b) => a.kcal - b.kcal)
+    .slice(0, 3);
+
+  if(!alts.length) return '';
+
+  return '<div style="margin-top:.85rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--r-sm);padding:.7rem .9rem">' +
+    '<div style="font-size:.78rem;font-weight:800;color:#fbbf24;margin-bottom:.5rem">💡 بدائل أقل سعرات:</div>' +
+    alts.map(a =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">' +
+      '<span style="font-size:.82rem">' + (a.emoji||'🍽️') + ' ' + escapeHtml(a.name) + '</span>' +
+      '<div style="display:flex;align-items:center;gap:.5rem">' +
+      '<span style="font-size:.78rem;color:#fbbf24">' + a.kcal + ' ك/100جم</span>' +
+      '<button class="btn btn-sm btn-gold" onclick="closeModal(\'addFoodModal\');setTimeout(()=>openAddModal(' + a.id + '),50)" style="padding:.2rem .6rem;font-size:.72rem">اختيار</button>' +
+      '</div></div>'
+    ).join('') +
+    '</div>';
+}
+
+// ════════════════════════════════════════════════════════
+// EXERCISES — تمارين منزلية
+// ════════════════════════════════════════════════════════
+const EXERCISES_DATA = [
+  {id:'pushup',    name:'ضغط (Push-ups)',          emoji:'💪', met:8,   unit:'تكرار', perUnit:0.5,  tip:'ابدأ بركبتيك على الأرض لو صعب — 3 sets × 10'},
+  {id:'situp',     name:'بطن (Crunches/Sit-ups)',  emoji:'🫀', met:5.5, unit:'تكرار', perUnit:0.3,  tip:'يد على الصدر، ارفع كتفيك مش رقبتك — 3 sets × 15'},
+  {id:'squat',     name:'سكواط (Squats)',           emoji:'🦵', met:7,   unit:'تكرار', perUnit:0.45, tip:'ظهرك مستقيم، ركبتيك ما تتعدوش أصابع قدمك — 3 sets × 15'},
+  {id:'lunge',     name:'لانجز — طعن (Lunges)',    emoji:'🏃', met:6,   unit:'تكرار', perUnit:0.38, tip:'خطوة للأمام، ركبة اليد الخلفية قريبة من الأرض — 3 sets × 12'},
+  {id:'jog',       name:'جري في المحل',             emoji:'🏃', met:10,  unit:'دقيقة', perUnit:null, tip:'ارفع ركبتيك للسرة — ابدأ 3 دقائق وزود'},
+  {id:'burpee',    name:'بربي (Burpees)',            emoji:'⚡', met:14,  unit:'تكرار', perUnit:1.0,  tip:'ضغط + قفز — حرق ضخم — 3 sets × 8'},
+  {id:'climber',   name:'Mountain Climbers',        emoji:'🧗', met:11,  unit:'دقيقة', perUnit:null, tip:'30 ثانية ON / 15 ثانية OFF — 4 مرات'},
+  {id:'plank',     name:'بلانك (Plank)',            emoji:'🧱', met:4,   unit:'ثانية', perUnit:null, tip:'ابدأ بـ 20 ثانية وزود — جسمك خط مستقيم'},
+  {id:'jumpjack',  name:'قفز نجمة (Jumping Jacks)', emoji:'⭐', met:9,   unit:'تكرار', perUnit:0.4,  tip:'ايدك فوق راسك وانت بتفتح رجليك — 3 sets × 30'},
+  {id:'highknee',  name:'رفع الركب (High Knees)',   emoji:'🦿', met:10,  unit:'دقيقة', perUnit:null, tip:'ايدك أمامك على مستوى الخصر — ارفع ركبتيك تلمسها'},
+  {id:'glute',     name:'رفع المؤخرة (Glute Bridge)',emoji:'🍑',met:4.5, unit:'تكرار', perUnit:0.28, tip:'استلقي على ضهرك، ارفع وسطك للأعلى — 3 sets × 15'},
+  {id:'walk',      name:'مشي سريع',                 emoji:'🚶', met:4.5, unit:'دقيقة', perUnit:null, tip:'خطوات سريعة، يديك بتتحرك — 30 دقيقة يومياً'},
+];
+
+// حساب السعرات المحروقة بمعادلة MET
+// Calories = MET × weight(kg) × duration(hours)
+function calcExBurn(met, durationMin, weightKg){
+  return Math.round(met * weightKg * (durationMin / 60));
+}
+
+function renderExercises(){
+  const wEl = $('exWeight');
+  // ملء الوزن من البروفايل
+  if(wEl && !wEl.value && S.profile.weight) wEl.value = S.profile.weight;
+
+  $('exerciseList').innerHTML = EXERCISES_DATA.map(ex => `
+    <div style="background:rgba(13,43,29,.55);border:1px solid var(--border2);border-radius:var(--r-sm);padding:.85rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+        <div>
+          <span style="font-size:1.1rem">${ex.emoji}</span>
+          <strong style="font-size:.9rem;margin-right:.35rem">${ex.name}</strong>
+          <span style="font-size:.75rem;color:var(--muted2)">(MET ${ex.met})</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+          <input type="number" id="ex_${ex.id}" min="0" placeholder="0"
+            style="width:80px;padding:.35rem .6rem;font-size:.88rem;text-align:center"
+            oninput="calcTotalBurn()">
+          <span style="font-size:.8rem;color:var(--muted2)">${ex.unit}</span>
+          <span id="exBurn_${ex.id}" style="font-size:.82rem;font-weight:700;color:var(--g1);min-width:52px;text-align:left">— سعرة</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  $('exerciseGuide').innerHTML = EXERCISES_DATA.map(ex => `
+    <div class="tip">
+      <h4>${ex.emoji} ${ex.name}</h4>
+      <p>${ex.tip}</p>
+      <p style="margin-top:.35rem;font-size:.78rem;color:var(--g1)">
+        🔥 حرق تقديري: <strong>${calcExBurn(ex.met, 10, 80)}</strong> سعرة / 10 دقائق (لشخص 80 كجم)
+      </p>
+    </div>`).join('');
+}
+
+function calcTotalBurn(){
+  const w = parseFloat($('exWeight')?.value) || S.profile.weight || 75;
+  let total = 0;
+
+  EXERCISES_DATA.forEach(ex => {
+    const val = parseFloat($('ex_'+ex.id)?.value) || 0;
+    if(!val){ const el=$('exBurn_'+ex.id); if(el) el.textContent='— سعرة'; return; }
+
+    let burn = 0;
+    if(ex.unit === 'دقيقة'){
+      burn = calcExBurn(ex.met, val, w);
+    } else if(ex.unit === 'ثانية'){
+      burn = calcExBurn(ex.met, val / 60, w);
+    } else {
+      // تكرارات — كل تكرار ~ 2 ثانية = 2/60 دقيقة
+      const estMins = (val * 2) / 60;
+      burn = calcExBurn(ex.met, estMins, w);
+    }
+    total += burn;
+    const el=$('exBurn_'+ex.id);
+    if(el) el.textContent = burn + ' سعرة';
+  });
+
+  setText('exTotalBurn', total);
+}
+
+function resetExercises(){
+  EXERCISES_DATA.forEach(ex => {
+    const el=$('ex_'+ex.id);
+    if(el) el.value='';
+    const burnEl=$('exBurn_'+ex.id);
+    if(burnEl) burnEl.textContent='— سعرة';
+  });
+  setText('exTotalBurn','0');
+}
+
+function logExerciseBurn(){
+  const burn = parseInt($('exTotalBurn')?.textContent) || 0;
+  if(!burn){ toast('⚠️ أدخل تمارين أولاً'); return; }
+  // أضف الحرق كـ "طاقة محروقة" في الترتيب — نطرحها من إجمالي السعرات
+  if(!S.tracker.exercise_burn) S.tracker.exercise_burn = [];
+  S.tracker.exercise_burn = [{
+    uid: Date.now(),
+    name: '🏋️ تمارين اليوم',
+    emoji:'🔥', qty:1, unit:'جلسة',
+    kcal: -burn, p:0, c:0, f:0
+  }];
+  save(); renderMealSlots(); renderTrackerSummary();
+  toast('✅ تم إضافة حرق ' + burn + ' سعرة لتتبع اليوم');
+}
+
+// ════════════════════════════════════════════════════════
+// INSIGHTS — تحليل التقدم
+// ════════════════════════════════════════════════════════
+function getInsights(){
+  const log = S.weightLog;
+  if(!log || log.length < 2) return null;
+
+  const sorted = [...log].sort((a,b)=>a.date.localeCompare(b.date));
+  const recent = sorted.slice(-14); // آخر 14 إدخال كحد أقصى
+  const first = sorted[0];
+  const last  = sorted[sorted.length-1];
+  const totalLost = (first.weight - last.weight).toFixed(1);
+
+  // حساب المعدل الأسبوعي من أحدث 4 إدخالات
+  let weeklyRate = null;
+  if(recent.length >= 2){
+    const oldest = recent[0];
+    const newest = recent[recent.length-1];
+    const days = (new Date(newest.date) - new Date(oldest.date)) / (1000*60*60*24);
+    if(days > 0){
+      weeklyRate = ((oldest.weight - newest.weight) / days * 7).toFixed(2);
+    }
+  }
+
+  return { totalLost, weeklyRate, entries: sorted.length, first, last };
+}
+
+function renderInsights(){
+  const ins = getInsights();
+  const el = $('insightsBox');
+  if(!el) return;
+
+  if(!ins){
+    el.innerHTML = '<p style="color:var(--muted2);font-size:.83rem">📊 سجّل وزنك مرتين على الأقل لتظهر التحليلات</p>';
+    return;
+  }
+
+  const lostNum = parseFloat(ins.totalLost);
+  const lostColor = lostNum > 0 ? '#10b981' : lostNum < 0 ? '#ef4444' : '#9ca3af';
+  const lostIcon  = lostNum > 0 ? '📉' : lostNum < 0 ? '📈' : '➡️';
+  const lostText  = lostNum > 0 ? 'فقدت' : lostNum < 0 ? 'زاد وزنك' : 'وزنك ثابت';
+
+  const rateNum = parseFloat(ins.weeklyRate);
+  const rateColor = rateNum > 0 ? '#10b981' : rateNum < 0 ? '#ef4444' : '#9ca3af';
+
+  el.innerHTML = `
+    <div class="g3">
+      <div class="sbox">
+        <div class="val" style="color:${lostColor}">${lostIcon} ${Math.abs(lostNum)} كجم</div>
+        <div class="lbl">${lostText} منذ البداية</div>
+      </div>
+      <div class="sbox">
+        <div class="val" style="color:${rateColor}">${Math.abs(rateNum)} كجم</div>
+        <div class="lbl">متوسط الأسبوع الأخير</div>
+      </div>
+      <div class="sbox">
+        <div class="val">${ins.entries}</div>
+        <div class="lbl">إدخال في السجل</div>
+      </div>
+    </div>
+    <div style="margin-top:.75rem;font-size:.82rem;color:var(--muted2)">
+      ${rateNum > 0 && rateNum <= 1 ? '✅ معدل ممتاز — فقدان آمن وصحي (0.5–1 كجم/أسبوع)' : ''}
+      ${rateNum > 1 ? '⚠️ المعدل مرتفع — تأكد من الحصول على سعرات كافية' : ''}
+      ${rateNum < 0 ? '📌 الوزن بيزيد — راجع خطتك الغذائية' : ''}
+      ${rateNum === 0 ? '➡️ الوزن ثابت — زود عجز السعرات أو نشاطك الرياضي' : ''}
+    </div>`;
+}
 
 // ════════════════════════════════════════════════════════
 // START
