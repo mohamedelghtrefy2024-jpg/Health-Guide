@@ -307,8 +307,15 @@ input[type=range]:focus{box-shadow:none;border:none}
 }
 .plan-day-hdr:hover{background:rgba(16,185,129,.07)}
 .plan-day-hdr h3{font-size:.95rem;font-weight:800;color:#6ee7b7}
-.plan-day-body{padding:.85rem 1rem;display:none}
+.plan-day-body{padding:.85rem 1rem;display:none;transition:all .3s}
 .plan-day-body.open{display:block}
+.plan-row{display:flex;gap:.85rem;padding:.6rem 0;border-bottom:1px solid var(--border2);align-items:flex-start}
+.plan-row:last-child{border:none}
+.plan-ico{font-size:1.5rem;flex-shrink:0;margin-top:.1rem}
+.plan-info{flex:1}
+.plan-name{font-weight:700;font-size:.88rem;color:var(--cream);margin-bottom:.15rem}
+.plan-time{font-size:.73rem;color:var(--muted2);margin-bottom:.2rem}
+.plan-txt{font-size:.82rem;color:var(--muted2);line-height:1.5}
 .plan-row{
   display:grid;grid-template-columns:140px 1fr auto;gap:.7rem;
   padding:.55rem 0;border-bottom:1px solid var(--border2);align-items:start;
@@ -477,12 +484,12 @@ input[type=range]:focus{box-shadow:none;border:none}
 <!-- ═══ TABS ═══ -->
 <div class="tabs">
   <button class="tab-btn active" data-tab="profile">👤 ملفي</button>
-  <button class="tab-btn" data-tab="library">📚 المكتبة</button>
-  <button class="tab-btn" data-tab="tracker">📅 تتبع اليوم</button>
   <button class="tab-btn" data-tab="planner">🧮 مخطط الوجبات</button>
+  <button class="tab-btn" data-tab="tracker">📅 تتبع اليوم</button>
   <button class="tab-btn" data-tab="ai">✨ خطة ذكية</button>
   <button class="tab-btn" data-tab="exercises">🏋️ تمارين</button>
   <button class="tab-btn" data-tab="week">📋 أسبوعي</button>
+  <button class="tab-btn" data-tab="library">📚 المكتبة</button>
   <button class="tab-btn" data-tab="tips">🔥 نصائح</button>
 </div>
 
@@ -525,7 +532,11 @@ input[type=range]:focus{box-shadow:none;border:none}
         </select>
       </div>
     </div>
-    <button class="btn" onclick="updateProfile()">💾 حفظ وحساب</button>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+      <button class="btn" onclick="updateProfile()">💾 حفظ وحساب</button>
+      <button class="btn btn-gold btn-sm" id="notifBtn" onclick="localStorage.getItem('notif_enabled')==='1'?cancelNotifications():enableNotifications()">🔔 تفعيل الإشعارات</button>
+      <span id="notifStatus" style="font-size:.78rem;color:var(--muted2)">غير مفعّل</span>
+    </div>
     <div class="health-warn" id="healthWarnBox">
       <p>⚠️ <strong>تنبيه صحي مهم:</strong> ننصحك باستشارة طبيبك المعالج قبل البدء في أي نظام غذائي، خصوصاً مع حالتك الصحية. هذه الخطة ليست بديلاً عن الاستشارة الطبية.</p>
     </div>
@@ -558,6 +569,7 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="sbox"><div class="val" id="targetKcalVal">—</div><div class="lbl">السعرات المستهدفة / يوم</div></div>
       <div class="sbox"><div class="val" id="weeksVal">—</div><div class="lbl">المدة المتوقعة لتحقيق الهدف</div></div>
     </div>
+    <div id="autoDeficitSuggestion" style="display:none"></div>
   </div>
 
   <!-- ═══ MACRO DISTRIBUTION CARD ═══ -->
@@ -879,9 +891,34 @@ input[type=range]:focus{box-shadow:none;border:none}
 ══════════════════════════════════════ -->
 <div id="week" class="tab">
   <div class="card">
-    <div class="card-title">📋 النظام الأسبوعي الجاهز</div>
-    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">
-      <button class="btn btn-sec" onclick="window.print()">🖨️ طباعة</button>
+    <div class="card-title">📋 النظام الأسبوعي المناسب لك</div>
+    <!-- مؤشر النظام المختار -->
+    <div id="weeklyPlanBanner" style="background:linear-gradient(135deg,rgba(4,120,87,.3),rgba(16,185,129,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+      <div>
+        <div style="font-weight:800;color:#6ee7b7;font-size:1rem" id="weekPlanTitle">اضبط ملفك الشخصي أولاً</div>
+        <div style="font-size:.78rem;color:var(--muted2)" id="weekPlanSub">يتم اختيار النظام تلقائياً بناءً على هدفك</div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <select id="weekPlanSelect" onchange="renderWeekly()" style="background:var(--bg-mid);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--cream);padding:.4rem .7rem;font-size:.82rem">
+          <option value="auto">🎯 تلقائي (حسب ملفي)</option>
+          <option value="1200">نظام 1200 سعرة</option>
+          <option value="1400">نظام 1400 سعرة</option>
+          <option value="1600">نظام 1600 سعرة</option>
+          <option value="1800">نظام 1800 سعرة</option>
+          <option value="2000">نظام 2000 سعرة</option>
+        </select>
+        <div id="variantWrap" style="display:none;align-items:center;gap:.4rem">
+          <span style="font-size:.78rem;color:var(--muted2)">الأسبوع:</span>
+          <select id="weekVariantSelect" onchange="renderWeekly()" style="background:var(--bg-mid);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--cream);padding:.4rem .7rem;font-size:.82rem">
+            <option value="0">أسبوع A</option>
+            <option value="1">أسبوع B</option>
+            <option value="2">أسبوع C</option>
+          </select>
+        </div>
+        <button class="btn btn-sec" onclick="window.print()">🖨️ طباعة</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
       <button class="btn btn-sec btn-sm" onclick="toggleAllDays(true)">⬇️ فتح الكل</button>
       <button class="btn btn-sec btn-sm" onclick="toggleAllDays(false)">⬆️ إغلاق الكل</button>
     </div>
@@ -1418,78 +1455,318 @@ const FOODS=[
 // ════════════════════════════════════════════════════════
 // WEEKLY PLAN DATA
 // ════════════════════════════════════════════════════════
-const WEEKLY=[
-  {day:'السبت',total:1530,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون + زنجبيل',kcal:0},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٢ بيضة مسلوقة | بطاطس مسلوقة ١٥٠جم + زيت زيتون صغيرة | خيار + فلفل رومي',kcal:380},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'تفاحة متوسطة',kcal:80},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي القرفة — يمنع تخزين الدهون',kcal:6},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر فراخ مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم + زيت زيتون | سلطة خضراء كبيرة',kcal:550},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'زبادي لايت + قرفة',kcal:80},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة مسلوقة | جبنة قريش ٥٠جم | خيار + فلفل رومي',kcal:280},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'٥ حبات لوز | شاي زنجبيل',kcal:74}]},
-  {day:'الأحد',total:1530,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون',kcal:5},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'فول مدمس كوب صغير + زيت زيتون | فلفل رومي + خيار | رغيف بلدي واحد',kcal:400},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'برتقالة متوسطة',kcal:70},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر بارد — محرق للدهون',kcal:2},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'سمك بلطي مشوي ٢٥٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:530},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'لبن رائب كوب',kcal:100},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة عيون بـ spray | خيار + فلفل رومي',kcal:240},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'٥ حبات جوز | شاي النعناع',kcal:80}]},
-  {day:'الاثنين',total:1480,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + زنجبيل',kcal:5},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٢ بيضة مقلية بـ spray | بطاطس مسلوقة ٢٠٠جم + زيت زيتون | خيار',kcal:400},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'١٥ حبة لوز',kcal:100},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي القرفة — يمنع تخزين الدهون',kcal:6},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'كبدة مشوية ١٥٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:500},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'تفاحة صغيرة',kcal:70},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'زبادي لايت | خيار + نعناع | ٢ رقاقة رايس كيك',kcal:250},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي اليانسون',kcal:3}]},
-  {day:'الثلاثاء',total:1480,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون + زنجبيل',kcal:10},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'فول مدمس + بيضة | فلفل رومي + خيار | رغيف بلدي',kcal:400},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'برتقالة متوسطة',kcal:70},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر ساخن — محرق',kcal:2},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'تونة بالماء علبة | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:480},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'لبن رائب + قرفة',kcal:100},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة مسلوقة | جبنة قريش ٥٠جم | خيار + فلفل رومي',kcal:280},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي الزنجبيل',kcal:8}]},
-  {day:'الأربعاء',total:1530,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون',kcal:5},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٣ بيض مسلوق | جبنة قريش ٥٠جم | خيار + فلفل رومي',kcal:380},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'١٥ حبة لوز',kcal:100},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي القرفة',kcal:6},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر دجاج مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:530},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'زبادي لايت',kcal:80},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة عيون بـ spray | خيار + فلفل رومي',kcal:240},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'بابونج بالنعناع',kcal:2}]},
-  {day:'الخميس',total:1590,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + زنجبيل + ليمون',kcal:10},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'٢ بيضة مسلوقة | بطاطس مسلوقة ١٥٠جم | خيار + فلفل رومي',kcal:380},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'تفاحة + ٥ حبات لوز',kcal:120},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر بارد — محرق',kcal:2},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر دجاج مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:550},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'ترمس كوب صغير',kcal:120},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'زبادي لايت | خيار + نعناع',kcal:200},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي اليانسون',kcal:3}]},
-  {day:'الجمعة',total:1580,meals:[
-    {ico:'🌅',name:'مشروب الاستيقاظ',time:'٥:٣٠ ص',txt:'ماء دافئ + ليمون',kcal:5},
-    {ico:'🍳',name:'الفطار',time:'٧:٣٠ ص',txt:'فول + بيضة | جبنة بيضاء خفيفة | رغيف بلدي',kcal:420},
-    {ico:'☕',name:'قهوة + بلح',time:'٨:٠٠ ص',txt:'قهوة سادة | ٣ بلحات',kcal:80},
-    {ico:'🍎',name:'سناك صباحي',time:'١٠:٠٠ ص',txt:'برتقالة متوسطة',kcal:70},
-    {ico:'🥤',name:'مشروب قبل الغداء',time:'١٢:٣٠ ظ',txt:'شاي أخضر ساخن — محرق',kcal:2},
-    {ico:'🍗',name:'الغداء',time:'٢:٠٠ - ٣:٠٠ ظ',txt:'صدر دجاج مشوي ٢٠٠جم | بطاطس مسلوقة ١٥٠جم | سلطة كبيرة',kcal:550},
-    {ico:'🥜',name:'سناك العصر',time:'٤:٣٠ - ٥:٠٠ ع',txt:'زبادي لايت + قرفة',kcal:80},
-    {ico:'🥗',name:'العشاء',time:'٧:٣٠ - ٨:٠٠ م',txt:'٢ بيضة مسلوقة | جبنة قريش ٥٠جم | خيار',kcal:280},
-    {ico:'🌙',name:'قبل النوم',time:'قبل النوم ٣٠د',txt:'شاي الزنجبيل بليمون',kcal:8}]},
-];
+// WEEKLY القديم محذوف — الأنظمة الجديدة في FIXED_WEEKLY_PLANS
+
+
+
+
+// ════════════════════════════════════════════════════════
+// EGYPTIAN MEAL DATABASE — قاعدة بيانات الأكل المصري
+// ════════════════════════════════════════════════════════
+const EG_MEALS = {
+  wake:[
+    {txt:'كوب ماء دافئ + عصرة ليمون',               kcal:8},
+    {txt:'كوب ماء دافئ + زنجبيل',                   kcal:5},
+    {txt:'كوب ماء دافئ + ليمون + نعناع',             kcal:6},
+    {txt:'كوب ماء بارد',                              kcal:0},
+    {txt:'كوب ماء دافئ + كمون',                      kcal:5},
+    {txt:'كوب ماء + قرفة',                            kcal:4},
+    {txt:'كوب ماء دافئ + خل تفاح ملعقة صغيرة',      kcal:3},
+  ],
+  coffee:[
+    {txt:'قهوة سادة + 2 تمرة',                        kcal:67},
+    {txt:'شاي أخضر + 2 تمرة',                         kcal:65},
+    {txt:'قهوة سادة بدون سكر',                         kcal:5},
+    {txt:'شاي أسود بدون سكر + تمرة واحدة',             kcal:38},
+    {txt:'كركديه بارد بدون سكر + تمرتين',              kcal:60},
+    {txt:'شاي أخضر بدون سكر',                          kcal:2},
+    {txt:'قهوة عربية + 2 تمرة',                        kcal:62},
+  ],
+  pre:[
+    {txt:'كوب ماء + شرائح خيار',                       kcal:12},
+    {txt:'كوب ماء + ليمون',                             kcal:8},
+    {txt:'كوب شاي أخضر',                               kcal:2},
+    {txt:'كوب كركديه بارد',                             kcal:10},
+    {txt:'كوب ماء دافئ',                               kcal:0},
+    {txt:'كوب ماء + نعناع',                             kcal:3},
+    {txt:'كوب ماء + زنجبيل',                            kcal:5},
+  ],
+  night:[
+    {txt:'كوب حليب لايت دافئ',                          kcal:80},
+    {txt:'كوب زبادي لايت + قرفة',                       kcal:65},
+    {txt:'كوب شاي أعشاب بدون سكر',                     kcal:5},
+    {txt:'كوب لبن لايت بارد',                            kcal:75},
+    {txt:'كوب شاي بابونج',                              kcal:3},
+    {txt:'كوب حليب لايت + قرفة',                        kcal:82},
+    {txt:'كوب كركديه دافئ بدون سكر',                    kcal:8},
+  ],
+  // الفطار — موزعة على مستويات سعرية
+  break:{
+    300:[
+      {txt:'فول مدمس 150جم + رغيف بلدي + طماطم وخيار + زيتون 5 حبات',                       kcal:295},
+      {txt:'2 بيضة مسلوقة + جبنة بيضاء 30جم + رغيف أسمر + طماطم',                           kcal:305},
+      {txt:'جبنة قريش 100جم + رغيف أسمر + زيتون + خيار وطماطم',                              kcal:290},
+      {txt:'شوفان 40جم + لبن لايت كوب + موزة نص',                                             kcal:298},
+      {txt:'بيضة عيون بزيت + رغيف بلدي + جبنة بيضاء 25جم + خيار',                           kcal:310},
+      {txt:'زبادي لايت 200جم + شوفان 30جم + تفاحة نص',                                       kcal:285},
+      {txt:'فول بزيت حار 120جم + رغيف أسمر + طماطم + خيار',                                  kcal:300},
+    ],
+    350:[
+      {txt:'فول مدمس 200جم + رغيف بلدي + طماطم وخيار + بيضة مسلوقة',                        kcal:348},
+      {txt:'3 بيض مسلوق + جبنة بيضاء 40جم + رغيف أسمر + طماطم',                             kcal:355},
+      {txt:'شوفان 50جم + لبن لايت + موزة + عسل ملعقة صغيرة',                                  kcal:345},
+      {txt:'جبنة قريش 150جم + رغيف بلدي + زيتون + طماطم + خيار',                             kcal:352},
+      {txt:'فول مدمس 150جم + 2 بيضة عيون + رغيف أسمر',                                       kcal:360},
+      {txt:'زبادي لايت 200جم + شوفان 40جم + موزة + عسل ملعقة',                               kcal:340},
+      {txt:'بيضة مقلية + جبنة قريش 100جم + رغيف بلدي + طماطم وخيار',                        kcal:355},
+    ],
+    400:[
+      {txt:'فول مدمس 200جم + 2 بيضة مسلوقة + رغيف بلدي + طماطم وخيار',                      kcal:398},
+      {txt:'3 بيض مسلوق + جبنة قريش 100جم + رغيف بلدي + زيتون + خيار',                      kcal:402},
+      {txt:'شوفان 60جم + لبن لايت + موزة + لوز 10جم + عسل',                                   kcal:395},
+      {txt:'فطير مشلتت نص + جبنة بيضاء 50جم + بيضة مسلوقة + طماطم',                         kcal:405},
+      {txt:'فول مدمس 200جم + 2 بيضة عيون + رغيف بلدي + طماطم وخيار',                        kcal:400},
+      {txt:'زبادي لايت 200جم + شوفان 50جم + موزة + مكسرات 15جم',                             kcal:390},
+      {txt:'بيضتين مقليتين + جبنة قريش 120جم + رغيف بلدي + طماطم',                           kcal:408},
+    ],
+    450:[
+      {txt:'فول مدمس 250جم + 2 بيضة مسلوقة + رغيف بلدي + طماطم وخيار + زيتون',             kcal:448},
+      {txt:'3 بيض عيون + جبنة قريش 150جم + رغيف بلدي + طماطم وخيار',                        kcal:455},
+      {txt:'شوفان 70جم + لبن لايت + موزة + لوز 15جم + عسل ملعقة',                             kcal:445},
+      {txt:'فول مدمس 200جم + 3 بيض مسلوق + رغيف بلدي + طماطم',                              kcal:452},
+      {txt:'بيضتين مقليتين + فول 100جم + جبنة بيضاء 40جم + رغيف بلدي',                      kcal:460},
+      {txt:'زبادي لايت 250جم + شوفان 60جم + موزة كاملة + مكسرات 20جم',                      kcal:440},
+      {txt:'3 بيضة عيون بزيت + رغيف بلدي + جبنة قريش 100جم + طماطم وخيار',                  kcal:455},
+    ],
+    500:[
+      {txt:'فول مدمس 250جم + 3 بيض مسلوق + رغيف بلدي + طماطم وخيار + زيتون',               kcal:498},
+      {txt:'3 بيض عيون + جبنة قريش 150جم + رغيف بلدي كامل + طماطم وخيار + زيتون',           kcal:505},
+      {txt:'شوفان 80جم + لبن كامل + موزة + لوز 20جم + عسل ملعقتين',                           kcal:495},
+      {txt:'فول مدمس 300جم + 2 بيضة عيون + رغيف بلدي + جبنة بيضاء 40جم',                   kcal:502},
+      {txt:'فطير مشلتت نص + جبنة قريش 150جم + 2 بيضة مسلوقة + طماطم وخيار',                 kcal:510},
+      {txt:'زبادي لايت 250جم + شوفان 70جم + موزة + مكسرات 25جم + عسل',                      kcal:490},
+      {txt:'3 بيض مسلوق + فول 150جم + رغيف بلدي + جبنة بيضاء 50جم + خيار',                  kcal:500},
+    ],
+  },
+  lunch:{
+    400:[
+      {txt:'صدر دجاج مشوي 120جم + أرز أبيض 4 معالق + سلطة خضراء + ماء',                    kcal:398},
+      {txt:'سمك بلطي مشوي 150جم + أرز 4 معالق + خضار سوتيه',                                kcal:395},
+      {txt:'كفتة لحم مشوية 100جم + مكرونة 3 معالق + سلطة',                                   kcal:402},
+      {txt:'عدس مسلوق 200جم + أرز 3 معالق + سلطة خضراء',                                     kcal:390},
+      {txt:'دجاج بالفرن 120جم + بطاطس مسلوقة 100جم + سلطة',                                  kcal:405},
+      {txt:'شيش طاووق 100جم + أرز 4 معالق + خضار مشوية',                                     kcal:395},
+      {txt:'كبدة دجاج مشوية 120جم + أرز 4 معالق + سلطة',                                     kcal:400},
+    ],
+    480:[
+      {txt:'صدر دجاج مشوي 150جم + أرز بني 5 معالق + سلطة خضراء + شوربة خضار',              kcal:478},
+      {txt:'سمك بلطي مشوي 180جم + أرز 5 معالق + خضار سوتيه + سلطة',                         kcal:482},
+      {txt:'كفتة لحم 120جم + مكرونة 4 معالق + سلطة كبيرة',                                   kcal:475},
+      {txt:'شوربة عدس + دجاج بالفرن 150جم + خضار مشوية + سلطة',                              kcal:485},
+      {txt:'لحم مشوي 120جم + أرز 5 معالق + بامية سوتيه + سلطة',                              kcal:480},
+      {txt:'كاري دجاج خفيف 150جم + أرز 5 معالق + سلطة',                                      kcal:478},
+      {txt:'كباب لحم 100جم + أرز بني 5 معالق + خضار مشوية + سلطة',                           kcal:485},
+    ],
+    550:[
+      {txt:'صدر دجاج مشوي 180جم + أرز 6 معالق + سلطة + شوربة خضار',                        kcal:548},
+      {txt:'سمك بلطي 200جم + أرز بني 6 معالق + خضار سوتيه + سلطة',                           kcal:552},
+      {txt:'كفتة لحم 150جم + مكرونة بصلصة طماطم 5 معالق + سلطة',                             kcal:545},
+      {txt:'دجاج بالفرن 180جم + بطاطس مسلوقة 150جم + سلطة + خضار',                          kcal:555},
+      {txt:'لحم مشوي 150جم + أرز 6 معالق + سلطة + شوربة عدس',                                kcal:550},
+      {txt:'شيش طاووق 150جم + أرز 6 معالق + خضار سوتيه + سلطة',                             kcal:545},
+      {txt:'كشري 300جم + سلطة خضراء + شوربة خضار',                                           kcal:555},
+    ],
+    620:[
+      {txt:'صدر دجاج مشوي 200جم + أرز بني 7 معالق + سلطة كبيرة + شوربة',                   kcal:618},
+      {txt:'سمك بلطي 220جم + أرز 7 معالق + خضار سوتيه + سلطة',                               kcal:622},
+      {txt:'لحم مشوي 180جم + أرز 7 معالق + خضار مشوية + سلطة',                               kcal:615},
+      {txt:'دجاج بالفرن 200جم + بطاطس مسلوقة 200جم + سلطة + خضار',                          kcal:625},
+      {txt:'كفتة 180جم + مكرونة 6 معالق + سلطة + شوربة خضار',                                kcal:620},
+      {txt:'كباب 150جم + أرز بني 7 معالق + خضار مشوية + سلطة كبيرة',                         kcal:618},
+      {txt:'ملوخية بدجاج 200جم + أرز 6 معالق + سلطة',                                        kcal:625},
+    ],
+    700:[
+      {txt:'صدر دجاج مشوي 230جم + أرز 8 معالق + سلطة + شوربة عدس',                         kcal:698},
+      {txt:'سمك بلطي 250جم + أرز بني 8 معالق + خضار سوتيه + سلطة',                           kcal:702},
+      {txt:'لحم مشوي 200جم + أرز 8 معالق + سلطة + خضار مشوية',                               kcal:695},
+      {txt:'دجاج بالفرن 230جم + بطاطس مسلوقة 200جم + سلطة + شوربة',                         kcal:705},
+      {txt:'كفتة 200جم + مكرونة 7 معالق + سلطة كبيرة + شوربة خضار',                          kcal:700},
+      {txt:'كشري كبير 400جم + سلطة + شوربة خضار',                                             kcal:698},
+      {txt:'ملوخية بدجاج 250جم + أرز 7 معالق + سلطة + خضار',                                 kcal:705},
+    ],
+  },
+  snack:{
+    150:[
+      {txt:'تفاحة كاملة',                                    kcal:95},
+      {txt:'موزة كاملة',                                     kcal:105},
+      {txt:'برتقالتان كبيرتان',                              kcal:120},
+      {txt:'جوافة كبيرة',                                    kcal:90},
+      {txt:'كوب مانجو مقطع',                                 kcal:100},
+      {txt:'كوب فراولة',                                     kcal:55},
+      {txt:'خيار وجزر + شرائح فلفل',                        kcal:45},
+    ],
+    170:[
+      {txt:'تفاحة + لوز 10جم',                               kcal:168},
+      {txt:'زبادي لايت 150جم',                               kcal:90},
+      {txt:'موزة + جوز 10جم',                                kcal:172},
+      {txt:'برتقالتان + تمرتان',                             kcal:160},
+      {txt:'جبنة قريش 100جم + خيار',                        kcal:125},
+      {txt:'كوب مانجو + لوز 10جم',                           kcal:168},
+      {txt:'2 تمرة + لوز 15جم',                              kcal:162},
+    ],
+    200:[
+      {txt:'تفاحة + لوز 15جم',                               kcal:202},
+      {txt:'زبادي لايت 200جم + موزة نص',                     kcal:195},
+      {txt:'موزة + مكسرات 15جم',                             kcal:210},
+      {txt:'3 تمرات + لوز 15جم',                             kcal:198},
+      {txt:'جبنة قريش 150جم + تفاحة',                       kcal:195},
+      {txt:'كوب فاكهة مشكلة + زبادي لايت',                  kcal:205},
+      {txt:'شوفان 30جم + لبن لايت',                          kcal:195},
+    ],
+    230:[
+      {txt:'زبادي لايت 200جم + موزة + لوز 10جم',            kcal:228},
+      {txt:'تفاحة + جبنة قريش 100جم + لوز 10جم',            kcal:232},
+      {txt:'موزة + زبادي لايت + مكسرات 15جم',               kcal:225},
+      {txt:'3 تمرات + لوز 20جم + زبادي لايت',               kcal:235},
+      {txt:'شوفان 40جم + لبن لايت + موزة نص',               kcal:228},
+      {txt:'كوب مانجو + زبادي لايت + مكسرات 10جم',          kcal:222},
+      {txt:'2 كيوي + جبنة قريش 100جم + لوز',                kcal:230},
+    ],
+    250:[
+      {txt:'زبادي لايت 200جم + موزة كاملة + مكسرات 15جم',   kcal:248},
+      {txt:'تفاحة كبيرة + جبنة قريش 150جم + لوز 15جم',     kcal:252},
+      {txt:'شوفان 45جم + لبن لايت + موزة + تمرتان',         kcal:248},
+      {txt:'3 تمرات + جوز 20جم + زبادي لايت',               kcal:255},
+      {txt:'موزتان + لوز 10جم',                              kcal:245},
+      {txt:'كوب مانجو + زبادي لايت 200جم + لوز 10جم',       kcal:248},
+      {txt:'عصير برتقال طبيعي كوب + لوز 20جم',             kcal:252},
+    ],
+  },
+  din:{
+    250:[
+      {txt:'تونة في الماء 100جم + سلطة خضراء كبيرة + شريحة عيش أسمر',                       kcal:248},
+      {txt:'2 بيضة مسلوقة + جبنة قريش 100جم + خيار وطماطم',                                  kcal:252},
+      {txt:'زبادي لايت 200جم + تفاحة + شريحة توست أسمر',                                     kcal:245},
+      {txt:'شوربة عدس كوب كبير + شريحة عيش أسمر + سلطة',                                     kcal:255},
+      {txt:'فول مدمس 100جم + بيضة مسلوقة + خيار وطماطم',                                     kcal:248},
+      {txt:'تونة بالماء 100جم + خيار وطماطم + شريحة توست',                                    kcal:240},
+      {txt:'جبنة قريش 150جم + خيار وطماطم + زيتون + توست',                                   kcal:255},
+    ],
+    300:[
+      {txt:'تونة في الماء 120جم + سلطة + رغيف أسمر',                                          kcal:298},
+      {txt:'2 بيضة مسلوقة + جبنة قريش 150جم + سلطة خضراء + شريحة توست',                     kcal:302},
+      {txt:'شوربة عدس + 2 بيضة مسلوقة + سلطة',                                               kcal:295},
+      {txt:'فول مدمس 150جم + بيضة مسلوقة + خيار وطماطم',                                     kcal:300},
+      {txt:'صدر دجاج مسلوق 100جم + سلطة كبيرة + شريحة توست',                                kcal:305},
+      {txt:'زبادي لايت 200جم + موزة + شوفان 20جم + توست',                                     kcal:295},
+      {txt:'تونة 120جم + بيضة مسلوقة + سلطة + توست',                                         kcal:302},
+    ],
+    350:[
+      {txt:'تونة في الماء 150جم + سلطة + رغيف أسمر + زبادي لايت',                            kcal:348},
+      {txt:'3 بيض مسلوق + جبنة قريش 100جم + سلطة كبيرة + توست',                             kcal:352},
+      {txt:'شوربة عدس + صدر دجاج 100جم + سلطة + شريحة توست',                                kcal:345},
+      {txt:'فول مدمس 150جم + 2 بيضة مسلوقة + سلطة + توست',                                   kcal:355},
+      {txt:'دجاج مسلوق 150جم + خضار مشوية + شريحة عيش أسمر',                                kcal:350},
+      {txt:'تونة 150جم + بيضتان مسلوقتان + سلطة + توست',                                     kcal:352},
+      {txt:'جبنة قريش 200جم + خيار وطماطم + بيضة + شريحة توست',                             kcal:348},
+    ],
+    400:[
+      {txt:'تونة 150جم + 2 بيضة مسلوقة + سلطة كبيرة + رغيف أسمر',                           kcal:398},
+      {txt:'صدر دجاج مسلوق 150جم + سلطة + خضار مشوية + شريحة توست',                        kcal:402},
+      {txt:'شوربة عدس + تونة 120جم + بيضتان + سلطة + توست',                                  kcal:395},
+      {txt:'فول مدمس 200جم + 2 بيضة + جبنة قريش 80جم + سلطة',                               kcal:405},
+      {txt:'3 بيض مسلوق + جبنة قريش 150جم + سلطة + رغيف أسمر',                              kcal:400},
+      {txt:'دجاج مسلوق 180جم + خضار سوتيه + سلطة + توست',                                   kcal:398},
+      {txt:'تونة 150جم + جبنة قريش 100جم + سلطة + رغيف أسمر + خيار',                        kcal:402},
+    ],
+    450:[
+      {txt:'صدر دجاج مشوي 180جم + سلطة كبيرة + خضار مشوية + رغيف أسمر',                    kcal:448},
+      {txt:'تونة 150جم + 3 بيض مسلوق + سلطة + رغيف بلدي',                                   kcal:452},
+      {txt:'شوربة عدس كبيرة + دجاج 150جم + سلطة + توست',                                     kcal:445},
+      {txt:'فول مدمس 200جم + 2 بيضة + جبنة قريش 100جم + سلطة + توست',                      kcal:455},
+      {txt:'3 بيض مسلوق + جبنة قريش 150جم + فول 100جم + سلطة',                              kcal:450},
+      {txt:'دجاج مسلوق 200جم + خضار مشوية + بيضة + سلطة',                                   kcal:448},
+      {txt:'تونة 180جم + 2 بيضة + جبنة قريش 100جم + سلطة + توست',                           kcal:452},
+    ],
+  }
+};
+
+// مولّد الـ 105 يوم ذكي
+function buildWeekDays(breakKcal, lunchKcal, dinKcal, snackKcal, variantOffset=0){
+  const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+  const bArr = EG_MEALS.break[breakKcal] || EG_MEALS.break[300];
+  const lArr = EG_MEALS.lunch[lunchKcal] || EG_MEALS.lunch[400];
+  const dArr = EG_MEALS.din[dinKcal]   || EG_MEALS.din[250];
+  const sArr = EG_MEALS.snack[snackKcal]|| EG_MEALS.snack[150];
+
+  return DAYS.map((day, i)=>{
+    const idx = (i + variantOffset) % 7;
+    const wake   = EG_MEALS.wake[i % 7];
+    const coffee = EG_MEALS.coffee[i % 7];
+    const pre    = EG_MEALS.pre[i % 7];
+    const night  = EG_MEALS.night[i % 7];
+    const brk    = bArr[idx];
+    const lunch  = lArr[idx];
+    const msnack = sArr[i % 7];          // سناك الصبح
+    const asnack = sArr[(i+3) % 7];      // سناك العصر
+    const din    = dArr[idx];
+    const total  = wake.kcal+brk.kcal+coffee.kcal+msnack.kcal+pre.kcal+
+                   lunch.kcal+asnack.kcal+din.kcal+night.kcal;
+    return {
+      day,
+      total,
+      meals:[
+        {ico:'🌅',name:'مشروب الاستيقاظ',  time:'5:30 ص — قبل ما تصحى بشوية', txt:wake.txt,   kcal:wake.kcal},
+        {ico:'🍳',name:'الفطار',            time:'7:30 ص',                       txt:brk.txt,    kcal:brk.kcal},
+        {ico:'☕',name:'قهوة + بلح',        time:'8:00 ص',                       txt:coffee.txt, kcal:coffee.kcal},
+        {ico:'🍎',name:'سناك صباحي',        time:'10:00 ص',                      txt:msnack.txt, kcal:msnack.kcal},
+        {ico:'🥤',name:'مشروب قبل الغداء', time:'12:30 م',                      txt:pre.txt,    kcal:pre.kcal},
+        {ico:'🍗',name:'الغداء',            time:'2:00 م',                       txt:lunch.txt,  kcal:lunch.kcal},
+        {ico:'🥜',name:'سناك العصر',        time:'4:30 م',                       txt:asnack.txt, kcal:asnack.kcal},
+        {ico:'🥗',name:'العشاء',            time:'7:30 م',                       txt:din.txt,    kcal:din.kcal},
+        {ico:'🌙',name:'قبل النوم',         time:'9:30 م',                       txt:night.txt,  kcal:night.kcal},
+      ]
+    };
+  });
+}
+
+// بناء الـ 5 أنظمة × 3 متغيرات = 15 أسبوع × 7 أيام = 105 يوم
+const FIXED_WEEKLY_PLANS = {
+  1200:{label:'نظام 1200 سعرة', variants:[
+    {name:'أسبوع A — بروتين أعلى',      days:buildWeekDays(300,400,250,150,0)},
+    {name:'أسبوع B — كارب متوازن',       days:buildWeekDays(300,400,250,150,2)},
+    {name:'أسبوع C — خفيف ومتنوع',       days:buildWeekDays(300,400,250,150,4)},
+  ]},
+  1400:{label:'نظام 1400 سعرة', variants:[
+    {name:'أسبوع A — بروتين أعلى',      days:buildWeekDays(350,480,300,170,0)},
+    {name:'أسبوع B — كارب متوازن',       days:buildWeekDays(350,480,300,170,2)},
+    {name:'أسبوع C — خفيف ومتنوع',       days:buildWeekDays(350,480,300,170,4)},
+  ]},
+  1600:{label:'نظام 1600 سعرة', variants:[
+    {name:'أسبوع A — بروتين أعلى',      days:buildWeekDays(400,550,350,200,0)},
+    {name:'أسبوع B — كارب متوازن',       days:buildWeekDays(400,550,350,200,2)},
+    {name:'أسبوع C — خفيف ومتنوع',       days:buildWeekDays(400,550,350,200,4)},
+  ]},
+  1800:{label:'نظام 1800 سعرة', variants:[
+    {name:'أسبوع A — بروتين أعلى',      days:buildWeekDays(450,620,400,230,0)},
+    {name:'أسبوع B — كارب متوازن',       days:buildWeekDays(450,620,400,230,2)},
+    {name:'أسبوع C — خفيف ومتنوع',       days:buildWeekDays(450,620,400,230,4)},
+  ]},
+  2000:{label:'نظام 2000 سعرة', variants:[
+    {name:'أسبوع A — بروتين أعلى',      days:buildWeekDays(500,700,450,250,0)},
+    {name:'أسبوع B — كارب متوازن',       days:buildWeekDays(500,700,450,250,2)},
+    {name:'أسبوع C — خفيف ومتنوع',       days:buildWeekDays(500,700,450,250,4)},
+  ]},
+};
+
+function getWeeklyPlanForUser(){
+  const goal=calcDailyGoal();
+  const levels=[1200,1400,1600,1800,2000];
+  const closest=levels.reduce((p,c)=>Math.abs(c-goal)<Math.abs(p-goal)?c:p);
+  return {plan:FIXED_WEEKLY_PLANS[closest], goal, closest};
+}
+
+
 
 const TIPS_DATA=[
   {ico:'💧',title:'الماء أساس الحرق',body:'اشرب 2-3 لتر ماء يومياً. الماء البارد يُجبر جسمك على حرق سعرات إضافية لتسخينه. كوب قبل كل وجبة يقلل الشهية 13%.'},
@@ -1505,13 +1782,15 @@ const TIPS_DATA=[
 // ════════════════════════════════════════════════════════
 // STORAGE
 // ════════════════════════════════════════════════════════
-const STORE='mrshd_v6';
+const STORE='mrshd_v11';
 function save(){
   try{
     localStorage.setItem(STORE,JSON.stringify({
       profile:S.profile,tracker:S.tracker,
       savedPlans:S.savedPlans,custom:S.custom,
       weightLog:S.weightLog,macros:S.macros,
+      notifEnabled:localStorage.getItem('notif_enabled')||'0',
+      lastAutoDeficitDate:localStorage.getItem('lastAutoDeficitDate')||'',
       tDate:new Date().toDateString(),
       tTimestamp:Date.now()
     }));
@@ -1525,6 +1804,8 @@ function load(){
     if(d.custom) S.custom=d.custom;
     if(d.weightLog) S.weightLog=d.weightLog;
     if(d.macros) S.macros={...S.macros,...d.macros};
+    if(d.notifEnabled==='1') localStorage.setItem('notif_enabled','1');
+    if(d.lastAutoDeficitDate) localStorage.setItem('lastAutoDeficitDate',d.lastAutoDeficitDate);
     // تحقق من اليوم — استخدم tDate كأساس، مع tolerance 28 ساعة للـ timezone
     if(d.tracker&&d.tTimestamp){
       const ageHours=(Date.now()-d.tTimestamp)/(1000*60*60);
@@ -1601,6 +1882,7 @@ function init(){
   renderWeightChart();
   renderInsights();
   renderExercises();
+  initNotifications();
   // تعيين تاريخ اليوم كـ default لإدخال الوزن
   const logDateEl=$('logWeightDate');
   if(logDateEl) logDateEl.value=new Date().toISOString().slice(0,10);
@@ -1623,6 +1905,8 @@ function buildTabs(){
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       btn.classList.add('active');
       $(btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab==='week') renderWeekly();
+      if(btn.dataset.tab==='insights') renderInsights();
     });
   });
 }
@@ -1651,7 +1935,14 @@ function fillProfileForm(){
 function validateProfile(w,tw,h,age){
   if(!w||w<30||w>300){toast('⚠️ الوزن الحالي يجب أن يكون بين 30 و 300 كجم');return false;}
   if(tw&&(tw<30||tw>300)){toast('⚠️ الوزن المستهدف يجب أن يكون بين 30 و 300 كجم');return false;}
-  if(tw&&tw>=w){toast('⚠️ الوزن المستهدف يجب أن يكون أقل من وزنك الحالي');return false;}
+  if(tw&&tw>=w){
+    toast('⚠️ الوزن المستهدف يجب أن يكون أقل من وزنك الحالي — برنامجنا لإنقاص الوزن');
+    return false;
+  }
+  if(tw&&(w-tw)>60){
+    // تحذير لو الفرق أكبر من 60 كجم — لا رفض، فقط تحذير
+    if(!confirm('⚠️ الفرق بين وزنك الحالي والمستهدف كبير جداً ('+(w-tw)+' كجم). يُنصح باستشارة طبيب. هل تريد المتابعة؟')) return false;
+  }
   if(!h||h<100||h>250){toast('⚠️ الطول يجب أن يكون بين 100 و 250 سم');return false;}
   if(!age||age<15||age>100){toast('⚠️ العمر يجب أن يكون بين 15 و 100 سنة');return false;}
   return true;
@@ -1693,6 +1984,32 @@ function updateProfile(doSave=true){
   const weeks=kgLeft>0&&deficit>0?Math.ceil((kgLeft*7700)/(deficit*7)):0;
   setText('targetKcalVal',targetKcal);
   setText('weeksVal',weeks>0?weeks+' أسبوع':'—');
+
+  // Auto-deficit suggestion بناءً على سجل الوزن
+  const wLog=S.weightLog||[];
+  const autoEl=$('autoDeficitSuggestion');
+  if(autoEl && wLog.length>=2){
+    const wFirst=wLog[0],wLast=wLog[wLog.length-1];
+    const actualLossKg=wFirst.weight-wLast.weight;
+    const daysDiff=Math.max(1,Math.round((new Date(wLast.date)-new Date(wFirst.date))/(1000*60*60*24)));
+    const actualRatePerWeek=(actualLossKg/daysDiff*7);
+    const idealRatePerWeek=0.5; // 0.5 كجم/أسبوع مثالي
+    let suggestion='';
+    if(actualRatePerWeek<0.2 && actualLossKg>0){
+      const suggestedDeficit=Math.min(1000,(deficit||500)+100);
+      suggestion=`📊 معدل فقدانك الحالي: ${actualRatePerWeek.toFixed(2)} كجم/أسبوع — بطيء. جرب رفع العجز إلى <strong>${suggestedDeficit}</strong> سعرة`;
+    } else if(actualRatePerWeek>1.2){
+      const suggestedDeficit=Math.max(200,(deficit||500)-100);
+      suggestion=`⚠️ معدل فقدانك: ${actualRatePerWeek.toFixed(2)} كجم/أسبوع — سريع. خفّض العجز إلى <strong>${suggestedDeficit}</strong> سعرة لحماية العضل`;
+    } else if(actualRatePerWeek>=0.3){
+      suggestion=`✅ معدل فقدانك: ${actualRatePerWeek.toFixed(2)} كجم/أسبوع — ممتاز! أنت في المسار الصح 🎯`;
+    }
+    if(suggestion){
+      autoEl.innerHTML=`<div style="background:rgba(16,185,129,.08);border:1px solid var(--border2);border-radius:var(--r-sm);padding:.75rem;font-size:.82rem;color:var(--muted2);margin-top:.75rem">${suggestion}</div>`;
+      autoEl.style.display='block';
+    }
+  }
+
   $('statsCard').style.display='block';
   $('goalCard').style.display='block';
   $('macroCard').style.display='block';
@@ -1702,6 +2019,22 @@ function updateProfile(doSave=true){
   // update tracker goal
   S._targetKcal=targetKcal;
   renderTrackerSummary();
+
+  // ربط مخطط الوجبات بالسعرات المستهدفة تلقائياً
+  const planKcalEl=$('planKcal');
+  if(planKcalEl) planKcalEl.value=targetKcal;
+  // تحديث وزن التمارين تلقائياً
+  const exWEl=$('exWeight');
+  if(exWEl && w) exWEl.value=w;
+
+  // بعد الحفظ الأول → انتقال تلقائي لمخطط الوجبات مع رسالة
+  if(doSave){
+    setTimeout(()=>{
+      const planBtn=document.querySelector('[data-tab="planner"]');
+      if(planBtn){ planBtn.click(); }
+      toast('✅ تم حفظ ملفك — هدفك اليومي '+targetKcal+' سعرة 🎯');
+    },400);
+  }
 }
 
 function updateHealthWarning(){
@@ -1920,9 +2253,11 @@ function removeItem(slot,uid){
 
 function clearDay(){
   if(!confirm('هل تريد مسح جميع وجبات اليوم؟')) return;
-  MEAL_SLOTS.forEach(m=>S.tracker[m.id]=[]);
-  save();renderMealSlots();renderTrackerSummary();
-  toast('🗑️ تم مسح جميع الوجبات');
+  const mealSlotIds=['wake','break','coffee','morn','pre','lunch','after','din','night'];
+  mealSlotIds.forEach(id=>{ S.tracker[id]=[]; });
+  // S.tracker.exercise_burn يُحفظ كما هو
+  save(); renderMealSlots(); renderTrackerSummary();
+  toast('🗑️ تم مسح وجبات اليوم — التمارين محفوظة 💪');
 }
 
 // ── حساب الهدف اليومي بشكل نظيف ──
@@ -1981,50 +2316,203 @@ function renderTrackerSummary(){
 // ════════════════════════════════════════════════════════
 const NON_VEG=['دجاج','فراخ','لحم','سمك','تونة','جمبري','سردين','كفتة','كباب','كبدة','شاورما','شيش','طيور','بلطي','قاروص','بوري','مكريل','سلمون','أسقلوب','تكا'];
 
+// قوائم وجبات مصرية حقيقية لكل وجبة
+const BREAKFAST_ITEMS=[
+  {name:'بيض مسلوق',emoji:'🥚',kcal:78,p:6,c:0.6,f:5,qty:1,unit:'بيضة'},
+  {name:'بيض مقلي بزيت',emoji:'🍳',kcal:90,p:6,c:0.4,f:7,qty:1,unit:'بيضة'},
+  {name:'جبنة بيضاء',emoji:'🧀',kcal:70,p:4,c:1,f:5,qty:30,unit:'جم'},
+  {name:'جبنة قريش',emoji:'🧀',kcal:50,p:8,c:2,f:0.5,qty:100,unit:'جم'},
+  {name:'فول مدمس',emoji:'🫘',kcal:110,p:7,c:18,f:0.5,qty:150,unit:'جم'},
+  {name:'شوفان بالحليب',emoji:'🥣',kcal:180,p:7,c:28,f:4,qty:1,unit:'كوب'},
+  {name:'عيش أسمر',emoji:'🍞',kcal:80,p:3,c:15,f:1,qty:1,unit:'شريحة'},
+  {name:'عيش بلدي',emoji:'🫓',kcal:130,p:4,c:26,f:1,qty:1,unit:'رغيف'},
+  {name:'لبن زبادي لايت',emoji:'🥛',kcal:60,p:5,c:7,f:0.5,qty:150,unit:'جم'},
+  {name:'طماطم وخيار',emoji:'🥗',kcal:30,p:1,c:6,f:0.2,qty:1,unit:'طبق'},
+  {name:'زيتون',emoji:'🫒',kcal:40,p:0.3,c:1,f:4,qty:10,unit:'حبة'},
+  {name:'عسل',emoji:'🍯',kcal:60,p:0,c:16,f:0,qty:1,unit:'ملعقة'},
+];
+const LUNCH_ITEMS=[
+  {name:'صدر دجاج مشوي',emoji:'🍗',kcal:165,p:31,c:0,f:3.6,qty:150,unit:'جم'},
+  {name:'دجاج بالفرن',emoji:'🍗',kcal:185,p:25,c:3,f:8,qty:150,unit:'جم'},
+  {name:'سمك بلطي مشوي',emoji:'🐟',kcal:140,p:28,c:0,f:3,qty:150,unit:'جم'},
+  {name:'لحم مشوي',emoji:'🥩',kcal:200,p:26,c:0,f:10,qty:120,unit:'جم'},
+  {name:'كفتة مشوية',emoji:'🍖',kcal:180,p:20,c:4,f:10,qty:100,unit:'جم'},
+  {name:'بيض مسلوق',emoji:'🥚',kcal:155,p:13,c:1,f:11,qty:2,unit:'بيضة'},
+  {name:'عدس',emoji:'🍲',kcal:190,p:14,c:33,f:0.8,qty:200,unit:'جم'},
+  {name:'أرز أبيض',emoji:'🍚',kcal:180,p:3.5,c:40,f:0.4,qty:100,unit:'جم'},
+  {name:'أرز بني',emoji:'🍚',kcal:165,p:3.5,c:34,f:1.6,qty:100,unit:'جم'},
+  {name:'مكرونة مسلوقة',emoji:'🍝',kcal:160,p:5.5,c:33,f:1,qty:100,unit:'جم'},
+  {name:'خبز بلدي',emoji:'🫓',kcal:130,p:4,c:26,f:1,qty:1,unit:'رغيف'},
+  {name:'سلطة خضراء',emoji:'🥗',kcal:40,p:2,c:7,f:0.5,qty:1,unit:'طبق'},
+  {name:'شوربة خضار',emoji:'🥣',kcal:60,p:3,c:10,f:1,qty:1,unit:'كوب'},
+];
+const DINNER_ITEMS=[
+  {name:'بيض مسلوق',emoji:'🥚',kcal:78,p:6,c:0.6,f:5,qty:2,unit:'بيضة'},
+  {name:'تونة في الماء',emoji:'🐟',kcal:100,p:22,c:0,f:1,qty:100,unit:'جم'},
+  {name:'جبنة قريش',emoji:'🧀',kcal:100,p:16,c:4,f:1,qty:200,unit:'جم'},
+  {name:'فول مدمس',emoji:'🫘',kcal:110,p:7,c:18,f:0.5,qty:150,unit:'جم'},
+  {name:'شوربة عدس',emoji:'🥣',kcal:120,p:8,c:20,f:1,qty:1,unit:'كوب'},
+  {name:'سلطة خضراء',emoji:'🥗',kcal:40,p:2,c:7,f:0.5,qty:1,unit:'طبق'},
+  {name:'خضار مشوية',emoji:'🥦',kcal:80,p:3,c:15,f:0.5,qty:1,unit:'طبق'},
+  {name:'عيش أسمر',emoji:'🍞',kcal:80,p:3,c:15,f:1,qty:1,unit:'شريحة'},
+  {name:'زبادي لايت',emoji:'🥛',kcal:60,p:5,c:7,f:0.5,qty:150,unit:'جم'},
+  {name:'دجاج مشوي بارد',emoji:'🍗',kcal:130,p:25,c:0,f:3,qty:100,unit:'جم'},
+];
+const SNACK_ITEMS=[
+  {name:'تفاحة',emoji:'🍎',kcal:80,p:0.4,c:21,f:0.3,qty:1,unit:'حبة'},
+  {name:'موزة',emoji:'🍌',kcal:105,p:1.3,c:27,f:0.4,qty:1,unit:'حبة'},
+  {name:'برتقالة',emoji:'🍊',kcal:62,p:1.2,c:15,f:0.2,qty:1,unit:'حبة'},
+  {name:'لوز',emoji:'🌰',kcal:100,p:3.7,c:3.5,f:9,qty:20,unit:'جم'},
+  {name:'زبادي لايت',emoji:'🥛',kcal:60,p:5,c:7,f:0.5,qty:150,unit:'جم'},
+  {name:'جبنة قريش',emoji:'🧀',kcal:50,p:8,c:2,f:0.5,qty:100,unit:'جم'},
+  {name:'تمر',emoji:'🟤',kcal:83,p:0.6,c:22,f:0.1,qty:3,unit:'حبة'},
+  {name:'خيار وجزر',emoji:'🥒',kcal:30,p:1,c:6,f:0.2,qty:1,unit:'طبق'},
+  {name:'بسكويت الشوفان',emoji:'🍪',kcal:110,p:2,c:18,f:3.5,qty:3,unit:'قطعة'},
+  {name:'فستق محمص',emoji:'🥜',kcal:90,p:3,c:4,f:7,qty:15,unit:'جم'},
+];
+const DRINK_ITEMS=[
+  {name:'ماء',emoji:'💧',kcal:0,p:0,c:0,f:0,qty:1,unit:'كوب'},
+  {name:'شاي أخضر',emoji:'🍵',kcal:2,p:0,c:0.5,f:0,qty:1,unit:'كوب'},
+  {name:'قهوة سادة',emoji:'☕',kcal:5,p:0.3,c:0,f:0,qty:1,unit:'كوب'},
+  {name:'عصير ليمون بدون سكر',emoji:'🍋',kcal:30,p:0.4,c:8,f:0.1,qty:1,unit:'كوب'},
+  {name:'حليب لايت',emoji:'🥛',kcal:80,p:6,c:10,f:1,qty:1,unit:'كوب'},
+  {name:'كركديه بارد',emoji:'🌺',kcal:10,p:0,c:2,f:0,qty:1,unit:'كوب'},
+];
+
+function pickRandom(arr,n=1){
+  const shuffled=[...arr].sort(()=>Math.random()-.5);
+  return shuffled.slice(0,n);
+}
+
 function generatePlan(){
   const mainN=Math.max(1,Math.min(4,parseInt($('mainMeals').value)||3));
   const snackN=Math.max(0,Math.min(3,parseInt($('snacks').value)||2));
   const drinkN=Math.max(0,Math.min(3,parseInt($('drinks').value)||2));
-  const planKcal=parseInt($('planKcal').value)||1500;
+  const planKcal=parseInt($('planKcal').value)||calcDailyGoal()||1500;
   const pref=getStr('pref');
   const forbidden=getStr('forbidden').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
   const isDiabetic=S.profile.diabetes===true;
   const isHyper=S.profile.hypertension===true;
 
-  let pool=allFoods().filter(f=>{
-    if(forbidden.some(fb=>f.name.toLowerCase().includes(fb))) return false;
-    if(isDiabetic  && (f.tags||[]).includes('تحذير_سكر'))  return false;
-    if(isHyper     && (f.tags||[]).includes('تحذير_ضغط'))  return false;
+  // فلترة حسب الممنوعات والأمراض
+  const filterItems=(arr)=>arr.filter(f=>{
+    if(forbidden.some(fb=>f.name.includes(fb))) return false;
+    if(isDiabetic && ['تمر','عسل','عصير ليمون بدون سكر'].includes(f.name)) return false;
+    if(pref==='veg' && ['دجاج','سمك','لحم','تونة','كفتة'].some(m=>f.name.includes(m))) return false;
+    if(pref==='highpro' && f.p<5) return false;
+    if(pref==='lowcarb' && f.c>20) return false;
     return true;
   });
-  if(pref==='highpro') pool=pool.filter(f=>(f.tags||[]).includes('بروتين')||f.p>10);
-  else if(pref==='lowcarb') pool=pool.filter(f=>f.c<15);
-  else if(pref==='veg') pool=pool.filter(f=>f.cat!=='بروتين'&&!NON_VEG.some(w=>f.name.includes(w)));
 
-  const mainPool=pool.filter(f=>['بروتين','حبوب','بقوليات','أكل مصري'].includes(f.cat));
-  const snackPool=pool.filter(f=>['فواكه','سناكات','مكسرات'].includes(f.cat));
-  const drinkPool=pool.filter(f=>f.cat==='مشروبات صحية');
+  // بناء الخطة من قوائم الوجبات المصرية الحقيقية
+  const fBreakfast = filterItems(BREAKFAST_ITEMS);
+  const fLunch     = filterItems(LUNCH_ITEMS);
+  const fDinner    = filterItems(DINNER_ITEMS);
+  const fSnack     = filterItems(SNACK_ITEMS);
+  const fDrink     = filterItems(DRINK_ITEMS);
 
-  const mainKcal=planKcal*.70,snackKcal=planKcal*.20,drinkKcal=planKcal*.10;
+  // توزيع السعرات: فطار 30% / غداء 35% / عشاء 25% / سناكات 10%
+  const bfKcal  = Math.round(planKcal * 0.30);
+  const lunchK  = Math.round(planKcal * 0.35);
+  const dinnerK = Math.round(planKcal * 0.25);
+  const snackK  = Math.round(planKcal * 0.10 / Math.max(snackN,1));
 
-  const plan={
-    breakfast:pickFood(mainPool,mainKcal/mainN),
-    snack_am:snackN>0?pickFood(snackPool,snackKcal/Math.max(snackN,1)):null,
-    lunch:mainN>=2?pickFood(mainPool,mainKcal/mainN):null,
-    snack_pm:snackN>1?pickFood(snackPool,snackKcal/Math.max(snackN,1)):null,
-    dinner:mainN>=3?pickFood(mainPool,mainKcal/mainN):null,
-    drink1:drinkN>0?pickFood(drinkPool,drinkKcal/Math.max(drinkN,1),250):null,
-    drink2:drinkN>1?pickFood(drinkPool,drinkKcal/Math.max(drinkN,1),250):null,
-    extra_main:mainN>=4?pickFood(mainPool,mainKcal/mainN):null,
+  // اختيار ذكي: بيضة + خبز + إضافة للفطار
+  const bfItems = buildMealCombination(fBreakfast, bfKcal);
+  const lItems  = buildMealCombination(fLunch,     lunchK);
+  const dItems  = buildMealCombination(fDinner,    dinnerK);
+
+  const structuredPlan = {
+    فطار:     { items: bfItems, targetKcal: bfKcal },
+    غداء:     mainN>=2 ? { items: lItems,  targetKcal: lunchK }  : null,
+    عشاء:     mainN>=3 ? { items: dItems,  targetKcal: dinnerK } : null,
+    'وجبة رابعة': mainN>=4 ? { items: buildMealCombination(fLunch, Math.round(planKcal*0.15)), targetKcal: Math.round(planKcal*0.15) } : null,
+    سناك:     snackN>0 ? pickRandom(fSnack, Math.min(snackN,2)) : [],
+    مشروبات:  drinkN>0 ? pickRandom(fDrink, Math.min(drinkN,3)) : [],
   };
-  S.currentPlan=plan;
+  S.currentPlan = structuredPlan;
+  S._planKcal   = planKcal;
 
   // Health notes HTML
   let notes='';
   if(isDiabetic) notes+=`<div class="plan-health-note"><p>🍬 <strong>مرضى السكر:</strong> تجنب السكريات والعصائر المحلاة، وزّع الكربوهيدرات على اليوم، واستشر طبيبك.</p></div>`;
-  if(isHyper) notes+=`<div class="plan-health-note"><p>❤️ <strong>مرضى الضغط:</strong> قلل الملح والمخللات، تجنب عرقسوس والمشروبات العالية الكافيين.</p></div>`;
+  if(isHyper)    notes+=`<div class="plan-health-note"><p>❤️ <strong>مرضى الضغط:</strong> قلل الملح والمخللات، تجنب عرقسوس والمشروبات العالية الكافيين.</p></div>`;
 
-  renderPlan(plan,notes);
+  renderStructuredPlan(structuredPlan, planKcal, notes);
+}
+
+// بناء تركيبة وجبة متوازنة من قائمة أصناف
+function buildMealCombination(pool, targetKcal){
+  if(!pool.length) return [];
+  const shuffled=[...pool].sort(()=>Math.random()-.5);
+  let total=0, chosen=[];
+  for(const item of shuffled){
+    if(total+item.kcal <= targetKcal+50 && chosen.length<4){
+      chosen.push(item);
+      total+=item.kcal;
+      if(total>=targetKcal*0.85) break;
+    }
+  }
+  if(!chosen.length) chosen=[shuffled[0]];
+  return chosen;
+}
+
+function renderStructuredPlan(plan, totalKcal, healthNotes=''){
+  const mealNames=Object.keys(plan).filter(k=>plan[k]&&k!=='سناك'&&k!=='مشروبات');
+  const meals=[];
+
+  // وجبات رئيسية
+  mealNames.forEach(name=>{
+    const m=plan[name];
+    if(!m) return;
+    const mKcal=m.items.reduce((s,i)=>s+i.kcal,0);
+    meals.push({
+      label:name,
+      items:m.items,
+      totalKcal:mKcal
+    });
+  });
+
+  // سناكات
+  if(plan['سناك']&&plan['سناك'].length){
+    plan['سناك'].forEach((s,i)=>{
+      meals.push({label:'سناك '+(i+1), items:[s], totalKcal:s.kcal});
+    });
+  }
+  // مشروبات
+  if(plan['مشروبات']&&plan['مشروبات'].length){
+    plan['مشروبات'].forEach((d,i)=>{
+      meals.push({label:'مشروب '+(i+1), items:[d], totalKcal:d.kcal});
+    });
+  }
+
+  const grandTotal=meals.reduce((s,m)=>s+m.totalKcal,0);
+  const totalPro  =Object.values(plan).flat().reduce((s,x)=>s+(Array.isArray(x)?x.reduce((ss,i)=>ss+(i.p||0),0):(x&&x.items?x.items.reduce((ss,i)=>ss+(i.p||0),0):0)),0);
+
+  const rows=meals.map(m=>`
+    <div style="margin-bottom:1rem;border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden">
+      <div style="background:rgba(4,120,87,.18);padding:.5rem .9rem;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:800;color:#6ee7b7">${m.label}</span>
+        <span style="font-size:.78rem;color:var(--gold)">${m.totalKcal} سعرة</span>
+      </div>
+      ${m.items.map(item=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .9rem;border-bottom:1px solid var(--border2);font-size:.85rem">
+          <span>${item.emoji||'🍽️'} ${item.name} — ${item.qty} ${item.unit||'جم'}</span>
+          <span style="color:var(--muted2)">${item.kcal} ك</span>
+        </div>`).join('')}
+    </div>`).join('');
+
+  $('planItems').innerHTML=`
+    ${healthNotes}
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;font-size:.85rem">
+      <span>🔥 المجموع: <strong style="color:var(--gold)">${grandTotal}</strong> سعرة</span>
+      <span>🎯 الهدف: <strong style="color:var(--g1)">${totalKcal}</strong> سعرة</span>
+      <span>💪 بروتين تقريبي: <strong>${totalPro.toFixed(0)}</strong>جم</span>
+    </div>
+    ${rows}`;
+  setText('planTotal',grandTotal);
+  $('planResult').style.display='block';
+  renderSavedPlans();
 }
 
 function pickFood(foods,targetKcal,fixedQty=0){
@@ -2138,67 +2626,71 @@ function generateAIPlan(){
   const meals=parseInt(getStr('aiMeals'))||5;
   const avoid=getStr('aiAvoid');
   const p=S.profile;
-  const bmr=p.gender==='male'?10*p.weight+6.25*p.height-5*p.age+5:10*p.weight+6.25*p.height-5*p.age-161;
-  const tdee=bmr*(p.activity||1.55);
-  const target=Math.max(1200,Math.round(tdee-(p.deficit||500)));
+  // السعرات دايماً من calcDailyGoal المرتبطة بالملف
+  const target=calcDailyGoal();
   const perMeal=Math.round(target/meals);
+  const proTarget=p.weight?Math.round(p.weight*1.8):Math.round(target*0.30/4);
+  const bfK=Math.round(target*0.30),lK=Math.round(target*0.35),
+        dK=Math.round(target*0.20),sK=Math.round(target*0.075);
 
   let txt=`🎯 خطتك الذكية — ${type}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-  txt+=`📊 السعرات المستهدفة: ${target} سعرة/يوم\n`;
+  txt+=`📊 السعرات: ${target} سعرة/يوم (من ملفك الشخصي)\n`;
   txt+=`📊 لكل وجبة تقريباً: ${perMeal} سعرة\n`;
-  if(p.weight && p.targetWeight) txt+=`⚖️ الهدف: إنقاص ${Math.max(0,p.weight-p.targetWeight).toFixed(1)} كجم\n`;
+  txt+=`💪 هدف البروتين: ${proTarget}جم/يوم\n`;
+  if(p.weight&&p.targetWeight) txt+=`⚖️ الهدف: إنقاص ${Math.max(0,p.weight-p.targetWeight).toFixed(1)} كجم\n`;
   txt+=`━━━━━━━━━━━━━━━━━━━━━━\n`;
-
-  // Health notes
-  if(p.diabetes) txt+=`🍬 تنبيه السكر: تجنب السكريات والعصائر المحلاة، وزّع الكربوهيدرات.\n`;
-  if(p.hypertension) txt+=`❤️ تنبيه الضغط: قلل الملح، تجنب عرقسوس والكافيين المرتفع.\n`;
+  if(p.diabetes) txt+=`🍬 تنبيه السكر: تجنب السكريات والعصائر المحلاة.\n`;
+  if(p.hypertension) txt+=`❤️ تنبيه الضغط: قلل الملح وتجنب الكافيين المرتفع.\n`;
   if(p.diabetes||p.hypertension) txt+=`━━━━━━━━━━━━━━━━━━━━━━\n`;
   txt+='\n';
 
   if(type==='نظام الصيام المتقطع'){
-    txt+=`⏰ فترة الأكل: 12 ظهراً — 8 مساءً (صيام 16 ساعة)\n\n`;
-    txt+=`12:00 — كسر الصيام:\n• 3 بيض مسلوق + خضار خام\n• شوفان 50جم + زبادي يوناني\n• ثمرة فاكهة صغيرة\n\n`;
-    txt+=`3:00 — سناك:\n• زبادي يوناني 200جم + مكسرات 30جم\n\n`;
-    txt+=`6:00 — الغداء:\n• صدر دجاج مشوي 150جم\n• أرز بني 80جم + خضار سوتيه\n• سلطة خضراء كبيرة\n\n`;
-    txt+=`7:45 — آخر وجبة:\n• تونة + سلطة خضراء\n• تفاحة صغيرة\n`;
+    txt+=`⏰ فترة الأكل: 12 ظهراً — 8 مساءً\n\n`;
+    txt+=`12:00 — كسر الصيام (${Math.round(target*0.35)} سعرة):\n`;
+    txt+=`• فول مدمس 150جم + 2 بيضة مسلوقة\n• رغيف عيش بلدي + طماطم وخيار\n\n`;
+    txt+=`3:00 — سناك (${sK} سعرة):\n• زبادي لايت 150جم + تفاحة\n\n`;
+    txt+=`6:00 — غداء (${Math.round(target*0.35)} سعرة):\n`;
+    txt+=`• صدر دجاج مشوي ${Math.round(target*0.12)}جم\n• أرز 80جم + سلطة خضراء\n\n`;
+    txt+=`7:45 — آخر وجبة (${Math.round(target*0.15)} سعرة):\n• تونة بالماء 100جم + خيار + شريحة عيش أسمر\n`;
   } else if(type==='عالي بروتين'){
-    txt+=`💪 الهدف: ${p.weight?Math.round(p.weight*2):'—'}جم بروتين يومياً (2جم/كجم)\n\n`;
-    txt+=`7:30 — الفطار (30جم بروتين):\n• 4 بياض بيض + بيضة كاملة\n• جبنة قريش 100جم\n• شوفان 40جم\n\n`;
-    txt+=`10:00 — سناك (20جم بروتين):\n• زبادي يوناني 200جم\n\n`;
-    txt+=`2:00 — الغداء (40جم بروتين):\n• صدر دجاج مشوي 200جم\n• بروكلي مشوي + أرز بني 80جم\n\n`;
-    txt+=`5:00 — سناك (20جم بروتين):\n• تونة في الماء + خيار\n\n`;
-    txt+=`8:00 — العشاء (30جم بروتين):\n• سمك مشوي 150جم\n• سلطة خضراء + زيت زيتون\n`;
+    txt+=`💪 هدف البروتين: ${proTarget}جم/يوم\n\n`;
+    txt+=`7:30 — الفطار (${bfK} سعرة):\n• 3 بيض مسلوق\n• جبنة قريش 150جم\n• رغيف عيش أسمر + طماطم وخيار\n\n`;
+    txt+=`10:00 — سناك (${sK} سعرة):\n• زبادي لايت + موزة\n\n`;
+    txt+=`2:00 — الغداء (${lK} سعرة):\n• صدر دجاج مشوي ${Math.round(lK*0.45)}جم\n• أرز بني 80جم + سلطة كبيرة\n\n`;
+    txt+=`5:00 — سناك (${sK} سعرة):\n• تونة بالماء 100جم + خيار\n\n`;
+    txt+=`8:00 — العشاء (${dK} سعرة):\n• سمك بلطي مشوي 150جم\n• خضار مشوية + شريحة عيش أسمر\n`;
   } else if(type==='منخفض الكارب'){
     txt+=`🥑 الهدف: أقل من 50جم كارب يومياً\n\n`;
-    txt+=`الفطار: 3 بيض + أفوكادو نصف + سبانخ\n`;
-    txt+=`السناك: مكسرات 30جم + خيار\n`;
-    txt+=`الغداء: لحم 150جم + بروكلي مشوي + سلطة\n`;
-    txt+=`سناك عصر: زبادي يوناني + بذور كتان\n`;
-    txt+=`العشاء: سمك 150جم + خضار سوتيه\n`;
-    txt+=`قبل النوم: جبنة قريش\n`;
+    txt+=`7:30 — الفطار (${bfK} سعرة):\n• 3 بيض مسلوق\n• جبنة بيضاء 40جم + زيتون\n• طماطم وخيار\n\n`;
+    txt+=`11:00 — سناك (${sK} سعرة):\n• مكسرات 25جم\n\n`;
+    txt+=`2:00 — الغداء (${lK} سعرة):\n• دجاج مشوي ${Math.round(lK*0.43)}جم\n• سلطة كبيرة + زيت زيتون + بروكلي\n\n`;
+    txt+=`5:30 — سناك (${sK} سعرة):\n• جبنة قريش 100جم\n\n`;
+    txt+=`8:00 — العشاء (${dK} سعرة):\n• سمك مشوي 150جم\n• خضار سوتيه بزيت زيتون\n`;
   } else if(type==='نباتي'){
-    txt+=`🌱 نظام نباتي متوازن\n\n`;
-    txt+=`الفطار: فول مدمس 150جم + خضار طازجة\n`;
-    txt+=`سناك: تفاحة + لوز 20جم\n`;
-    txt+=`الغداء: عدس 150جم + أرز بني 80جم + سلطة\n`;
-    txt+=`سناك عصر: زبادي لايت + فاكهة\n`;
-    txt+=`العشاء: حمص مسلوق + خضار مشوية\n`;
-    txt+=`قبل النوم: حليب لوز + قرفة\n`;
+    txt+=`🌱 نظام نباتي مصري متوازن\n\n`;
+    txt+=`7:30 — الفطار (${bfK} سعرة):\n• فول مدمس 200جم\n• رغيف عيش بلدي + طماطم وخيار\n\n`;
+    txt+=`11:00 — سناك (${sK} سعرة):\n• تفاحة + لوز 20جم\n\n`;
+    txt+=`2:00 — الغداء (${lK} سعرة):\n• عدس مسلوق 200جم + أرز 80جم\n• سلطة خضراء كبيرة\n\n`;
+    txt+=`5:30 — سناك (${sK} سعرة):\n• زبادي لايت + موزة\n\n`;
+    txt+=`8:00 — العشاء (${dK} سعرة):\n• فول مدمس 150جم + 2 بيضة\n• طماطم وخيار\n`;
   } else {
-    txt+=`5:30 — مشروب الاستيقاظ:\n• ماء دافئ + ليمون + زنجبيل\n\n`;
-    txt+=`7:30 — الفطار:\n• 2 بيض مسلوق + شريحة خبز أسمر\n• طماطم وخيار + زيت زيتون\n\n`;
-    txt+=`10:00 — سناك:\n• تفاحة + 10 حبة لوز\n\n`;
-    txt+=`2:00 — الغداء:\n• صدر دجاج مشوي 120جم\n• أرز بني 80جم + خضار سوتيه\n• سلطة خضراء كبيرة\n\n`;
-    txt+=`5:00 — سناك عصر:\n• زبادي لايت + قرفة\n\n`;
-    txt+=`8:00 — العشاء:\n• تونة بالماء + سلطة\n• شريحة توست أسمر\n\n`;
-    txt+=`قبل النوم:\n• زبادي يوناني + قرفة\n`;
+    txt+=`5:30 — مشروب الاستيقاظ:\n• ماء دافئ + ليمون\n\n`;
+    txt+=`7:30 — الفطار (${bfK} سعرة):\n• 2 بيضة مسلوقة\n• رغيف عيش أسمر + جبنة بيضاء\n• طماطم وخيار\n\n`;
+    txt+=`11:00 — سناك (${sK} سعرة):\n• تفاحة + 10 حبة لوز\n\n`;
+    txt+=`2:00 — الغداء (${lK} سعرة):\n• صدر دجاج مشوي ${Math.round(lK*0.30)}جم\n• أرز أبيض 80جم + سلطة خضراء + شوربة خضار\n\n`;
+    txt+=`5:30 — سناك عصر (${sK} سعرة):\n• زبادي لايت 150جم\n\n`;
+    txt+=`8:00 — العشاء (${dK} سعرة):\n• تونة بالماء 100جم + سلطة\n• شريحة عيش أسمر\n`;
   }
 
   txt+=`\n━━━━━━━━━━━━━━━━━━━━━━\n`;
   txt+=`💧 الماء: 3-4 لتر موزعة على اليوم\n`;
-  txt+=`☕ القهوة: 2-3 كوب سادة\n`;
+  txt+=`☕ قهوة/شاي: 2-3 كوب بدون سكر\n`;
   txt+=`🚫 تجنب: ${avoid||'السكر والمقليات والمشروبات الغازية'}\n`;
-  txt+=`🚶 مشي: 30 دقيقة يومياً على الأقل`;
+  txt+=`🚶 مشي: 30 دقيقة يومياً على الأقل\n`;
+  txt+=`\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+  txt+=`💪 إجمالي البروتين اليومي المتوقع: ~${proTarget}جم\n`;
+  txt+=`🔥 إجمالي السعرات: ~${target} سعرة/يوم\n`;
+  txt+=`⚖️ معدل الفقدان المتوقع: ~0.5 كجم/أسبوع`;
 
   const el=$('aiResult');
   el.textContent=txt;
@@ -2225,38 +2717,96 @@ function fallbackCopy(text){
 // WEEKLY PLAN
 // ════════════════════════════════════════════════════════
 function renderWeekly(){
-  $('weeklyPlan').innerHTML=WEEKLY.map((d,i)=>{
-    const actual=d.meals.reduce((s,m)=>s+m.kcal,0);
-    const diff=Math.abs(actual-d.total);
-    const warn=diff>50?`<span style="color:#f87171;font-size:.75rem"> ⚠️ فرق ${diff} سعرة</span>`:'';
-    return `<div class="plan-day" id="pd${i}">
-      <div class="plan-day-hdr" onclick="toggleDay(${i})">
-        <h3>📅 ${d.day} — ${d.total} سعرة${warn}</h3>
-        <span id="pdArrow${i}" style="color:var(--muted);font-size:1.2rem">${i===0?'▲':'▼'}</span>
-      </div>
-      <div class="plan-day-body${i===0?' open':''}" id="pdb${i}">
-        ${d.meals.map(m=>`
-          <div class="plan-row">
-            <div class="time-lbl">${m.ico} ${m.name}<br><small style="font-size:.7rem;color:var(--muted2)">${m.time}</small></div>
-            <div class="meal-txt">${escapeHtml(m.txt)}</div>
-            <div class="kcal-badge">${m.kcal>0?m.kcal+'ك':'—'}</div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
+  const sel      = $('weekPlanSelect');
+  const varSel   = $('weekVariantSelect');
+  const choice   = sel   ? sel.value            : 'auto';
+  const varIdx   = varSel? parseInt(varSel.value)||0 : 0;
+  const container= $('weeklyPlan');
+  const banner   = $('weekPlanTitle');
+  const sub      = $('weekPlanSub');
+  const varWrap  = $('variantWrap');
+
+  let planKey, planData;
+  if(choice==='auto'){
+    const {plan,goal,closest}=getWeeklyPlanForUser();
+    planData=plan; planKey=closest;
+    if(banner) banner.textContent=plan?plan.label+' (هدفك '+goal+' سعرة)':'اضبط ملفك أولاً';
+    if(sub)    sub.textContent  =plan?'اختيار تلقائي من ملفك الشخصي':'أدخل بياناتك في ملفي';
+  } else {
+    planKey =parseInt(choice);
+    planData=FIXED_WEEKLY_PLANS[planKey];
+    if(banner) banner.textContent=planData?planData.label:'—';
+    if(sub)    sub.textContent  ='نظام ثابت '+planKey+' سعرة/يوم';
+  }
+
+  // إظهار/إخفاء variant selector
+  if(varWrap){
+    if(planData&&planData.variants){
+      varWrap.style.display='flex';
+      if(varSel){
+        const curVal=varSel.value;
+        varSel.innerHTML=planData.variants.map((v,i)=>
+          `<option value="${i}">${v.name}</option>`).join('');
+        varSel.value=Math.min(parseInt(curVal)||0, planData.variants.length-1);
+      }
+    } else { varWrap.style.display='none'; }
+  }
+
+  if(!planData||!planData.variants){
+    container.innerHTML='<div class="empty"><div class="e-ico">📋</div><p>أدخل بياناتك في "ملفي" أولاً</p></div>';
+    return;
+  }
+
+  const safeIdx  = Math.min(varIdx, planData.variants.length-1);
+  const variant  = planData.variants[safeIdx];
+  const days     = variant.days;
+  const weekTotal= days.reduce((s,d)=>s+d.total,0);
+  const weekAvg  = Math.round(weekTotal/days.length);
+
+  container.innerHTML=
+    `<div style="background:rgba(16,185,129,.08);border:1px solid var(--border2);border-radius:var(--r-sm);padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;display:flex;gap:1.5rem;flex-wrap:wrap">
+      <span>📊 متوسط اليوم: <strong style="color:var(--gold)">${weekAvg}</strong> سعرة</span>
+      <span>📅 مجموع الأسبوع: <strong style="color:var(--g1)">${weekTotal.toLocaleString()}</strong> سعرة</span>
+      <span>🥗 <strong>${variant.name}</strong></span>
+    </div>`+
+    days.map((d,i)=>`
+      <div class="plan-day" id="pd${i}">
+        <div class="plan-day-hdr" onclick="toggleDay(${i})">
+          <h3>📅 ${d.day} — ${d.total} سعرة</h3>
+          <span id="pdArrow${i}" style="color:var(--muted2);font-size:1.1rem;transition:transform .3s">▼</span>
+        </div>
+        <div class="plan-day-body" id="pdb${i}">
+          ${d.meals.map(m=>`
+            <div class="plan-row">
+              <span class="plan-ico">${m.ico}</span>
+              <div class="plan-info">
+                <div class="plan-name">${m.name} <span style="color:var(--gold);font-size:.75rem;font-weight:700">${m.kcal} سعرة</span></div>
+                <div class="plan-time">⏰ ${m.time}</div>
+                <div class="plan-txt">${m.txt}</div>
+              </div>
+            </div>`).join('')}
+          <div style="text-align:center;padding:.5rem;background:rgba(16,185,129,.05);font-size:.73rem;color:var(--muted2);border-top:1px solid var(--border2)">
+            💧 3-4 لتر ماء &nbsp;|&nbsp; ☕ قهوة/شاي بدون سكر &nbsp;|&nbsp; 🚶 30 دقيقة مشي
+          </div>
+        </div>
+      </div>`).join('');
 }
 
 function toggleDay(i){
-  const body=$(`pdb${i}`),arrow=$(`pdArrow${i}`);
+  const body=$('pdb'+i), arrow=$('pdArrow'+i);
   body.classList.toggle('open');
   arrow.textContent=body.classList.contains('open')?'▲':'▼';
 }
 function toggleAllDays(open){
-  WEEKLY.forEach((_,i)=>{
-    const body=$(`pdb${i}`),arrow=$(`pdArrow${i}`);
-    if(open){body.classList.add('open');arrow.textContent='▲';}
-    else{body.classList.remove('open');arrow.textContent='▼';}
-  });
+  // نستخدم كل عناصر pdb الموجودة فعلاً في الـ DOM
+  let i=0;
+  while(true){
+    const body=$('pdb'+i), arrow=$('pdArrow'+i);
+    if(!body) break;
+    if(open){ body.classList.add('open'); if(arrow) arrow.textContent='▲'; }
+    else     { body.classList.remove('open'); if(arrow) arrow.textContent='▼'; }
+    i++;
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -2353,7 +2903,7 @@ function toast(msg){
 // ════════════════════════════════════════════════════════
 function exportData(){
   const data={
-    _app:'مرشدك الصحي v10.0',
+    _app:'مرشدك الصحي v11.0',
     _by:'Mohamed Elghtrefy',
     _exported:new Date().toLocaleString('ar-EG'),
     profile:S.profile,
@@ -2714,23 +3264,45 @@ function loadMacroSliders(){
 function addWeightLog(){
   const val  = parseFloat($('logWeightVal')?.value);
   const date = $('logWeightDate')?.value;
-  if(!val || val < 30 || val > 300){ toast('⚠️ أدخل وزناً صحيحاً بين 30 و 300 كجم'); return; }
-  if(!date){ toast('⚠️ اختر التاريخ'); return; }
+  if(!val||val<30||val>300){toast('⚠️ أدخل وزناً صحيحاً بين 30 و 300 كجم');return;}
+  if(!date){toast('⚠️ اختر التاريخ');return;}
 
-  // إزالة نفس اليوم لو موجود
-  S.weightLog = S.weightLog.filter(e => e.date !== date);
-  S.weightLog.push({date, weight: val});
-  S.weightLog.sort((a,b) => a.date.localeCompare(b.date));
+  S.weightLog=S.weightLog.filter(e=>e.date!==date);
+  S.weightLog.push({date,weight:val});
+  S.weightLog.sort((a,b)=>a.date.localeCompare(b.date));
+  if(S.weightLog.length>52) S.weightLog=S.weightLog.slice(-52);
 
-  // الاحتفاظ بآخر 52 إدخال (سنة)
-  if(S.weightLog.length > 52) S.weightLog = S.weightLog.slice(-52);
+  // تحديث الوزن الحالي في البروفايل
+  S.profile.weight=val;
+  const wEl=$('weight'); if(wEl) wEl.value=val;
 
   save();
   renderWeightChart();
-  renderInsights();
   $('weightLogCard').style.display='block';
-  toast('✅ تم تسجيل الوزن: ' + val + ' كجم');
-  $('logWeightVal').value = '';
+
+  // Smart Status — مقارنة بالتسجيل السابق
+  const log=S.weightLog;
+  if(log.length>=2){
+    const prev=log[log.length-2],curr=log[log.length-1];
+    const diff=+(curr.weight-prev.weight).toFixed(1);
+    const days=Math.max(1,Math.round((new Date(curr.date)-new Date(prev.date))/(864e5)));
+    const rateW=+(diff/days*7).toFixed(2);
+    let msg='';
+    if(diff<0){
+      if(Math.abs(rateW)<=1) msg=`🎉 رائع! فقدت ${Math.abs(diff)} كجم — معدل صحي ممتاز ✅`;
+      else msg=`⚠️ فقدت ${Math.abs(diff)} كجم بسرعة — زد البروتين لحماية العضل`;
+    } else if(diff>0){
+      msg=`📈 الوزن زاد ${diff} كجم — راجع خطة السعرات`;
+    } else {
+      msg=`⚖️ الوزن ثابت — جرب تقليل 100 سعرة أو زيادة التمارين`;
+    }
+    if(msg) setTimeout(()=>toast(msg),1200);
+  } else {
+    toast('✅ تم تسجيل الوزن: '+val+' كجم');
+  }
+  $('logWeightVal').value='';
+  // تعديل العجز التلقائي بناءً على التقدم
+  setTimeout(autoAdjustDeficit, 1500);
 }
 
 function renderWeightChart(){
@@ -3035,6 +3607,151 @@ function renderInsights(){
       ${rateNum < 0 ? '📌 الوزن بيزيد — راجع خطتك الغذائية' : ''}
       ${rateNum === 0 ? '➡️ الوزن ثابت — زود عجز السعرات أو نشاطك الرياضي' : ''}
     </div>`;
+}
+
+
+
+// ════════════════════════════════════════════════════════
+// AUTO-ADJUST DEFICIT — ضبط العجز تلقائياً
+// ════════════════════════════════════════════════════════
+function shouldAutoAdjust(){
+  const lastDate = localStorage.getItem('lastAutoDeficitDate');
+  if(!lastDate) return true;
+  const daysSince = (Date.now() - new Date(lastDate)) / 864e5;
+  return daysSince >= 7;
+}
+
+function autoAdjustDeficit(){
+  const log = S.weightLog || [];
+  if(log.length < 2) return;
+  if(!shouldAutoAdjust()) return;
+
+  // نأخذ أول وآخر تسجيل بفارق ≥ 7 أيام
+  const sorted = [...log].sort((a,b)=>a.date.localeCompare(b.date));
+  const oldest = sorted[0];
+  const newest = sorted[sorted.length-1];
+  const days = Math.round((new Date(newest.date)-new Date(oldest.date))/864e5);
+  if(days < 7) return;
+
+  const lossKg   = oldest.weight - newest.weight; // موجب = فقدان
+  const ratePerW  = +(lossKg / days * 7).toFixed(2);
+  const curDeficit= S.profile.deficit || 500;
+  let newDeficit  = curDeficit;
+  let msg = '';
+
+  if(ratePerW < 0.3){
+    newDeficit = Math.min(1000, curDeficit + 50);
+    msg = `⚙️ معدل فقدانك ${ratePerW} كجم/أسبوع — بطيء. تم رفع العجز إلى ${newDeficit} سعرة`;
+  } else if(ratePerW > 0.8){
+    newDeficit = Math.max(200, curDeficit - 50);
+    msg = `⚙️ معدل فقدانك ${ratePerW} كجم/أسبوع — سريع. تم تخفيض العجز إلى ${newDeficit} سعرة لحماية العضل`;
+  } else {
+    // في النطاق المثالي 0.3–0.8
+    localStorage.setItem('lastAutoDeficitDate', new Date().toISOString().slice(0,10));
+    return;
+  }
+
+  if(newDeficit === curDeficit) return;
+
+  S.profile.deficit = newDeficit;
+  // تحديث شريط العجز في الواجهة
+  const defEl = $('deficit');
+  if(defEl){ defEl.value = newDeficit; setText('deficitLbl', newDeficit); }
+  // إعادة حساب الهدف
+  updateProfile(false);
+  save();
+  localStorage.setItem('lastAutoDeficitDate', new Date().toISOString().slice(0,10));
+  setTimeout(()=>toast(msg), 800);
+}
+
+// ════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS — إشعارات مواعيد الأكل
+// ════════════════════════════════════════════════════════
+const MEAL_REMINDERS = [
+  {h:5,  m:30, label:'مشروب الاستيقاظ', ico:'🌅'},
+  {h:7,  m:30, label:'الفطار',           ico:'🍳'},
+  {h:8,  m:0,  label:'قهوة + بلح',       ico:'☕'},
+  {h:10, m:0,  label:'سناك صباحي',       ico:'🍎'},
+  {h:12, m:30, label:'مشروب قبل الغداء', ico:'🥤'},
+  {h:14, m:0,  label:'الغداء',           ico:'🍗'},
+  {h:16, m:30, label:'سناك العصر',       ico:'🥜'},
+  {h:19, m:30, label:'العشاء',           ico:'🥗'},
+  {h:21, m:30, label:'قبل النوم',        ico:'🌙'},
+];
+let _notifTimers = [];
+
+function enableNotifications(){
+  if(!('Notification' in window)){
+    toast('⚠️ متصفحك لا يدعم الإشعارات');
+    return;
+  }
+  Notification.requestPermission().then(perm=>{
+    if(perm==='granted'){
+      localStorage.setItem('notif_enabled','1');
+      scheduleMealReminders();
+      updateNotifBtn(true);
+      toast('🔔 تم تفعيل إشعارات مواعيد الأكل ✅');
+    } else {
+      toast('⚠️ لم يتم منح إذن الإشعارات — تحقق من إعدادات المتصفح');
+    }
+  });
+}
+
+function cancelNotifications(){
+  _notifTimers.forEach(t=>clearTimeout(t));
+  _notifTimers=[];
+  localStorage.removeItem('notif_enabled');
+  updateNotifBtn(false);
+  toast('🔕 تم إلغاء الإشعارات');
+}
+
+function scheduleMealReminders(){
+  // إلغاء القديمة أولاً
+  _notifTimers.forEach(t=>clearTimeout(t));
+  _notifTimers=[];
+  if(Notification.permission!=='granted') return;
+
+  const now=new Date();
+  MEAL_REMINDERS.forEach(r=>{
+    const target=new Date();
+    target.setHours(r.h, r.m, 0, 0);
+    // لو الوقت فات اليوم → غداً
+    if(target<=now) target.setDate(target.getDate()+1);
+    const delay=target-now;
+    const t=setTimeout(()=>{
+      new Notification('🌿 مرشدك الصحي',{
+        body:`⏰ حان وقت: ${r.ico} ${r.label}`,
+        icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🌿</text></svg>'
+      });
+      // إعادة جدولة لليوم التالي
+      if(localStorage.getItem('notif_enabled')==='1') scheduleMealReminders();
+    }, delay);
+    _notifTimers.push(t);
+  });
+}
+
+function updateNotifBtn(enabled){
+  const btn=$('notifBtn');
+  const status=$('notifStatus');
+  if(btn){
+    btn.textContent=enabled?'🔕 إلغاء الإشعارات':'🔔 تفعيل الإشعارات';
+    btn.className=enabled?'btn btn-sec btn-sm':'btn btn-gold btn-sm';
+  }
+  if(status){
+    status.textContent=enabled?'✅ مفعّل':'غير مفعّل';
+    status.style.color=enabled?'var(--g1)':'var(--muted2)';
+  }
+}
+
+function initNotifications(){
+  const enabled=localStorage.getItem('notif_enabled')==='1';
+  if(enabled && Notification.permission==='granted'){
+    scheduleMealReminders();
+    updateNotifBtn(true);
+  } else {
+    updateNotifBtn(false);
+    if(enabled) localStorage.removeItem('notif_enabled'); // الإذن اتسحب
+  }
 }
 
 // ════════════════════════════════════════════════════════
