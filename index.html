@@ -519,7 +519,7 @@ input[type=range]:focus{box-shadow:none;border:none}
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <h1>🌿 مرشدك الصحي</h1>
-  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك | v13 🏋️ تمارين + 📊 تحليلات</p>
+  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك | v14 🌍 7 دول + 15 خطة ذكية</p>
   <div style="margin-top:.5rem">
     <button class="theme-btn" id="themeBtnHeader" onclick="toggleTheme()">🌙 الوضع الداكن</button>
   </div>
@@ -536,6 +536,7 @@ input[type=range]:focus{box-shadow:none;border:none}
   <button class="tab-btn" data-tab="library">📚 المكتبة</button>
   <button class="tab-btn" data-tab="tips">🔥 نصائح</button>
   <button class="tab-btn" data-tab="challenges">🏆 تحديات</button>
+  <button class="tab-btn" data-tab="guide">📖 دليل الاستخدام</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -564,9 +565,6 @@ input[type=range]:focus{box-shadow:none;border:none}
           <option value="1.9">عالي جداً — عمل شاق</option>
         </select>
       </div>
-      <div class="field"><label>⏰ وقت الاستيقاظ</label>
-        <input type="time" id="wakeTime" value="05:30">
-      </div>
       <div class="field"><label>🩸 مرض السكر؟</label>
         <select id="diabetes" onchange="updateHealthWarning()">
           <option value="no">لا — بدون سكر</option>
@@ -579,21 +577,11 @@ input[type=range]:focus{box-shadow:none;border:none}
           <option value="yes">نعم — مريض ضغط</option>
         </select>
       </div>
-      <div class="field"><label>❤️ مشاكل القلب؟</label>
-        <select id="heartCondition" onchange="updateHealthWarning()">
-          <option value="no">لا — قلب سليم</option>
-          <option value="yes">نعم — مشاكل قلبية</option>
-        </select>
-      </div>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-      <button class="btn" onclick="updateProfile()">💾 حفظ وحساب</button>
-      <button class="btn btn-gold btn-sm" id="notifBtn" onclick="localStorage.getItem('notif_enabled')==='1'?cancelNotifications():enableNotifications()">🔔 تفعيل الإشعارات</button>
-      <button class="btn btn-sec btn-sm" onclick="generateMonthlyReport()">📊 تقرير شهري</button>
-      <button class="btn btn-sec btn-sm" onclick="exportData()">📤 تصدير البيانات</button>
-      <label class="btn btn-sec btn-sm" style="cursor:pointer;margin:0">📥 استيراد
-        <input type="file" accept=".json" onchange="importData(this)" style="display:none">
-      </label>
+      <button class="btn" onclick="safeRun(()=>updateProfile(),null,'updateProfile')">💾 حفظ وحساب</button>
+      <button class="btn btn-gold btn-sm" id="notifBtn" onclick="safeRun(()=>{localStorage.getItem('notif_enabled')==='1'?cancelNotifications():enableNotifications()},null,'notifications')">🔔 تفعيل الإشعارات</button>
+      <button class="btn btn-sec btn-sm" onclick="safeRun(()=>generateMonthlyReport(),null,'monthlyReport')">📊 تقرير شهري</button>
       <span id="notifStatus" style="font-size:.78rem;color:var(--muted2)">غير مفعّل</span>
     </div>
     <div class="health-warn" id="healthWarnBox">
@@ -701,7 +689,7 @@ input[type=range]:focus{box-shadow:none;border:none}
         <label>التاريخ</label>
         <input type="date" id="logWeightDate">
       </div>
-      <button class="btn btn-sm" onclick="addWeightLog()" style="flex-shrink:0">➕ تسجيل</button>
+      <button class="btn btn-sm" onclick="safeRun(()=>addWeightLog(),null,'addWeightLog')" style="flex-shrink:0">➕ تسجيل</button>
     </div>
     <div id="weightChartWrap"></div>
     <div id="weightLogList" style="margin-top:.6rem;max-height:180px;overflow-y:auto"></div>
@@ -717,14 +705,20 @@ input[type=range]:focus{box-shadow:none;border:none}
   <div class="card">
     <div class="card-title">📚 مكتبة الأغذية — <span id="foodCount" style="color:var(--gold)">0</span> صنف</div>
     <div class="search-wrap"><input type="text" id="searchFood" placeholder="ابحث عن طعام..."></div>
-    <!-- فلتر الدول -->
-    <div style="font-size:.76rem;color:var(--muted2);margin-bottom:.4rem">🌍 فلتر بالبلد:</div>
-    <div class="filters" id="countryFilterBar"></div>
-    <!-- فلتر نوع الوجبة -->
-    <div style="font-size:.76rem;color:var(--muted2);margin-bottom:.4rem;margin-top:.5rem">🍽️ فلتر نوع الوجبة:</div>
-    <div class="filters" id="mealTypeFilterBar"></div>
-    <!-- فلتر التصنيف -->
-    <div style="font-size:.76rem;color:var(--muted2);margin-bottom:.4rem;margin-top:.5rem">📂 تصنيف:</div>
+    <!-- فلتر البلد -->
+    <div style="margin-bottom:.75rem">
+      <label style="font-size:.8rem;color:var(--muted2);font-weight:700;display:block;margin-bottom:.3rem">🌍 عرض أكل البلد:</label>
+      <div class="filters" id="countryFilterBar">
+        <button class="filter-btn active" onclick="filterCountry(this,'الكل')">🌍 الكل</button>
+        <button class="filter-btn" onclick="filterCountry(this,'مصر')">🇪🇬 مصر</button>
+        <button class="filter-btn" onclick="filterCountry(this,'سوريا')">🇸🇾 سوريا</button>
+        <button class="filter-btn" onclick="filterCountry(this,'لبنان')">🇱🇧 لبنان</button>
+        <button class="filter-btn" onclick="filterCountry(this,'السعودية')">🇸🇦 السعودية</button>
+        <button class="filter-btn" onclick="filterCountry(this,'العراق')">🇮🇶 العراق</button>
+        <button class="filter-btn" onclick="filterCountry(this,'تونس')">🇹🇳 تونس</button>
+        <button class="filter-btn" onclick="filterCountry(this,'المغرب')">🇲🇦 المغرب</button>
+      </div>
+    </div>
     <div class="filters" id="filterBar"></div>
     <div class="food-grid" id="foodGrid"></div>
   </div>
@@ -733,7 +727,7 @@ input[type=range]:focus{box-shadow:none;border:none}
     <div class="card-title">💾 Export / Import بياناتك</div>
     <p style="color:var(--muted2);font-size:.83rem;margin-bottom:.85rem">صدّر بياناتك كنسخة احتياطية أو انقلها لجهاز آخر</p>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-sec" onclick="exportData()">📤 Export بيانات</button>
+      <button class="btn btn-sec" onclick="safeRun(()=>exportData(),null,'exportData')">📤 Export بيانات</button>
       <label class="btn btn-sec" style="cursor:pointer;margin:0">
         📥 Import بيانات
         <input type="file" id="importFile" accept=".json" onchange="importData(this)" style="display:none">
@@ -748,7 +742,7 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div style="flex:1;min-width:200px">
         <input type="text" id="onlineSearch" placeholder="مثال: أرز، banana، تشيكن..." style="width:100%">
       </div>
-      <button class="btn" id="onlineSearchBtn" onclick="searchFoodOnline()">🔍 بحث</button>
+      <button class="btn" id="onlineSearchBtn" onclick="safeRun(()=>searchFoodOnline(),null,'searchFoodOnline')">🔍 بحث</button>
       <div style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--muted2)">
         <span>USDA Key:</span>
         <input type="text" id="usdaKey" placeholder="اختياري" style="width:130px;font-size:.82rem;padding:.4rem .7rem" title="احصل على مفتاح مجاني من fdc.nal.usda.gov">
@@ -788,8 +782,8 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="field"><label>دهون (جم)</label><input type="number" id="cfF" placeholder="0" min="0" step=".1"></div>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <button class="btn" onclick="addCustomFood()">💾 حفظ الصنف</button>
-      <button class="btn btn-sec" onclick="toggleCustomList()" id="manageCustomBtn" style="display:none">📋 إدارة المضافة</button>
+      <button class="btn" onclick="safeRun(()=>addCustomFood(),null,'addCustomFood')">💾 حفظ الصنف</button>
+      <button class="btn btn-sec" onclick="safeRun(()=>toggleCustomList(),null,'toggleCustomList')" id="manageCustomBtn" style="display:none">📋 إدارة المضافة</button>
     </div>
     <div id="customList" style="margin-top:1rem;display:none"></div>
   </div>
@@ -800,13 +794,6 @@ input[type=range]:focus{box-shadow:none;border:none}
 ══════════════════════════════════════ -->
 <div id="tracker" class="tab">
   <div class="tracker-summary" id="trackerSummary">
-    <!-- السعرات المستهدفة — واضحة في الأعلى -->
-    <div id="targetKcalBanner" style="text-align:center;margin-bottom:.85rem;padding:.6rem;background:rgba(16,185,129,.12);border:1px solid var(--border);border-radius:var(--r-sm)">
-      <span style="font-size:.82rem;color:var(--muted2)">🎯 هدف اليوم: </span>
-      <span id="trackerTargetKcal" style="font-size:1.4rem;font-weight:900;color:#6ee7b7">—</span>
-      <span style="font-size:.82rem;color:var(--muted2)"> سعرة</span>
-      <span id="trackerTdeeHint" style="font-size:.73rem;color:var(--muted2);display:block;margin-top:.15rem"></span>
-    </div>
     <div class="sum-grid">
       <div class="sum-item"><div class="v" id="totKcal">0</div><div class="l">سعرات</div></div>
       <div class="sum-item"><div class="v" id="totPro">0</div><div class="l">بروتين(جم)</div></div>
@@ -840,8 +827,10 @@ input[type=range]:focus{box-shadow:none;border:none}
     </div>
   </div>
   <div style="display:flex;justify-content:flex-end;margin-bottom:.85rem">
-    <button class="btn btn-red btn-sm" onclick="clearDay()">🗑️ مسح جميع الوجبات</button>
+    <button class="btn btn-red btn-sm" onclick="safeRun(()=>clearDay(),null,'clearDay')">🗑️ مسح جميع الوجبات</button>
   </div>
+  <!-- اقتراحات ذكية -->
+  <div id="smartSuggestionsBox" style="margin-bottom:.85rem"></div>
   <div id="mealSlots"></div>
 </div>
 
@@ -872,7 +861,7 @@ input[type=range]:focus{box-shadow:none;border:none}
       </div>
       <div class="field"><label>أكلات ممنوعة (افصل بفاصلة)</label><input type="text" id="forbidden" placeholder="مثال: تمر, عسل"></div>
     </div>
-    <button class="btn" onclick="generatePlan()">🔄 توليد الخطة</button>
+    <button class="btn" onclick="safeRun(()=>generatePlan(),null,'generatePlan')">🔄 توليد الخطة</button>
   </div>
 
   <div id="planResult" style="display:none">
@@ -880,9 +869,9 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="card-title">📋 الخطة المقترحة — إجمالي: <span id="planTotal" style="color:var(--gold)">0</span> سعرة</div>
       <div id="planItems"></div>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
-        <button class="btn" onclick="applyPlan()">✅ تطبيق على تتبع اليوم</button>
-        <button class="btn btn-gold" onclick="savePlan()">⭐ حفظ كمفضلة</button>
-        <button class="btn btn-sec" onclick="generatePlan()">🔄 توليد مختلف</button>
+        <button class="btn" onclick="safeRun(()=>applyPlan(),null,'applyPlan')">✅ تطبيق على تتبع اليوم</button>
+        <button class="btn btn-gold" onclick="safeRun(()=>savePlan(),null,'savePlan')">⭐ حفظ كمفضلة</button>
+        <button class="btn btn-sec" onclick="safeRun(()=>generatePlan(),null,'generatePlan')">🔄 توليد مختلف</button>
       </div>
     </div>
   </div>
@@ -891,54 +880,106 @@ input[type=range]:focus{box-shadow:none;border:none}
     <div class="card-title">⭐ الخطط المفضلة</div>
     <div id="savedPlans"></div>
   </div>
+
+  <!-- كارد حساب وجبة لحظية -->
+  <div class="card">
+    <div class="card-title">🧮 حساب وجبة لحظية</div>
+    <p style="font-size:.83rem;color:var(--muted2);margin-bottom:.85rem">أدخل سعرات أي وجبة يدوياً وأضفها لتتبع اليوم فوراً</p>
+    <div class="g2">
+      <div class="field">
+        <label>وصف الوجبة (اختياري)</label>
+        <input type="text" id="instantMealName" placeholder="مثال: شاورما دجاج من السوق">
+      </div>
+      <div class="field">
+        <label>عدد السعرات</label>
+        <input type="number" id="instantMealKcal" min="1" max="5000" placeholder="مثال: 450">
+      </div>
+    </div>
+    <div class="g2" style="margin-bottom:.85rem">
+      <div class="field">
+        <label>بروتين (جم) — اختياري</label>
+        <input type="number" id="instantMealP" min="0" placeholder="0" step=".1">
+      </div>
+      <div class="field">
+        <label>الوجبة</label>
+        <select id="instantMealSlot">
+          <option value="wake">مشروب الاستيقاظ</option>
+          <option value="break">الفطار</option>
+          <option value="coffee">قهوة + بلح</option>
+          <option value="morn">سناك صباحي</option>
+          <option value="pre">مشروب قبل الغداء</option>
+          <option value="lunch" selected>الغداء</option>
+          <option value="after">سناك العصر</option>
+          <option value="din">العشاء</option>
+          <option value="night">قبل النوم</option>
+        </select>
+      </div>
+    </div>
+    <div id="instantMealPreview" style="display:none;background:rgba(4,120,87,.12);border:1px solid var(--border);border-radius:var(--r-sm);padding:.65rem;margin-bottom:.75rem;font-size:.85rem;color:var(--g1);font-weight:700;text-align:center"></div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <button class="btn btn-sec" onclick="safeRun(()=>calcInstantMeal(),null,'calcInstantMeal')">🧮 حساب</button>
+      <button class="btn" onclick="safeRun(()=>addInstantMeal(),null,'addInstantMeal')">➕ إضافة للتتبع</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
-     TAB 5 — AI PLAN
+     TAB 5 — SMART PLANS (15 READY PLANS)
 ══════════════════════════════════════ -->
 <div id="ai" class="tab">
   <div class="card">
-    <div class="card-title">✨ الخطط الذكية الجاهزة — اختر خطتك</div>
-    <p style="font-size:.83rem;color:var(--muted2);margin-bottom:1rem">15 خطة جاهزة بمستويات سعرية مختلفة. اضغط على أي خطة لعرضها في مخطط الوجبات، ثم طبّقها على تتبع اليوم.</p>
-
-    <!-- مؤشر الخطة الموصى بها -->
-    <div id="smartPlanRecommend" style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(4,120,87,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.75rem 1rem;margin-bottom:1rem;display:none">
-      <span style="font-size:.82rem;color:#6ee7b7">🎯 بناءً على ملفك الشخصي، هدفك اليومي <strong id="smartGoalVal" style="color:var(--gold)">—</strong> سعرة — الخطة الأقرب مُميَّزة أدناه</span>
+    <div class="card-title">✨ الخطط الذكية الجاهزة — 15 خطة</div>
+    <p style="font-size:.83rem;color:var(--muted2);margin-bottom:1rem">خطط يومية جاهزة بأكل مصري حقيقي — مرتبطة بسعراتك المستهدفة من ملفك الشخصي</p>
+    <!-- فلتر نوع الخطة -->
+    <div class="filters" style="margin-bottom:1rem">
+      <button class="filter-btn active" onclick="filterSmartPlans(this,'all')">الكل</button>
+      <button class="filter-btn" onclick="filterSmartPlans(this,'متوازن')">⚖️ متوازن</button>
+      <button class="filter-btn" onclick="filterSmartPlans(this,'عالي بروتين')">💪 عالي بروتين</button>
+      <button class="filter-btn" onclick="filterSmartPlans(this,'منخفض كارب')">🥑 منخفض كارب</button>
+      <button class="filter-btn" onclick="filterSmartPlans(this,'نباتي')">🌱 نباتي</button>
+      <button class="filter-btn" onclick="filterSmartPlans(this,'صيام متقطع')">⏰ صيام متقطع</button>
     </div>
-
-    <div id="smartPlansList" style="display:grid;gap:.65rem"></div>
+    <div id="smartPlansList"></div>
   </div>
-
-  <!-- الخطة الذكية النصية القديمة -->
-  <div class="card" style="margin-top:1.25rem">
-    <div class="card-title" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">📝 خطة نصية مخصصة (AI محلي) ▾</div>
-    <div style="display:none">
-      <div class="g3">
-        <div class="field"><label>نوع النظام الغذائي</label>
-          <select id="dietType">
-            <option value="متوازن">متوازن ومتنوع</option>
-            <option value="عالي بروتين">عالي البروتين 💪</option>
-            <option value="منخفض الكارب">منخفض الكارب 🥑</option>
-            <option value="نظام الصيام المتقطع">صيام متقطع 16/8 ⏰</option>
-            <option value="نباتي">نباتي 🌱</option>
-          </select>
-        </div>
-        <div class="field"><label>عدد الوجبات اليومية</label>
-          <select id="aiMeals">
-            <option value="3">3 وجبات</option>
-            <option value="4">4 وجبات</option>
-            <option value="5" selected>5 وجبات</option>
-            <option value="6">6 وجبات</option>
-          </select>
-        </div>
-        <div class="field"><label>أكلات أتجنبها</label><input type="text" id="aiAvoid" placeholder="مثال: مكسرات، حليب"></div>
+  <!-- عرض تفاصيل الخطة المختارة -->
+  <div id="smartPlanDetail" style="display:none">
+    <div class="card">
+      <div class="card-title" id="smartPlanDetailTitle">تفاصيل الخطة</div>
+      <div id="smartPlanDetailContent"></div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
+        <button class="btn" onclick="safeRun(()=>applySmartPlan(),null,'applySmartPlan')">✅ تطبيق على تتبع اليوم</button>
+        <button class="btn btn-sec" onclick="safeRun(()=>{$('smartPlanDetail').style.display='none';$('smartPlansList').style.display=''},null,'smartPlanBack')">← رجوع للخطط</button>
       </div>
-      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-        <button class="btn" onclick="generateAIPlan()">✨ توليد الخطة</button>
-        <button class="btn btn-sec" onclick="copyAIPlan()">📋 نسخ الخطة</button>
-      </div>
-      <div class="ai-result" id="aiResult"></div>
     </div>
+  </div>
+  <!-- توليد خطة مخصصة -->
+  <div class="card">
+    <div class="card-title">🔧 توليد خطة مخصصة</div>
+    <div class="g3">
+      <div class="field"><label>نوع النظام الغذائي</label>
+        <select id="dietType">
+          <option value="متوازن">متوازن ومتنوع</option>
+          <option value="عالي بروتين">عالي البروتين 💪</option>
+          <option value="منخفض الكارب">منخفض الكارب 🥑</option>
+          <option value="نظام الصيام المتقطع">صيام متقطع 16/8 ⏰</option>
+          <option value="نباتي">نباتي 🌱</option>
+        </select>
+      </div>
+      <div class="field"><label>عدد الوجبات اليومية</label>
+        <select id="aiMeals">
+          <option value="3">3 وجبات</option>
+          <option value="4">4 وجبات</option>
+          <option value="5" selected>5 وجبات</option>
+          <option value="6">6 وجبات</option>
+        </select>
+      </div>
+      <div class="field"><label>أكلات أتجنبها</label><input type="text" id="aiAvoid" placeholder="مثال: مكسرات، حليب"></div>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <button class="btn" onclick="safeRun(()=>generateAIPlan(),null,'generateAIPlan')">✨ توليد الخطة</button>
+      <button class="btn btn-sec" onclick="safeRun(()=>copyAIPlan(),null,'copyAIPlan')">📋 نسخ الخطة</button>
+    </div>
+    <div class="ai-result" id="aiResult"></div>
   </div>
 </div>
 
@@ -963,8 +1004,8 @@ input[type=range]:focus{box-shadow:none;border:none}
         <div style="font-size:.75rem;color:var(--muted2)">سعرة حرارية</div>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-        <button class="btn btn-sec btn-sm" onclick="resetExercises()">🔄 إعادة تعيين</button>
-        <button class="btn btn-sm" onclick="logExerciseBurn()">➕ أضف للتتبع (حرق سلبي)</button>
+        <button class="btn btn-sec btn-sm" onclick="safeRun(()=>resetExercises(),null,'resetExercises')">🔄 إعادة تعيين</button>
+        <button class="btn btn-sm" onclick="safeRun(()=>logExerciseBurn(),null,'logExerciseBurn')">➕ أضف للتتبع (حرق سلبي)</button>
       </div>
     </div>
   </div>
@@ -1038,12 +1079,79 @@ input[type=range]:focus{box-shadow:none;border:none}
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     TAB — دليل الاستخدام
+══════════════════════════════════════ -->
+<div id="guide" class="tab">
+  <div class="card">
+    <div class="card-title">📖 دليل الاستخدام الكامل</div>
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(4,120,87,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;margin-bottom:1rem;text-align:center">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--g1)">🌿 مرشدك الصحي — v14</div>
+      <div style="font-size:.78rem;color:var(--muted2);margin-top:.25rem">Prepared by: <strong style="color:var(--g1)">Mohamed Elghtrefy</strong> | All data stored locally</div>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>👤 1. ملفي — Profile</h4>
+      <p>أدخل بياناتك الأساسية: الوزن الحالي والمستهدف، الطول، العمر، الجنس، مستوى النشاط. سيتم حساب <strong>BMR</strong> و<strong>TDEE</strong> و<strong>BMI</strong> تلقائياً. اضبط شريط <strong>العجز اليومي</strong> (200-1000 سعرة) ليحسب وقت الوصول للهدف. 💾 اضغط "حفظ وحساب" لحفظ كل بياناتك.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>🧮 2. مخطط الوجبات — Meal Planner</h4>
+      <p>يولّد خطة أكل يومية كاملة بضغطة واحدة. حدد السعرات المستهدفة، عدد الوجبات والسناكات، والتفضيل الغذائي (متوازن/عالي بروتين/منخفض كارب/نباتي). <strong>🧮 حساب وجبة لحظية:</strong> أدخل سعرات أي وجبة غير موجودة في المكتبة وأضفها للتتبع مباشرة.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>📅 3. تتبع اليوم — Daily Tracker</h4>
+      <p>تتبع كل ما تأكله في 9 وجبات مرتبة بالتوقيت. 📊 يظهر في الأعلى: إجمالي السعرات + البروتين + الكارب + الدهون + المتبقي. يظهر <strong>اقتراح ذكي</strong> إذا كنت تحتاج مزيداً من البروتين أو السعرات. ✏️ تعديل كمية: أيقونة القلم. ✕ حذف: الزر الأحمر.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>📚 4. المكتبة — Food Library</h4>
+      <p>228+ صنف غذائي مع السعرات الكاملة. 🔍 <strong>البحث الضبابي:</strong> يتعرف على النص العربي بأشكاله المختلفة (أ/إ/آ/ا). 🌍 فلتر الدول: عرض أكل 7 دول عربية. ➕ <strong>إضافة مخصص:</strong> أضف أي طعام بكميات السعرات المطلوبة. 🌐 <strong>البحث الأونلاين:</strong> عبر Open Food Facts + USDA.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>✨ 5. خطة ذكية — Smart Plan</h4>
+      <p>15 خطة يومية جاهزة بأكل مصري حقيقي مرتبطة بسعراتك المستهدفة. اضغط على أي خطة لعرض تفاصيلها وتطبيقها على تتبع اليوم. يمكنك أيضاً توليد خطة مخصصة باختيار نوع النظام الغذائي.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>🏋️ 6. تمارين — Exercises</h4>
+      <p>احسب السعرات المحروقة من 12 تمريناً منزلياً بناءً على وزنك الحقيقي. اضغط "أضف للتتبع" لطرح الحرق من إجمالي السعرات اليوم.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>📋 7. أسبوعي — Weekly Plan</h4>
+      <p>خطة أكل جاهزة لـ 7 أيام كاملة (105 يوم متنوع عبر 3 متغيرات). يختار النظام تلقائياً بناءً على سعراتك المستهدفة. 🖨️ زر "طباعة" لطباعة الخطة كاملة.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>🏆 8. تحديات — Challenges</h4>
+      <p>5 تحديات أسبوعية (بدون سكر، مشي، ماء، تمارين، نوم). فعّل التحدي وسجّل تقدمك يومياً. يمكن تفعيل أكثر من تحدٍ في نفس الوقت.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>💾 9. Export / Import البيانات</h4>
+      <p>📤 <strong>تصدير:</strong> زر "Export" ينزّل ملف JSON بكل بياناتك. 📥 <strong>استيراد:</strong> زر "Import" لاسترجاع بياناتك على أي جهاز. 🔄 <strong>نسخة احتياطية تلقائية:</strong> النظام يحفظ نسخة في المتصفح تلقائياً كل 7 أيام.</p>
+    </div>
+
+    <div class="tip" style="margin-bottom:.7rem">
+      <h4>⚙️ 10. الإعدادات والأدوات</h4>
+      <p>🌙 <strong>الوضع الداكن/الفاتح/التلقائي:</strong> زر التبديل في الأعلى. 🔔 <strong>إشعارات مواعيد الأكل:</strong> فعّلها من زر "تفعيل الإشعارات" في ملفك. 📊 <strong>تقرير شهري PDF:</strong> زر "تقرير شهري" يولّد ملف PDF بتقدمك. ⚖️ <strong>توزيع المغذيات (Macros):</strong> اضبط نسب البروتين والكارب والدهون في ملفك.</p>
+    </div>
+
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:var(--r-sm);padding:.85rem;font-size:.8rem;color:var(--gold)">
+      <strong>⚠️ تنبيه هام:</strong> هذا التطبيق للإرشاد والتوعية الغذائية فقط وليس بديلاً عن الاستشارة الطبية المتخصصة. إذا كنت تعاني من أمراض مزمنة، يرجى استشارة طبيبك.
+    </div>
+  </div>
+</div>
+
 </div><!-- /wrap -->
 
 <!-- ═══ DEV FOOTER ═══ -->
 <div class="dev-footer">
   <p>💚 Prepared by: <strong>Mohamed Elghtrefy</strong> — Volunteering for your health</p>
-  <p style="font-size:.75rem;margin-top:.25rem">Version: <strong style="color:var(--g1)">v12.0</strong> &nbsp;|&nbsp; All Rights Reserved © 2026 &nbsp;|&nbsp;
+  <p style="font-size:.75rem;margin-top:.25rem">Version: <strong style="color:var(--g1)">v14.0</strong> &nbsp;|&nbsp; All Rights Reserved © 2026 &nbsp;|&nbsp;
     <button onclick="openModal('helpModal')" style="background:none;border:none;color:var(--g1);cursor:pointer;font-size:.78rem;text-decoration:underline;font-family:inherit">📖 Help Guide</button>
   </p>
 </div>
@@ -1292,7 +1400,8 @@ function escapeHtml(t){
 // STATE
 // ════════════════════════════════════════════════════════
 let S={
-  profile:{weight:80,targetWeight:70,height:170,age:25,gender:'male',activity:1.55,deficit:500,diabetes:false,hypertension:false,heartCondition:false,wakeTime:'05:30'},
+  version:3,
+  profile:{weight:80,targetWeight:70,height:170,age:25,gender:'male',activity:1.55,deficit:500,diabetes:false,hypertension:false},
   tracker:{},
   savedPlans:[],
   custom:[],
@@ -1301,33 +1410,9 @@ let S={
   favorites:[],            // قائمة ids الأصناف المفضلة
   challengeProgress:{},    // تقدم التحديات {challengeId: {active, startDate, days:{}}}
   currentPlan:null,
-  _activeCountry:'all',    // فلتر الدولة
-  _activeMealType:'all',   // فلتر نوع الوجبة
   _editSlot:null,_editUid:null,_editFood:null,
   _addFood:null,_defaultSlot:null
 };
-
-// حساب أوقات الوجبات من وقت الاستيقاظ
-function getMealTimes(wakeStr){
-  const [wh,wm]=wakeStr.split(':').map(Number);
-  const base=wh*60+wm;
-  const fmt=(mins)=>{
-    const h=Math.floor(mins/60)%24,m=mins%60;
-    const h12=h%12||12, ampm=h<12?'ص':'م';
-    return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
-  };
-  return {
-    wake: fmt(base),
-    break: fmt(base+120),       // +2 ساعة
-    coffee: fmt(base+150),      // +2:30
-    morn: fmt(base+270),        // +4:30
-    pre: fmt(base+390),         // +6:30
-    lunch: fmt(base+510),       // +8:30
-    after: fmt(base+630),       // +10:30
-    din: fmt(base+780),         // +13 ساعة
-    night: fmt(base+930),       // +15:30 ساعة
-  };
-}
 
 const MEAL_SLOTS=[
   {id:'wake', name:'مشروب الاستيقاظ', time:'٥:٣٠ ص', ico:'🌅'},
@@ -1341,16 +1426,6 @@ const MEAL_SLOTS=[
   {id:'night',name:'قبل النوم',        time:'قبل النوم ٣٠د',ico:'🌙'},
   {id:'exercise_burn', name:'🔥 حرق التمارين', time:'', ico:'🏋️'}
 ];
-
-// تحديث أوقات الوجبات من وقت الاستيقاظ
-function refreshMealTimes(){
-  const wt=S.profile.wakeTime||'05:30';
-  const times=getMealTimes(wt);
-  const timeMap={wake:'wake',break:'break',coffee:'coffee',morn:'morn',pre:'pre',lunch:'lunch',after:'after',din:'din',night:'night'};
-  MEAL_SLOTS.forEach(slot=>{
-    if(times[slot.id]) slot.time=times[slot.id];
-  });
-}
 
 // ════════════════════════════════════════════════════════
 // FOOD DATABASE — 210+ items
@@ -1914,12 +1989,118 @@ const TIPS_DATA=[
 ];
 
 // ════════════════════════════════════════════════════════
+// safeRun — حماية الدوال من الانهيار
+// ════════════════════════════════════════════════════════
+function safeRun(fn, fallback, errorMsg){
+  try{ return fn(); }
+  catch(e){
+    console.error(errorMsg||'safeRun error:', e);
+    if(typeof fallback === 'function') return fallback(e);
+    if(fallback !== undefined) return fallback;
+  }
+}
+
+// validateState — تنظيف البيانات المهجورة
+function validateState(state){
+  if(!state || typeof state !== 'object') return;
+  if(!state.profile || typeof state.profile !== 'object') state.profile = {};
+  const defaults = {weight:80,targetWeight:70,height:170,age:25,gender:'male',activity:1.55,deficit:500,diabetes:false,hypertension:false};
+  state.profile = {...defaults, ...state.profile};
+  if(state.tracker && typeof state.tracker === 'object'){
+    Object.keys(state.tracker).forEach(slotId=>{
+      if(!Array.isArray(state.tracker[slotId])) state.tracker[slotId] = [];
+      else state.tracker[slotId] = state.tracker[slotId].filter(item=>
+        item && typeof item === 'object' && typeof item.kcal === 'number' && !isNaN(item.kcal)
+      );
+    });
+  }
+  if(!Array.isArray(state.savedPlans)) state.savedPlans = [];
+  if(!Array.isArray(state.custom)) state.custom = [];
+  state.custom = state.custom.filter(f=>f && f.name && typeof f.kcal === 'number');
+  if(!Array.isArray(state.weightLog)) state.weightLog = [];
+  state.weightLog = state.weightLog.filter(e=>e && e.date && typeof e.weight === 'number');
+  if(!state.macros || typeof state.macros !== 'object') state.macros = {p:30,c:40,f:30};
+  if(!Array.isArray(state.favorites)) state.favorites = [];
+  if(!state.challengeProgress || typeof state.challengeProgress !== 'object') state.challengeProgress = {};
+}
+
+// migrateState — ترحيل البيانات القديمة
+function migrateState(oldVersion, oldState){
+  if(!oldVersion || oldVersion < 2){
+    if(!Array.isArray(oldState.favorites)) oldState.favorites = [];
+    if(oldState.tracker && typeof oldState.tracker === 'string'){
+      try{ oldState.tracker = JSON.parse(oldState.tracker); } catch(e){ oldState.tracker = {}; }
+    }
+  }
+  if(!oldVersion || oldVersion < 3){
+    if(!oldState.challengeProgress) oldState.challengeProgress = {};
+    if(oldState.profile && oldState.profile.activity){
+      const act = parseFloat(oldState.profile.activity);
+      if(!isNaN(act)) oldState.profile.activity = act;
+    }
+  }
+  oldState.version = 3;
+  return oldState;
+}
+
+// cleanupAll — تنظيف المؤقتات والمستمعات
+const _timers = [];
+function trackTimer(id){ _timers.push(id); return id; }
+function cleanupTimers(){ _timers.forEach(t=>clearTimeout(t)); _timers.length=0; }
+function cleanupAll(){
+  cleanupTimers();
+  if(typeof _notifTimers !== 'undefined') _notifTimers.forEach(t=>clearTimeout(t));
+}
+
+// autoBackup — نسخ احتياطي تلقائي كل 7 أيام
+function autoBackup(){
+  try{
+    const lastBackup = localStorage.getItem('mrshd_last_backup');
+    const now = Date.now();
+    const SEVEN_DAYS = 7*24*60*60*1000;
+    if(lastBackup && (now - parseInt(lastBackup)) < SEVEN_DAYS) return;
+    const backupData = {
+      _app:'مرشدك الصحي — نسخة احتياطية تلقائية',
+      _by:'Mohamed Elghtrefy',
+      _date:new Date().toLocaleString('ar-EG'),
+      version: S.version,
+      profile:S.profile,
+      custom:S.custom,
+      savedPlans:S.savedPlans,
+      weightLog:S.weightLog,
+      macros:S.macros,
+      favorites:S.favorites,
+    };
+    localStorage.setItem('mrshd_auto_backup', JSON.stringify(backupData));
+    localStorage.setItem('mrshd_last_backup', String(now));
+    console.log('✅ نسخة احتياطية تلقائية:', new Date().toLocaleDateString('ar-EG'));
+  } catch(e){ console.warn('autoBackup error:', e); }
+}
+
+// normArabic + fuzzyMatch — بحث ضبابي عربي
+function normArabic(str){
+  return (str||'').toLowerCase()
+    .replace(/[أإآا]/g,'ا').replace(/[ةه]/g,'ه').replace(/[يى]/g,'ي').replace(/[ئء]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+function fuzzyMatch(query, target){
+  if(!query) return true;
+  const q = normArabic(query);
+  const t = normArabic(target);
+  if(t.includes(q)) return true;
+  let qi=0;
+  for(let i=0;i<t.length&&qi<q.length;i++) if(t[i]===q[qi]) qi++;
+  return qi===q.length && q.length>=2;
+}
+
+// ════════════════════════════════════════════════════════
 // STORAGE
 // ════════════════════════════════════════════════════════
 const STORE='mrshd_v11';
 function save(){
   try{
     localStorage.setItem(STORE,JSON.stringify({
+      version:S.version||3,
       profile:S.profile,tracker:S.tracker,
       savedPlans:S.savedPlans,custom:S.custom,
       weightLog:S.weightLog,macros:S.macros,
@@ -1934,7 +2115,12 @@ function save(){
 }
 function load(){
   try{
-    const d=JSON.parse(localStorage.getItem(STORE)||'{}');
+    let d=JSON.parse(localStorage.getItem(STORE)||'{}');
+    // ترحيل البيانات القديمة إذا لزم
+    const oldVer = d.version || 1;
+    if(oldVer < 3) d = migrateState(oldVer, d);
+    // تنظيف البيانات
+    validateState(d);
     if(d.profile) S.profile={...S.profile,...d.profile};
     if(d.savedPlans) S.savedPlans=d.savedPlans;
     if(d.custom) S.custom=d.custom;
@@ -2008,14 +2194,12 @@ function init(){
   initTheme();
   load();
   buildTabs();
-  refreshMealTimes(); // تحديث أوقات الوجبات من وقت الاستيقاظ
   fillProfileForm();
   renderFilters();
   renderFoodGrid();
-  renderSmartPlans(calcDailyGoal()||0);
-  autoSelectWeeklyLevel(calcDailyGoal()||0);
   renderMealSlots();
   renderTrackerSummary();
+  renderSmartSuggestions();
   renderSavedPlans();
   renderWeekly();
   renderTips();
@@ -2028,6 +2212,9 @@ function init(){
   renderExercises();
   renderChallenges();
   initNotifications();
+  renderSmartPlans();
+  renderFiltersForCountry();
+  autoBackup(); // نسخة احتياطية تلقائية كل 7 أيام
   // تعيين تاريخ اليوم كـ default لإدخال الوزن
   const logDateEl=$('logWeightDate');
   if(logDateEl) logDateEl.value=new Date().toISOString().slice(0,10);
@@ -2035,41 +2222,31 @@ function init(){
     setText('deficitLbl',e.target.value);
     updateProfile();
   });
-  // تغيير وقت الاستيقاظ مع تأكيد
-  const wakeEl=$('wakeTime');
-  if(wakeEl){
-    wakeEl.addEventListener('change',()=>{
-      const hasData=MEAL_SLOTS.some(m=>(S.tracker[m.id]||[]).length>0);
-      if(hasData && !confirm('⚠️ تغيير وقت الاستيقاظ سيعيد حساب أوقات الـ 9 وجبات. هل تريد المتابعة؟')) {
-        wakeEl.value=S.profile.wakeTime||'05:30';
-        return;
-      }
-      S.profile.wakeTime=wakeEl.value;
-      refreshMealTimes();
-      renderMealSlots();
-      save();
-      toast('⏰ تم تحديث أوقات الوجبات');
-    });
-  }
   // debounce للبحث — مش بيشغل render كل حرف
   let _searchTimer=null;
   $('searchFood').addEventListener('input',()=>{
     clearTimeout(_searchTimer);
     _searchTimer=setTimeout(renderFoodGrid,280);
   });
+  // حساب الوجبة اللحظية عند تغيير السعرات
+  const instKcal=$('instantMealKcal');
+  if(instKcal) instKcal.addEventListener('input',()=>safeRun(calcInstantMeal,null,'calcInstantMeal'));
 }
 
 function buildTabs(){
   document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-      btn.classList.add('active');
-      $(btn.dataset.tab).classList.add('active');
-      if(btn.dataset.tab==='week') renderWeekly();
-      if(btn.dataset.tab==='insights') renderInsights();
-      if(btn.dataset.tab==='challenges') renderChallenges();
-      if(btn.dataset.tab==='ai') renderSmartPlans(calcDailyGoal()||0);
+      safeRun(()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        btn.classList.add('active');
+        const tabEl=$(btn.dataset.tab);
+        if(tabEl) tabEl.classList.add('active');
+        if(btn.dataset.tab==='week') renderWeekly();
+        if(btn.dataset.tab==='insights') renderInsights();
+        if(btn.dataset.tab==='challenges') renderChallenges();
+        if(btn.dataset.tab==='tracker') renderSmartSuggestions();
+      }, null, 'buildTabs click');
     });
   });
 }
@@ -2082,8 +2259,6 @@ function fillProfileForm(){
   setVal('deficit',p.deficit);setText('deficitLbl',p.deficit);
   setVal('diabetes',p.diabetes?'yes':'no');
   setVal('hypertension',p.hypertension?'yes':'no');
-  setVal('heartCondition',p.heartCondition?'yes':'no');
-  setVal('wakeTime',p.wakeTime||'05:30');
   updateHealthWarning();
   if(p.weight&&p.height&&p.age) updateProfile(false);
   // إظهار كروت الـ macros والوزن لو في بيانات محفوظة
@@ -2092,8 +2267,6 @@ function fillProfileForm(){
     if(S.weightLog && S.weightLog.length > 0) $('weightLogCard').style.display='block';
     syncMacros(null,false);
   }
-  // تحديث أوقات الوجبات عند التحميل
-  refreshMealTimes();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2121,16 +2294,11 @@ function updateProfile(doSave=true){
         activity=parseFloat(getStr('activity'))||1.55,
         deficit=getNum('deficit'),
         diabetes=getStr('diabetes')==='yes',
-        hypertension=getStr('hypertension')==='yes',
-        heartCondition=getStr('heartCondition')==='yes',
-        wakeTime=getStr('wakeTime')||'05:30';
+        hypertension=getStr('hypertension')==='yes';
   if(doSave && !validateProfile(w,tw,h,age)) return;
   if(doSave){
-    S.profile={weight:w,targetWeight:tw,height:h,age,gender,activity,deficit,diabetes,hypertension,heartCondition,wakeTime};
+    S.profile={weight:w,targetWeight:tw,height:h,age,gender,activity,deficit,diabetes,hypertension};
     save();updateHealthWarning();
-    // تحديث أوقات الوجبات
-    refreshMealTimes();
-    renderMealSlots();
   }
   if(!w||!h||!age) return;
   const bmr=gender==='male'?10*w+6.25*h-5*age+5:10*w+6.25*h-5*age-161;
@@ -2190,7 +2358,6 @@ function updateProfile(doSave=true){
   syncMacros(null,false); // تحديث عرض الماكروز بدون حفظ
   // update tracker goal
   S._targetKcal=targetKcal;
-  S._tdee=tdee; // حفظ الـ TDEE للعرض في التتبع
   renderTrackerSummary();
 
   // ربط مخطط الوجبات بالسعرات المستهدفة تلقائياً
@@ -2199,11 +2366,6 @@ function updateProfile(doSave=true){
   // تحديث وزن التمارين تلقائياً
   const exWEl=$('exWeight');
   if(exWEl && w) exWEl.value=w;
-
-  // تحديث الخطط الذكية — تمييز الأقرب للهدف
-  renderSmartPlans(targetKcal);
-  // تحديث الأسبوعي — اختيار المستوى الأقرب
-  autoSelectWeeklyLevel(targetKcal);
 
   // بعد الحفظ — عرض رسالة التوست فقط بدون انتقال
   if(doSave){
@@ -2214,15 +2376,7 @@ function updateProfile(doSave=true){
 function updateHealthWarning(){
   const d=getStr('diabetes')==='yes';
   const h=getStr('hypertension')==='yes';
-  const hc=getStr('heartCondition')==='yes';
-  const box=$('healthWarnBox');
-  if(!box) return;
-  box.classList.toggle('show',d||h||hc);
-  let msg='⚠️ <strong>تنبيه صحي مهم:</strong> ننصحك باستشارة طبيبك المعالج قبل البدء في أي نظام غذائي خصوصاً مع حالتك الصحية. هذه الخطة ليست بديلاً عن الاستشارة الطبية.<br>';
-  if(d) msg+='🍬 <strong>السكر:</strong> تجنب السكريات والنشويات المرتفعة — وزّع الكربوهيدرات على مدار اليوم.<br>';
-  if(h) msg+='💊 <strong>الضغط:</strong> قلل الملح، تجنب عرقسوس، والمشروبات العالية الكافيين.<br>';
-  if(hc) msg+='❤️ <strong>القلب:</strong> تجنب الدهون المشبعة والمقليات، ركز على الأوميجا-3 والخضروات.';
-  box.querySelector('p').innerHTML=msg;
+  $('healthWarnBox').classList.toggle('show',d||h);
 }
 
 // ════════════════════════════════════════════════════════
@@ -2233,80 +2387,14 @@ function updateFoodCount(){
 }
 
 function renderFilters(){
-  // فلتر الدول
-  const countries=[
-    {id:'all',label:'🌍 الكل'},
-    {id:'مصر',label:'🇪🇬 مصر'},
-    {id:'سوريا',label:'🇸🇾 سوريا'},
-    {id:'لبنان',label:'🇱🇧 لبنان'},
-    {id:'السعودية',label:'🇸🇦 السعودية'},
-    {id:'العراق',label:'🇮🇶 العراق'},
-    {id:'تونس',label:'🇹🇳 تونس'},
-    {id:'الأردن',label:'🇯🇴 الأردن'},
-    {id:'فلسطين',label:'🇵🇸 فلسطين'},
-    {id:'مفضلة',label:'⭐ مفضلتي'},
-  ];
-  const countryBar=$('countryFilterBar');
-  if(countryBar){
-    countryBar.innerHTML=countries.map(c=>
-      `<button class="filter-btn${S._activeCountry===c.id?' active':''}" onclick="setCountryFilter('${c.id}')">${c.label}</button>`
-    ).join('');
-  }
-
-  // فلتر نوع الوجبة
-  const mealTypes=[
-    {id:'all',label:'🍽️ الكل'},
-    {id:'فطار',label:'🍳 فطار'},
-    {id:'غداء',label:'🍗 غداء'},
-    {id:'عشاء',label:'🥗 عشاء'},
-    {id:'سناك',label:'🍎 سناك'},
-    {id:'مشروبات',label:'🥤 مشروبات'},
-  ];
-  const mealBar=$('mealTypeFilterBar');
-  if(mealBar){
-    mealBar.innerHTML=mealTypes.map(m=>
-      `<button class="filter-btn${S._activeMealType===m.id?' active':''}" onclick="setMealTypeFilter('${m.id}')">${m.label}</button>`
-    ).join('');
-  }
-
-  const cats=['الكل',...new Set(allFoods().map(f=>f.cat))];
+  const cats=['الكل','⭐ مفضلتي',...new Set(allFoods().map(f=>f.cat))];
   $('filterBar').innerHTML=cats.map(c=>{
     const active=c===_activeCat?' active':'';
     if(c==='الكل') return `<button class="filter-btn${_activeCat==='الكل'?' active':''}" onclick="filterCat(this,'الكل')">الكل</button>`;
+    if(c==='⭐ مفضلتي') return `<button class="filter-btn${_activeCat==='⭐ مفضلتي'?' active':''}" onclick="filterCat(this,'⭐ مفضلتي')">⭐ مفضلتي</button>`;
     return `<button class="filter-btn${active}" onclick="filterCat(this,'${escapeHtml(c)}')">${escapeHtml(c)}</button>`;
   }).join('');
 }
-
-// فلتر الدول — خريطة الأكل حسب الدولة
-const COUNTRY_CATS={
-  'مصر':['أكل مصري','بقوليات','حبوب','خضروات'],
-  'سوريا':['بروتين','حبوب','خضروات','مكسرات'],
-  'لبنان':['بروتين','حبوب','بقوليات','خضروات'],
-  'السعودية':['بروتين','حبوب','مكسرات','تمر'],
-  'العراق':['بروتين','حبوب','بقوليات'],
-  'تونس':['بروتين','حبوب','خضروات','زيوت وتوابل'],
-  'الأردن':['بروتين','حبوب','بقوليات','خضروات'],
-  'فلسطين':['بروتين','حبوب','بقوليات','خضروات'],
-};
-const MEAL_TYPE_CATS={
-  'فطار':['حبوب','ألبان','بروتين','بقوليات'],
-  'غداء':['بروتين','حبوب','خضروات','بقوليات'],
-  'عشاء':['بروتين','ألبان','خضروات','بقوليات'],
-  'سناك':['فواكه','مكسرات','سناكات','ألبان'],
-  'مشروبات':['مشروبات صحية'],
-};
-
-function setCountryFilter(id){
-  S._activeCountry=id;
-  renderFilters();
-  renderFoodGrid();
-}
-function setMealTypeFilter(id){
-  S._activeMealType=id;
-  renderFilters();
-  renderFoodGrid();
-}
-
 
 let _activeCat='الكل';
 function filterCat(btn,cat){
@@ -2326,29 +2414,21 @@ function toggleFavorite(fid,e){
 }
 
 function renderFoodGrid(){
-  const q=(getStr('searchFood')||'').toLowerCase();
-  let list=allFoods();
-
-  // فلتر المفضلة عبر country filter
-  if(S._activeCountry==='مفضلة') list=list.filter(f=>f.isFavorite);
-  else if(S._activeCountry!=='all' && COUNTRY_CATS[S._activeCountry]){
-    list=list.filter(f=>COUNTRY_CATS[S._activeCountry].includes(f.cat));
+  const q=(getStr('searchFood')||'').trim();
+  let list;
+  if(typeof _activeCountry !== 'undefined' && _activeCountry !== 'الكل'){
+    list = (COUNTRY_FOODS[_activeCountry]||[]).map(f=>({...f, isFavorite: S.favorites.includes(f.id)}));
+  } else {
+    list = allFoods();
   }
-
-  // فلتر نوع الوجبة
-  if(S._activeMealType!=='all' && MEAL_TYPE_CATS[S._activeMealType]){
-    list=list.filter(f=>MEAL_TYPE_CATS[S._activeMealType].includes(f.cat));
-  }
-
-  // فلتر التصنيف
   if(_activeCat==='⭐ مفضلتي') list=list.filter(f=>f.isFavorite);
   else if(_activeCat!=='الكل') list=list.filter(f=>f.cat===_activeCat);
-
-  if(q) list=list.filter(f=>f.name.toLowerCase().includes(q));
+  // بحث ضبابي محسّن
+  if(q) list=list.filter(f=>fuzzyMatch(q, f.name) || f.name.toLowerCase().includes(q.toLowerCase()));
   if(!list.length){$('foodGrid').innerHTML='<div class="empty"><div class="e-ico">🔍</div><p>لا توجد نتائج</p></div>';return;}
   $('foodGrid').innerHTML=list.map(f=>`
-    <div class="food-card" onclick="openAddModal(${f.id})" style="position:relative">
-      <button onclick="toggleFavorite(${f.id},event)" style="position:absolute;top:.4rem;left:.4rem;background:none;border:none;cursor:pointer;font-size:1rem;padding:0;line-height:1;opacity:${f.isFavorite?'1':'.35'};transition:opacity .2s" title="${f.isFavorite?'إزالة من المفضلة':'إضافة للمفضلة'}">${f.isFavorite?'⭐':'☆'}</button>
+    <div class="food-card" onclick="safeRun(()=>openAddModal(${f.id}, S._defaultSlot||null),null,'openAddModal')" style="position:relative">
+      <button onclick="safeRun(()=>toggleFavorite(${f.id},event),null,'toggleFavorite')" style="position:absolute;top:.4rem;left:.4rem;background:none;border:none;cursor:pointer;font-size:1rem;padding:0;line-height:1;opacity:${f.isFavorite?'1':'.35'};transition:opacity .2s" title="${f.isFavorite?'إزالة من المفضلة':'إضافة للمفضلة'}">${f.isFavorite?'⭐':'☆'}</button>
       <span class="ico">${f.emoji||'🍽️'}</span>
       <div class="nm">${escapeHtml(f.name)}</div>
       <div class="kc">${f.kcal} كيلو/100جم</div>
@@ -2356,32 +2436,30 @@ function renderFoodGrid(){
     </div>`).join('');
 }
 
-
 // ════════════════════════════════════════════════════════
 // ADD FOOD MODAL
 // ════════════════════════════════════════════════════════
 function openAddModal(fid, defaultSlot=null){
-  const f=allFoods().find(x=>x.id===fid);
-  if(!f){ toast('⚠️ لم يُعثر على الصنف'); return; }
-  // use passed slot → stored slot → default 'break'
-  const slot = defaultSlot || S._defaultSlot || 'break';
+  // ابحث في الأصناف الأصلية أولاً، ثم في قاعدة الدول
+  let f = allFoods().find(x=>x.id===fid);
+  if(!f && typeof COUNTRY_FOODS !== 'undefined'){
+    for(const cArr of Object.values(COUNTRY_FOODS)){
+      f = cArr.find(x=>x.id===fid);
+      if(f) break;
+    }
+  }
+  if(!f) return;
+  // consume the pending default slot
+  const slot = defaultSlot || S._defaultSlot || null;
   S._defaultSlot = null;
   S._addFood=f;
   setText('modalFoodName',f.emoji+' '+f.name);
   $('modalFoodInfo').innerHTML=`<strong>${f.kcal}</strong> كيلو/100جم | بروتين: ${f.p}جم | كارب: ${f.c}جم | دهون: ${f.f}جم`;
   $('modalQty').value=100;
   $('modalUnit').value='g';
-  // set the slot select
-  const slotSel = $('modalSlot');
-  if(slotSel){
-    // make sure the option exists
-    let found=false;
-    for(let i=0;i<slotSel.options.length;i++){
-      if(slotSel.options[i].value===slot){ slotSel.selectedIndex=i; found=true; break; }
-    }
-    if(!found) slotSel.selectedIndex=1; // default: فطار
-  }
+  if(slot) $('modalSlot').value=slot;
   updateModalCalc();
+  // اقتراح بدائل أقل سعرات لو الصنف عالي
   const altsEl=$('modalAlternatives');
   if(altsEl) altsEl.innerHTML=suggestAlternatives(f);
   openModal('addFoodModal');
@@ -2517,19 +2595,12 @@ function renderMealSlots(){
 }
 
 function switchToLib(slotId){
-  S._defaultSlot = slotId;
-  // تفعيل تبويب المكتبة
+  S._defaultSlot=slotId;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  const libBtn = document.querySelector('[data-tab="library"]');
-  if(libBtn) libBtn.classList.add('active');
-  const libTab = $('library');
-  if(libTab) libTab.classList.add('active');
-  // لفت الانتباه للبحث
-  const searchEl = $('searchFood');
-  if(searchEl){ searchEl.focus(); searchEl.select(); }
-  const slotName = MEAL_SLOTS.find(s=>s.id===slotId)?.name || slotId;
-  toast('🔍 اختر طعاماً لإضافته إلى: '+slotName);
+  document.querySelector('[data-tab="library"]').classList.add('active');
+  $('library').classList.add('active');
+  toast('🔍 اختر طعاماً لإضافته للوجبة');
 }
 
 function removeExerciseBurn(){
@@ -2582,22 +2653,6 @@ function renderTrackerSummary(){
   bar.style.width=pct+'%';
   bar.className='prog prog-cal'+(kcal>goal?' over':'');
 
-  // تحديث بانر السعرات المستهدفة في الأعلى
-  const targetBanner=$('trackerTargetKcal');
-  const tdeeHint=$('trackerTdeeHint');
-  if(targetBanner){
-    if(goal>0){
-      targetBanner.textContent=goal;
-      if(tdeeHint && S._tdee){
-        const deficit=Math.round(S._tdee-goal);
-        tdeeHint.textContent=`TDEE: ${Math.round(S._tdee)} • عجز: ${deficit} سعرة • متبقي: ${remain}`;
-      }
-    } else {
-      targetBanner.textContent='—';
-      if(tdeeHint) tdeeHint.textContent='⚙️ أدخل بياناتك في ملفي الشخصي أولاً';
-    }
-  }
-
   // أشرطة المغذيات — تظهر لو الـ macros محددة والهدف موجود
   const mbWrap=$('macroBarsWrap');
   if(mbWrap && goal>0 && S.macros){
@@ -2617,6 +2672,8 @@ function renderTrackerSummary(){
   } else if(mbWrap){
     mbWrap.style.display = 'none';
   }
+  // تحديث الاقتراحات الذكية
+  safeRun(renderSmartSuggestions, null, 'renderSmartSuggestions');
 }
 
 // ════════════════════════════════════════════════════════
@@ -2693,94 +2750,58 @@ function pickRandom(arr,n=1){
 }
 
 function generatePlan(){
-  const mainN  = Math.max(1,Math.min(4,parseInt($('mainMeals').value)||3));
-  const snackN = Math.max(0,Math.min(3,parseInt($('snacks').value)||2));
-  const drinkN = Math.max(0,Math.min(3,parseInt($('drinks').value)||2));
-  // قراءة السعرات من الحقل أو من ملف البروفايل
-  const planKcal = parseInt($('planKcal').value)||calcDailyGoal()||1500;
-  const pref     = getStr('pref');
-  const forbidden= getStr('forbidden').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
-  const isDiabetic = S.profile.diabetes===true;
-  const isHyper    = S.profile.hypertension===true;
-  const NON_VEG_KW = ['دجاج','فراخ','لحم','سمك','تونة','جمبري','سردين','كفتة','كباب','كبدة','شاورما','شيش','طاووق','بلطي','قاروص','بوري'];
+  const mainN=Math.max(1,Math.min(4,parseInt($('mainMeals').value)||3));
+  const snackN=Math.max(0,Math.min(3,parseInt($('snacks').value)||2));
+  const drinkN=Math.max(0,Math.min(3,parseInt($('drinks').value)||2));
+  const planKcal=parseInt($('planKcal').value)||calcDailyGoal()||1500;
+  const pref=getStr('pref');
+  const forbidden=getStr('forbidden').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+  const isDiabetic=S.profile.diabetes===true;
+  const isHyper=S.profile.hypertension===true;
 
-  // فلترة قاعدة الأكل الكاملة allFoods()
-  const filterFoods=(list)=>list.filter(f=>{
-    if(forbidden.some(fb=>f.name.toLowerCase().includes(fb))) return false;
-    if(isDiabetic && (f.tags||[]).includes('تحذير_سكر')) return false;
-    if(isHyper    && (f.tags||[]).includes('تحذير_ضغط')) return false;
-    if(pref==='veg'     && NON_VEG_KW.some(kw=>f.name.includes(kw))) return false;
-    if(pref==='highpro' && (f.p||0)<6) return false;
-    if(pref==='lowcarb' && (f.c||0)>25) return false;
+  // فلترة حسب الممنوعات والأمراض
+  const filterItems=(arr)=>arr.filter(f=>{
+    if(forbidden.some(fb=>f.name.includes(fb))) return false;
+    if(isDiabetic && ['تمر','عسل','عصير ليمون بدون سكر'].includes(f.name)) return false;
+    if(pref==='veg' && ['دجاج','سمك','لحم','تونة','كفتة'].some(m=>f.name.includes(m))) return false;
+    if(pref==='highpro' && f.p<5) return false;
+    if(pref==='lowcarb' && f.c>20) return false;
     return true;
   });
 
-  const pool = filterFoods(allFoods());
+  // بناء الخطة من قوائم الوجبات المصرية الحقيقية
+  const fBreakfast = filterItems(BREAKFAST_ITEMS);
+  const fLunch     = filterItems(LUNCH_ITEMS);
+  const fDinner    = filterItems(DINNER_ITEMS);
+  const fSnack     = filterItems(SNACK_ITEMS);
+  const fDrink     = filterItems(DRINK_ITEMS);
 
-  // تقسيم المكتبة حسب الفئة
-  const byCat=(cats)=>pool.filter(f=>cats.includes(f.cat));
-  const bfPool   = byCat(['بقوليات','بروتين','حبوب','ألبان','خضروات']);
-  const mainPool = byCat(['بروتين','بقوليات','حبوب','خضروات','أكل مصري']);
-  const dinPool  = byCat(['بروتين','بقوليات','خضروات','ألبان']);
-  const snkPool  = byCat(['فواكه','سناكات','مكسرات','ألبان']);
-  const drkPool  = byCat(['مشروبات صحية']);
+  // توزيع السعرات: فطار 30% / غداء 35% / عشاء 25% / سناكات 10%
+  const bfKcal  = Math.round(planKcal * 0.30);
+  const lunchK  = Math.round(planKcal * 0.35);
+  const dinnerK = Math.round(planKcal * 0.25);
+  const snackK  = Math.round(planKcal * 0.10 / Math.max(snackN,1));
 
-  // توزيع السعرات: وجبات رئيسية 70% ، سناك 20% ، مشروبات 10%
-  const mainKcal  = Math.round(planKcal * 0.70);
-  const snackKcal = Math.round(planKcal * 0.20);
-  const drinkKcal = Math.round(planKcal * 0.10);
+  // اختيار ذكي: بيضة + خبز + إضافة للفطار
+  const bfItems = buildMealCombination(fBreakfast, bfKcal);
+  const lItems  = buildMealCombination(fLunch,     lunchK);
+  const dItems  = buildMealCombination(fDinner,    dinnerK);
 
-  // توزيع الوجبات الرئيسية: فطار 30%  غداء 40%  عشاء 30%
-  const bfK  = Math.round(mainKcal * 0.30);
-  const lnK  = Math.round(mainKcal * 0.40);
-  const dnK  = mainKcal - bfK - lnK;
-  const snkK = snackN>0 ? Math.round(snackKcal/snackN) : 0;
-  const drkK = drinkN>0 ? Math.round(drinkKcal/drinkN) : 0;
-
-  // دالة بناء تركيبة وجبة من pool حسب هدف kcal
-  const buildCombo=(pool,target)=>{
-    if(!pool.length) return [];
-    const sh=[...pool].sort(()=>Math.random()-.5);
-    let tot=0, result=[];
-    for(const f of sh){
-      if(result.length>=4) break;
-      // احسب الكمية المناسبة (30–400 جم)
-      let qty=Math.round((target/Math.max(f.kcal,1))*100/(result.length+1));
-      qty=Math.max(30,Math.min(f.cat==='مكسرات'?50:f.cat==='زيوت وتوابل'?20:f.cat==='مشروبات صحية'?300:350,qty));
-      const itemKcal=Math.round(f.kcal*qty/100);
-      if(tot+itemKcal>target*1.25) continue;
-      result.push({
-        ...f,qty,unit:'جم',
-        kcal:itemKcal,
-        p:parseFloat((f.p*qty/100).toFixed(1)),
-        c:parseFloat((f.c*qty/100).toFixed(1)),
-        f:parseFloat((f.f*qty/100).toFixed(1))
-      });
-      tot+=itemKcal;
-      if(tot>=target*0.85) break;
-    }
-    if(!result.length && sh.length){
-      const f=sh[0]; const qty=100;
-      result.push({...f,qty,unit:'جم',kcal:Math.round(f.kcal*qty/100),p:parseFloat((f.p*qty/100).toFixed(1)),c:parseFloat((f.c*qty/100).toFixed(1)),f:parseFloat((f.f*qty/100).toFixed(1))});
-    }
-    return result;
+  const structuredPlan = {
+    فطار:     { items: bfItems, targetKcal: bfKcal },
+    غداء:     mainN>=2 ? { items: lItems,  targetKcal: lunchK }  : null,
+    عشاء:     mainN>=3 ? { items: dItems,  targetKcal: dinnerK } : null,
+    'وجبة رابعة': mainN>=4 ? { items: buildMealCombination(fLunch, Math.round(planKcal*0.15)), targetKcal: Math.round(planKcal*0.15) } : null,
+    سناك:     snackN>0 ? pickRandom(fSnack, Math.min(snackN,2)) : [],
+    مشروبات:  drinkN>0 ? pickRandom(fDrink, Math.min(drinkN,3)) : [],
   };
-
-  // بناء الخطة
-  const structuredPlan = {};
-  structuredPlan['فطار']       = { items:buildCombo(bfPool||mainPool,bfK),  targetKcal:bfK  };
-  if(mainN>=2) structuredPlan['غداء']  = { items:buildCombo(mainPool,lnK),  targetKcal:lnK  };
-  if(mainN>=3) structuredPlan['عشاء']  = { items:buildCombo(dinPool||mainPool,dnK), targetKcal:dnK };
-  if(mainN>=4) structuredPlan['وجبة رابعة'] = { items:buildCombo(mainPool,Math.round(planKcal*0.15)), targetKcal:Math.round(planKcal*0.15) };
-  for(let i=1;i<=snackN;i++) structuredPlan['سناك '+i] = { items:buildCombo(snkPool,snkK), targetKcal:snkK };
-  for(let i=1;i<=drinkN;i++) structuredPlan['مشروب '+i] = { items:buildCombo(drkPool,drkK), targetKcal:drkK };
-
   S.currentPlan = structuredPlan;
   S._planKcal   = planKcal;
 
+  // Health notes HTML
   let notes='';
-  if(isDiabetic) notes+=`<div class="plan-health-note"><p>🍬 <strong>مرضى السكر:</strong> تجنب السكريات والعصائر المحلاة، وزّع الكربوهيدرات على اليوم.</p></div>`;
-  if(isHyper)    notes+=`<div class="plan-health-note"><p>❤️ <strong>مرضى الضغط:</strong> قلل الملح والمخللات، تجنب عرقسوس والكافيين الزائد.</p></div>`;
+  if(isDiabetic) notes+=`<div class="plan-health-note"><p>🍬 <strong>مرضى السكر:</strong> تجنب السكريات والعصائر المحلاة، وزّع الكربوهيدرات على اليوم، واستشر طبيبك.</p></div>`;
+  if(isHyper)    notes+=`<div class="plan-health-note"><p>❤️ <strong>مرضى الضغط:</strong> قلل الملح والمخللات، تجنب عرقسوس والمشروبات العالية الكافيين.</p></div>`;
 
   renderStructuredPlan(structuredPlan, planKcal, notes);
 }
@@ -2802,53 +2823,60 @@ function buildMealCombination(pool, targetKcal){
 }
 
 function renderStructuredPlan(plan, totalKcal, healthNotes=''){
-  if(!plan){ $('planItems').innerHTML='<p style="color:var(--muted2)">لم يتم توليد خطة بعد.</p>'; return; }
+  const mealNames=Object.keys(plan).filter(k=>plan[k]&&k!=='سناك'&&k!=='مشروبات');
+  const meals=[];
 
-  const meals = [];
-  Object.entries(plan).forEach(([key, val])=>{
-    if(!val) return;
-    // val قد يكون {items, targetKcal} أو مصفوفة أو كائن منفرد
-    let items = [];
-    if(Array.isArray(val))                     items = val;
-    else if(val.items && Array.isArray(val.items)) items = val.items;
-    else if(val.name)                          items = [val];
-    if(!items.length) return;
-    const mKcal = items.reduce((s,i)=>s+(i.kcal||0),0);
-    meals.push({ label:key, items, totalKcal:mKcal });
+  // وجبات رئيسية
+  mealNames.forEach(name=>{
+    const m=plan[name];
+    if(!m) return;
+    const mKcal=m.items.reduce((s,i)=>s+i.kcal,0);
+    meals.push({
+      label:name,
+      items:m.items,
+      totalKcal:mKcal
+    });
   });
 
-  const grandTotal = meals.reduce((s,m)=>s+m.totalKcal,0);
-  const totalPro   = meals.reduce((s,m)=>s+m.items.reduce((ss,i)=>ss+(i.p||0),0),0);
+  // سناكات
+  if(plan['سناك']&&plan['سناك'].length){
+    plan['سناك'].forEach((s,i)=>{
+      meals.push({label:'سناك '+(i+1), items:[s], totalKcal:s.kcal});
+    });
+  }
+  // مشروبات
+  if(plan['مشروبات']&&plan['مشروبات'].length){
+    plan['مشروبات'].forEach((d,i)=>{
+      meals.push({label:'مشروب '+(i+1), items:[d], totalKcal:d.kcal});
+    });
+  }
 
-  const LABEL_ICO = {
-    'فطار':'🍳','غداء':'🍗','عشاء':'🥗','وجبة رابعة':'🍽️',
-    'سناك 1':'🍎','سناك 2':'🥜','سناك 3':'🫐',
-    'مشروب 1':'🥤','مشروب 2':'☕','مشروب 3':'🍵',
-  };
+  const grandTotal=meals.reduce((s,m)=>s+m.totalKcal,0);
+  const totalPro  =Object.values(plan).flat().reduce((s,x)=>s+(Array.isArray(x)?x.reduce((ss,i)=>ss+(i.p||0),0):(x&&x.items?x.items.reduce((ss,i)=>ss+(i.p||0),0):0)),0);
 
-  const rows = meals.map(m=>`
-    <div style="margin-bottom:.85rem;border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden">
+  const rows=meals.map(m=>`
+    <div style="margin-bottom:1rem;border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden">
       <div style="background:rgba(4,120,87,.18);padding:.5rem .9rem;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:800;color:#6ee7b7">${LABEL_ICO[m.label]||'🍽️'} ${m.label}</span>
+        <span style="font-weight:800;color:#6ee7b7">${m.label}</span>
         <span style="font-size:.78rem;color:var(--gold)">${m.totalKcal} سعرة</span>
       </div>
       ${m.items.map(item=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .9rem;border-bottom:1px solid var(--border2);font-size:.84rem">
-          <span>${item.emoji||'🍽️'} ${escapeHtml(item.name)} — ${item.qty||100} ${item.unit||'جم'}</span>
-          <span style="color:var(--muted2);white-space:nowrap">${item.kcal||0} ك</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem .9rem;border-bottom:1px solid var(--border2);font-size:.85rem">
+          <span>${item.emoji||'🍽️'} ${item.name} — ${item.qty} ${item.unit||'جم'}</span>
+          <span style="color:var(--muted2)">${item.kcal} ك</span>
         </div>`).join('')}
     </div>`).join('');
 
-  $('planItems').innerHTML = `
+  $('planItems').innerHTML=`
     ${healthNotes}
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;font-size:.85rem;background:rgba(16,185,129,.08);padding:.65rem 1rem;border-radius:var(--r-sm)">
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;font-size:.85rem">
       <span>🔥 المجموع: <strong style="color:var(--gold)">${grandTotal}</strong> سعرة</span>
       <span>🎯 الهدف: <strong style="color:var(--g1)">${totalKcal}</strong> سعرة</span>
-      <span>💪 بروتين: ~<strong>${totalPro.toFixed(0)}</strong>جم</span>
+      <span>💪 بروتين تقريبي: <strong>${totalPro.toFixed(0)}</strong>جم</span>
     </div>
     ${rows}`;
-  setText('planTotal', grandTotal);
-  $('planResult').style.display = 'block';
+  setText('planTotal',grandTotal);
+  $('planResult').style.display='block';
   renderSavedPlans();
 }
 
@@ -2909,50 +2937,16 @@ function applyPlan(){
 }
 
 function _doApply(replace){
-  if(!S.currentPlan){ toast('⚠️ لا توجد خطة للتطبيق'); return; }
-  if(replace) MEAL_SLOTS.forEach(m=>{ if(m.id!=='exercise_burn') S.tracker[m.id]=[]; });
-
-  const plan = S.currentPlan;
-
-  // خريطة أسماء وجبات الخطة → slotId في الـ tracker
-  const slotMap = {
-    'فطار':'break','غداء':'lunch','عشاء':'din',
-    'وجبة رابعة':'coffee',
-    'سناك 1':'morn','سناك 2':'after','سناك 3':'coffee',
-    'مشروب 1':'wake','مشروب 2':'pre','مشروب 3':'night',
-  };
-
-  Object.entries(plan).forEach(([key, val])=>{
-    if(!val) return;
-    const slotId = slotMap[key] || 'lunch';
-    if(!S.tracker[slotId]) S.tracker[slotId] = [];
-
-    // val يمكن أن يكون: {items:[...], targetKcal} أو مصفوفة أو كائن فردي
-    let items = [];
-    if(Array.isArray(val))               items = val;
-    else if(val.items && Array.isArray(val.items)) items = val.items;
-    else if(val.name)                    items = [val];
-
-    items.forEach(item=>{
-      if(!item || !item.name) return;
-      const qty  = item.qty  || 100;
-      const kcal = item.kcal || Math.round((item.kcal||0)*qty/100);
-      S.tracker[slotId].push({
-        uid  : Date.now() + Math.random(),
-        fid  : item.id || item.fid || -1,
-        name : item.name,
-        emoji: item.emoji || '🍽️',
-        qty, unit: item.unit || 'جم',
-        kcal,
-        p: parseFloat(item.p || 0),
-        c: parseFloat(item.c || 0),
-        f: parseFloat(item.f || 0)
-      });
-    });
+  const map={breakfast:'break',snack_am:'morn',lunch:'lunch',snack_pm:'after',dinner:'din',drink1:'pre',drink2:'wake',extra_main:'coffee'};
+  if(replace) MEAL_SLOTS.forEach(m=>S.tracker[m.id]=[]);
+  Object.entries(S.currentPlan).forEach(([key,item])=>{
+    if(!item) return;
+    const slotId=map[key]||'lunch';
+    if(!S.tracker[slotId]) S.tracker[slotId]=[];
+    S.tracker[slotId].push({uid:Date.now()+Math.random(),fid:item.id,name:item.name,emoji:item.emoji||'🍽️',qty:item.qty,unit:'جرام',kcal:item.kcal,p:item.pro,c:item.carb,f:item.fat});
   });
-
-  save(); renderMealSlots(); renderTrackerSummary();
-  toast(replace ? '✅ تم استبدال الوجبات بالخطة' : '✅ تم إضافة الخطة للوجبات');
+  save();renderMealSlots();renderTrackerSummary();
+  toast(replace?'✅ تم استبدال الوجبات بالخطة':'✅ تم إضافة الخطة للوجبات');
   document.querySelector('[data-tab="tracker"]').click();
 }
 
@@ -2992,191 +2986,6 @@ function deletePlan(id){
 // ════════════════════════════════════════════════════════
 // AI PLAN (LOCAL)
 // ════════════════════════════════════════════════════════
-// ════════════════════════════════════════════════════════
-// SMART PLANS — 15 خطة جاهزة
-// ════════════════════════════════════════════════════════
-
-const SMART_PLANS_DATA = [
-  // ── 1200 سعرة ─────────────────────────────────
-  { id:'sp_1200a', label:'خطة 1200 — أ 🟢', kcal:1200, tag:'خسارة سريعة', color:'#6ee7b7',
-    meals:{ فطار:{items:[{name:'بيضتان مسلوقتان',emoji:'🥚',qty:100,unit:'جم',kcal:155,p:13,c:1,f:11},{name:'رغيف عيش أسمر',emoji:'🍞',qty:50,unit:'جم',kcal:120,p:4,c:25,f:1}],targetKcal:275},
-            غداء:{items:[{name:'صدر دجاج مشوي',emoji:'🍗',qty:150,unit:'جم',kcal:248,p:46,c:0,f:5},{name:'أرز أبيض',emoji:'🍚',qty:80,unit:'جم',kcal:104,p:2,c:23,f:0},{name:'سلطة خضراء',emoji:'🥗',qty:100,unit:'جم',kcal:25,p:1,c:5,f:0}],targetKcal:377},
-            عشاء:{items:[{name:'تونة بالماء',emoji:'🐟',qty:100,unit:'جم',kcal:116,p:26,c:0,f:1},{name:'خيار وطماطم',emoji:'🥒',qty:150,unit:'جم',kcal:30,p:1,c:6,f:0}],targetKcal:146},
-            'سناك 1':{items:[{name:'تفاحة',emoji:'🍎',qty:120,unit:'جم',kcal:62,p:0,c:16,f:0}],targetKcal:62},
-            'مشروب 1':{items:[{name:'ماء دافئ + ليمون',emoji:'🍋',qty:250,unit:'مل',kcal:10,p:0,c:3,f:0}],targetKcal:10} } },
-  { id:'sp_1200b', label:'خطة 1200 — ب 🟢', kcal:1200, tag:'نباتي خفيف', color:'#6ee7b7',
-    meals:{ فطار:{items:[{name:'فول مدمس',emoji:'🫘',qty:200,unit:'جم',kcal:170,p:12,c:28,f:2},{name:'رغيف عيش بلدي',emoji:'🍞',qty:50,unit:'جم',kcal:120,p:4,c:25,f:1}],targetKcal:290},
-            غداء:{items:[{name:'عدس مسلوق',emoji:'🍲',qty:150,unit:'جم',kcal:172,p:13,c:30,f:0},{name:'أرز أبيض',emoji:'🍚',qty:60,unit:'جم',kcal:78,p:1,c:17,f:0}],targetKcal:250},
-            عشاء:{items:[{name:'زبادي لايت',emoji:'🥛',qty:200,unit:'جم',kcal:72,p:8,c:8,f:0},{name:'خيار وطماطم',emoji:'🥒',qty:150,unit:'جم',kcal:30,p:1,c:6,f:0}],targetKcal:102},
-            'سناك 1':{items:[{name:'موزة',emoji:'🍌',qty:100,unit:'جم',kcal:89,p:1,c:23,f:0}],targetKcal:89},
-            'مشروب 1':{items:[{name:'شاي أخضر',emoji:'🍵',qty:250,unit:'مل',kcal:2,p:0,c:0,f:0}],targetKcal:2} } },
-  { id:'sp_1200c', label:'خطة 1200 — ج 🟢', kcal:1200, tag:'عالي بروتين', color:'#6ee7b7',
-    meals:{ فطار:{items:[{name:'بيض مسلوق ×3',emoji:'🥚',qty:150,unit:'جم',kcal:233,p:19,c:1,f:16},{name:'جبنة قريش',emoji:'🧀',qty:100,unit:'جم',kcal:72,p:12,c:3,f:1}],targetKcal:305},
-            غداء:{items:[{name:'صدر دجاج مشوي',emoji:'🍗',qty:200,unit:'جم',kcal:330,p:62,c:0,f:7},{name:'سلطة كبيرة',emoji:'🥗',qty:150,unit:'جم',kcal:35,p:2,c:7,f:0}],targetKcal:365},
-            عشاء:{items:[{name:'تونة بالماء',emoji:'🐟',qty:120,unit:'جم',kcal:139,p:31,c:0,f:1},{name:'زبادي لايت',emoji:'🥛',qty:150,unit:'جم',kcal:54,p:6,c:6,f:0}],targetKcal:193},
-            'سناك 1':{items:[{name:'لوز',emoji:'🌰',qty:25,unit:'جم',kcal:144,p:5,c:5,f:12}],targetKcal:144},
-            'مشروب 1':{items:[{name:'قهوة سوداء',emoji:'☕',qty:250,unit:'مل',kcal:5,p:0,c:1,f:0}],targetKcal:5} } },
-  // ── 1500 سعرة ─────────────────────────────────
-  { id:'sp_1500a', label:'خطة 1500 — أ 🟡', kcal:1500, tag:'خسارة متوسطة', color:'#fbbf24',
-    meals:{ فطار:{items:[{name:'بيضتان مسلوقتان',emoji:'🥚',qty:100,unit:'جم',kcal:155,p:13,c:1,f:11},{name:'رغيف عيش أسمر',emoji:'🍞',qty:65,unit:'جم',kcal:156,p:5,c:32,f:1},{name:'جبنة بيضاء',emoji:'🧀',qty:30,unit:'جم',kcal:72,p:4,c:0,f:6}],targetKcal:383},
-            غداء:{items:[{name:'دجاج مشوي',emoji:'🍗',qty:180,unit:'جم',kcal:297,p:55,c:0,f:6},{name:'أرز بني',emoji:'🍚',qty:90,unit:'جم',kcal:153,p:3,c:32,f:1},{name:'سلطة خضراء',emoji:'🥗',qty:120,unit:'جم',kcal:30,p:1,c:6,f:0}],targetKcal:480},
-            عشاء:{items:[{name:'سمك بلطي مشوي',emoji:'🐟',qty:150,unit:'جم',kcal:162,p:34,c:0,f:3},{name:'خضار مشوية',emoji:'🥦',qty:150,unit:'جم',kcal:52,p:3,c:10,f:0}],targetKcal:214},
-            'سناك 1':{items:[{name:'تفاحة',emoji:'🍎',qty:130,unit:'جم',kcal:67,p:0,c:17,f:0}],targetKcal:67},
-            'سناك 2':{items:[{name:'زبادي لايت',emoji:'🥛',qty:150,unit:'جم',kcal:54,p:6,c:6,f:0}],targetKcal:54},
-            'مشروب 1':{items:[{name:'ماء دافئ + ليمون',emoji:'🍋',qty:250,unit:'مل',kcal:10,p:0,c:3,f:0}],targetKcal:10} } },
-  { id:'sp_1500b', label:'خطة 1500 — ب 🟡', kcal:1500, tag:'صيام متقطع', color:'#fbbf24',
-    meals:{ غداء:{items:[{name:'فول مدمس',emoji:'🫘',qty:250,unit:'جم',kcal:213,p:15,c:35,f:3},{name:'بيضتان',emoji:'🥚',qty:100,unit:'جم',kcal:155,p:13,c:1,f:11},{name:'رغيف عيش بلدي',emoji:'🍞',qty:50,unit:'جم',kcal:120,p:4,c:25,f:1}],targetKcal:488},
-            عشاء:{items:[{name:'دجاج مشوي',emoji:'🍗',qty:200,unit:'جم',kcal:330,p:62,c:0,f:7},{name:'أرز أبيض',emoji:'🍚',qty:100,unit:'جم',kcal:130,p:2,c:28,f:0}],targetKcal:460},
-            'سناك 1':{items:[{name:'موزة',emoji:'🍌',qty:120,unit:'جم',kcal:107,p:1,c:27,f:0}],targetKcal:107},
-            'سناك 2':{items:[{name:'مكسرات مشكلة',emoji:'🌰',qty:30,unit:'جم',kcal:172,p:5,c:6,f:15}],targetKcal:172},
-            'مشروب 1':{items:[{name:'قهوة سوداء',emoji:'☕',qty:250,unit:'مل',kcal:5,p:0,c:1,f:0}],targetKcal:5} } },
-  { id:'sp_1500c', label:'خطة 1500 — ج 🟡', kcal:1500, tag:'منخفض كارب', color:'#fbbf24',
-    meals:{ فطار:{items:[{name:'بيض مسلوق ×3',emoji:'🥚',qty:150,unit:'جم',kcal:233,p:19,c:1,f:16},{name:'جبنة قريش',emoji:'🧀',qty:150,unit:'جم',kcal:108,p:18,c:5,f:1},{name:'طماطم وخيار',emoji:'🥒',qty:150,unit:'جم',kcal:30,p:1,c:6,f:0}],targetKcal:371},
-            غداء:{items:[{name:'صدر دجاج مشوي',emoji:'🍗',qty:250,unit:'جم',kcal:413,p:77,c:0,f:9},{name:'سلطة كبيرة + زيت زيتون',emoji:'🥗',qty:200,unit:'جم',kcal:120,p:2,c:8,f:9}],targetKcal:533},
-            عشاء:{items:[{name:'سمك مشوي',emoji:'🐟',qty:180,unit:'جم',kcal:194,p:41,c:0,f:3},{name:'خضار سوتيه',emoji:'🥦',qty:200,unit:'جم',kcal:70,p:4,c:12,f:0}],targetKcal:264},
-            'سناك 1':{items:[{name:'لوز',emoji:'🌰',qty:30,unit:'جم',kcal:173,p:6,c:6,f:15}],targetKcal:173},
-            'مشروب 1':{items:[{name:'شاي أخضر',emoji:'🍵',qty:300,unit:'مل',kcal:3,p:0,c:0,f:0}],targetKcal:3} } },
-  // ── 1800 سعرة ─────────────────────────────────
-  { id:'sp_1800a', label:'خطة 1800 — أ 🔵', kcal:1800, tag:'صيانة / نشاط خفيف', color:'#60a5fa',
-    meals:{ فطار:{items:[{name:'فول مدمس',emoji:'🫘',qty:200,unit:'جم',kcal:170,p:12,c:28,f:2},{name:'بيضتان مسلوقتان',emoji:'🥚',qty:100,unit:'جم',kcal:155,p:13,c:1,f:11},{name:'رغيف عيش بلدي',emoji:'🍞',qty:70,unit:'جم',kcal:168,p:5,c:35,f:1}],targetKcal:493},
-            غداء:{items:[{name:'دجاج مشوي',emoji:'🍗',qty:200,unit:'جم',kcal:330,p:62,c:0,f:7},{name:'أرز بني',emoji:'🍚',qty:120,unit:'جم',kcal:204,p:4,c:43,f:1},{name:'سلطة خضراء',emoji:'🥗',qty:150,unit:'جم',kcal:37,p:2,c:8,f:0}],targetKcal:571},
-            عشاء:{items:[{name:'لحمة مشوية',emoji:'🥩',qty:150,unit:'جم',kcal:285,p:39,c:0,f:13},{name:'خضار مشوية',emoji:'🥦',qty:200,unit:'جم',kcal:70,p:4,c:14,f:0}],targetKcal:355},
-            'سناك 1':{items:[{name:'موزة',emoji:'🍌',qty:120,unit:'جم',kcal:107,p:1,c:27,f:0}],targetKcal:107},
-            'سناك 2':{items:[{name:'زبادي لايت',emoji:'🥛',qty:200,unit:'جم',kcal:72,p:8,c:8,f:0}],targetKcal:72},
-            'مشروب 1':{items:[{name:'عصير برتقال طازج',emoji:'🍊',qty:200,unit:'مل',kcal:88,p:1,c:21,f:0}],targetKcal:88} } },
-  { id:'sp_1800b', label:'خطة 1800 — ب 🔵', kcal:1800, tag:'رياضي مبتدئ', color:'#60a5fa',
-    meals:{ فطار:{items:[{name:'شوفان بالحليب',emoji:'🥣',qty:80,unit:'جم',kcal:295,p:11,c:48,f:6},{name:'موزة',emoji:'🍌',qty:100,unit:'جم',kcal:89,p:1,c:23,f:0}],targetKcal:384},
-            غداء:{items:[{name:'صدر دجاج مشوي',emoji:'🍗',qty:250,unit:'جم',kcal:413,p:77,c:0,f:9},{name:'أرز أبيض',emoji:'🍚',qty:130,unit:'جم',kcal:169,p:3,c:37,f:0},{name:'سلطة خضراء',emoji:'🥗',qty:150,unit:'جم',kcal:37,p:2,c:8,f:0}],targetKcal:619},
-            عشاء:{items:[{name:'بيض مسلوق ×3',emoji:'🥚',qty:150,unit:'جم',kcal:233,p:19,c:1,f:16},{name:'جبنة قريش',emoji:'🧀',qty:150,unit:'جم',kcal:108,p:18,c:5,f:1}],targetKcal:341},
-            'سناك 1':{items:[{name:'تفاحة',emoji:'🍎',qty:150,unit:'جم',kcal:77,p:0,c:20,f:0}],targetKcal:77},
-            'سناك 2':{items:[{name:'لوز',emoji:'🌰',qty:30,unit:'جم',kcal:173,p:6,c:6,f:15}],targetKcal:173},
-            'مشروب 1':{items:[{name:'ماء + ليمون',emoji:'🍋',qty:300,unit:'مل',kcal:12,p:0,c:4,f:0}],targetKcal:12} } },
-  { id:'sp_1800c', label:'خطة 1800 — ج 🔵', kcal:1800, tag:'عائلي متوازن', color:'#60a5fa',
-    meals:{ فطار:{items:[{name:'بيضتان مسلوقتان',emoji:'🥚',qty:100,unit:'جم',kcal:155,p:13,c:1,f:11},{name:'فول مدمس',emoji:'🫘',qty:150,unit:'جم',kcal:128,p:9,c:21,f:2},{name:'رغيف عيش أسمر',emoji:'🍞',qty:80,unit:'جم',kcal:192,p:6,c:40,f:2}],targetKcal:475},
-            غداء:{items:[{name:'كفتة مشوية',emoji:'🥩',qty:150,unit:'جم',kcal:300,p:28,c:4,f:18},{name:'أرز أبيض',emoji:'🍚',qty:130,unit:'جم',kcal:169,p:3,c:37,f:0},{name:'سلطة طحينة',emoji:'🥗',qty:50,unit:'جم',kcal:100,p:3,c:9,f:6}],targetKcal:569},
-            عشاء:{items:[{name:'تونة بالماء',emoji:'🐟',qty:150,unit:'جم',kcal:174,p:39,c:0,f:1},{name:'خيار وطماطم',emoji:'🥒',qty:200,unit:'جم',kcal:40,p:2,c:8,f:0},{name:'رغيف عيش أسمر',emoji:'🍞',qty:50,unit:'جم',kcal:120,p:4,c:25,f:1}],targetKcal:334},
-            'سناك 1':{items:[{name:'تمر ×3 حبات',emoji:'🟤',qty:30,unit:'جم',kcal:83,p:1,c:22,f:0}],targetKcal:83},
-            'سناك 2':{items:[{name:'مكسرات مشكلة',emoji:'🌰',qty:35,unit:'جم',kcal:200,p:6,c:7,f:17}],targetKcal:200},
-            'مشروب 1':{items:[{name:'قهوة سوداء',emoji:'☕',qty:250,unit:'مل',kcal:5,p:0,c:1,f:0}],targetKcal:5} } },
-  // ── 2000 سعرة ─────────────────────────────────
-  { id:'sp_2000a', label:'خطة 2000 — أ 🟠', kcal:2000, tag:'نشاط متوسط', color:'#fb923c',
-    meals:{ فطار:{items:[{name:'شوفان بالحليب',emoji:'🥣',qty:100,unit:'جم',kcal:369,p:14,c:59,f:8},{name:'موزة',emoji:'🍌',qty:120,unit:'جم',kcal:107,p:1,c:27,f:0}],targetKcal:476},
-            غداء:{items:[{name:'صدر دجاج مشوي',emoji:'🍗',qty:250,unit:'جم',kcal:413,p:77,c:0,f:9},{name:'أرز بني',emoji:'🍚',qty:150,unit:'جم',kcal:255,p:5,c:53,f:2},{name:'سلطة خضراء',emoji:'🥗',qty:150,unit:'جم',kcal:37,p:2,c:8,f:0}],targetKcal:705},
-            عشاء:{items:[{name:'سمك بلطي مشوي',emoji:'🐟',qty:200,unit:'جم',kcal:216,p:45,c:0,f:4},{name:'خضار مشوية',emoji:'🥦',qty:200,unit:'جم',kcal:70,p:4,c:14,f:0},{name:'رغيف عيش أسمر',emoji:'🍞',qty:50,unit:'جم',kcal:120,p:4,c:25,f:1}],targetKcal:406},
-            'سناك 1':{items:[{name:'تفاحة',emoji:'🍎',qty:150,unit:'جم',kcal:77,p:0,c:20,f:0}],targetKcal:77},
-            'سناك 2':{items:[{name:'لوز',emoji:'🌰',qty:30,unit:'جم',kcal:173,p:6,c:6,f:15}],targetKcal:173},
-            'مشروب 1':{items:[{name:'عصير برتقال',emoji:'🍊',qty:200,unit:'مل',kcal:88,p:1,c:21,f:0}],targetKcal:88} } },
-  { id:'sp_2000b', label:'خطة 2000 — ب 🟠', kcal:2000, tag:'رياضي نشط', color:'#fb923c',
-    meals:{ فطار:{items:[{name:'بيض مسلوق ×4',emoji:'🥚',qty:200,unit:'جم',kcal:310,p:26,c:2,f:22},{name:'رغيف عيش أسمر',emoji:'🍞',qty:80,unit:'جم',kcal:192,p:6,c:40,f:2},{name:'جبنة قريش',emoji:'🧀',qty:100,unit:'جم',kcal:72,p:12,c:3,f:1}],targetKcal:574},
-            غداء:{items:[{name:'دجاج مشوي',emoji:'🍗',qty:300,unit:'جم',kcal:495,p:93,c:0,f:11},{name:'أرز بني',emoji:'🍚',qty:150,unit:'جم',kcal:255,p:5,c:53,f:2}],targetKcal:750},
-            عشاء:{items:[{name:'تونة بالماء',emoji:'🐟',qty:150,unit:'جم',kcal:174,p:39,c:0,f:1},{name:'سلطة كبيرة',emoji:'🥗',qty:200,unit:'جم',kcal:50,p:2,c:10,f:0}],targetKcal:224},
-            'سناك 1':{items:[{name:'موزة',emoji:'🍌',qty:120,unit:'جم',kcal:107,p:1,c:27,f:0}],targetKcal:107},
-            'سناك 2':{items:[{name:'مكسرات مشكلة',emoji:'🌰',qty:40,unit:'جم',kcal:229,p:7,c:8,f:19}],targetKcal:229},
-            'مشروب 1':{items:[{name:'قهوة سوداء',emoji:'☕',qty:250,unit:'مل',kcal:5,p:0,c:1,f:0}],targetKcal:5} } },
-  { id:'sp_2000c', label:'خطة 2000 — ج 🟠', kcal:2000, tag:'صيانة متوازنة', color:'#fb923c',
-    meals:{ فطار:{items:[{name:'فول مدمس',emoji:'🫘',qty:250,unit:'جم',kcal:213,p:15,c:35,f:3},{name:'بيضتان',emoji:'🥚',qty:100,unit:'جم',kcal:155,p:13,c:1,f:11},{name:'رغيف عيش بلدي',emoji:'🍞',qty:80,unit:'جم',kcal:192,p:6,c:40,f:2}],targetKcal:560},
-            غداء:{items:[{name:'كباب مشوي',emoji:'🥩',qty:200,unit:'جم',kcal:400,p:37,c:5,f:24},{name:'أرز أبيض',emoji:'🍚',qty:150,unit:'جم',kcal:195,p:4,c:43,f:0},{name:'سلطة طحينة',emoji:'🥗',qty:60,unit:'جم',kcal:120,p:3,c:11,f:7}],targetKcal:715},
-            عشاء:{items:[{name:'سمك مشوي',emoji:'🐟',qty:200,unit:'جم',kcal:216,p:45,c:0,f:4},{name:'خضار سوتيه',emoji:'🥦',qty:200,unit:'جم',kcal:70,p:4,c:14,f:0}],targetKcal:286},
-            'سناك 1':{items:[{name:'تمر ×4',emoji:'🟤',qty:40,unit:'جم',kcal:111,p:1,c:30,f:0}],targetKcal:111},
-            'سناك 2':{items:[{name:'لوز + جوز',emoji:'🌰',qty:40,unit:'جم',kcal:229,p:6,c:7,f:20}],targetKcal:229},
-            'مشروب 1':{items:[{name:'عصير ليمون بدون سكر',emoji:'🍋',qty:300,unit:'مل',kcal:15,p:0,c:4,f:0}],targetKcal:15} } },
-  // ── 2500 سعرة ─────────────────────────────────
-  { id:'sp_2500a', label:'خطة 2500 — أ 🔴', kcal:2500, tag:'بناء عضل', color:'#f87171',
-    meals:{ فطار:{items:[{name:'شوفان بالحليب',emoji:'🥣',qty:120,unit:'جم',kcal:443,p:17,c:71,f:9},{name:'موزتان',emoji:'🍌',qty:240,unit:'جم',kcal:214,p:3,c:55,f:1}],targetKcal:657},
-            غداء:{items:[{name:'صدر دجاج مشوي',emoji:'🍗',qty:350,unit:'جم',kcal:578,p:108,c:0,f:12},{name:'أرز بني',emoji:'🍚',qty:200,unit:'جم',kcal:340,p:7,c:71,f:3}],targetKcal:918},
-            عشاء:{items:[{name:'لحمة مشوية',emoji:'🥩',qty:200,unit:'جم',kcal:380,p:52,c:0,f:18},{name:'خضار مشوية',emoji:'🥦',qty:200,unit:'جم',kcal:70,p:4,c:14,f:0}],targetKcal:450},
-            'سناك 1':{items:[{name:'مكسرات مشكلة',emoji:'🌰',qty:50,unit:'جم',kcal:286,p:9,c:10,f:24}],targetKcal:286},
-            'سناك 2':{items:[{name:'تفاحة + جبنة قريش',emoji:'🍎',qty:150,unit:'جم',kcal:130,p:9,c:18,f:1}],targetKcal:130},
-            'مشروب 1':{items:[{name:'عصير برتقال طبيعي',emoji:'🍊',qty:300,unit:'مل',kcal:132,p:2,c:31,f:0}],targetKcal:132} } },
-  { id:'sp_2500b', label:'خطة 2500 — ب 🔴', kcal:2500, tag:'رياضي محترف', color:'#f87171',
-    meals:{ فطار:{items:[{name:'بيض مسلوق ×5',emoji:'🥚',qty:250,unit:'جم',kcal:388,p:32,c:2,f:27},{name:'رغيف عيش أسمر',emoji:'🍞',qty:100,unit:'جم',kcal:240,p:8,c:50,f:2},{name:'جبنة قريش',emoji:'🧀',qty:150,unit:'جم',kcal:108,p:18,c:5,f:1}],targetKcal:736},
-            غداء:{items:[{name:'دجاج مشوي',emoji:'🍗',qty:400,unit:'جم',kcal:660,p:124,c:0,f:14},{name:'أرز بني',emoji:'🍚',qty:200,unit:'جم',kcal:340,p:7,c:71,f:3}],targetKcal:1000},
-            عشاء:{items:[{name:'تونة بالماء',emoji:'🐟',qty:200,unit:'جم',kcal:232,p:52,c:0,f:2},{name:'سلطة كبيرة + زيت زيتون',emoji:'🥗',qty:250,unit:'جم',kcal:150,p:3,c:10,f:11}],targetKcal:382},
-            'سناك 1':{items:[{name:'موزة',emoji:'🍌',qty:150,unit:'جم',kcal:134,p:2,c:34,f:0}],targetKcal:134},
-            'سناك 2':{items:[{name:'لوز',emoji:'🌰',qty:40,unit:'جم',kcal:231,p:8,c:8,f:20}],targetKcal:231},
-            'مشروب 1':{items:[{name:'قهوة سوداء',emoji:'☕',qty:250,unit:'مل',kcal:5,p:0,c:1,f:0}],targetKcal:5} } },
-  { id:'sp_2500c', label:'خطة 2500 — ج 🔴', kcal:2500, tag:'مكثّف للرياضيين', color:'#f87171',
-    meals:{ فطار:{items:[{name:'فول مدمس',emoji:'🫘',qty:300,unit:'جم',kcal:255,p:18,c:42,f:4},{name:'بيض مسلوق ×4',emoji:'🥚',qty:200,unit:'جم',kcal:310,p:26,c:2,f:22},{name:'رغيف عيش بلدي',emoji:'🍞',qty:100,unit:'جم',kcal:240,p:8,c:50,f:2}],targetKcal:805},
-            غداء:{items:[{name:'كباب مشوي',emoji:'🥩',qty:300,unit:'جم',kcal:600,p:55,c:7,f:36},{name:'أرز أبيض',emoji:'🍚',qty:200,unit:'جم',kcal:260,p:5,c:57,f:0}],targetKcal:860},
-            عشاء:{items:[{name:'سمك بلطي مشوي',emoji:'🐟',qty:300,unit:'جم',kcal:324,p:68,c:0,f:6},{name:'خضار مشوية',emoji:'🥦',qty:200,unit:'جم',kcal:70,p:4,c:14,f:0}],targetKcal:394},
-            'سناك 1':{items:[{name:'تمر ×6',emoji:'🟤',qty:60,unit:'جم',kcal:166,p:1,c:45,f:0}],targetKcal:166},
-            'سناك 2':{items:[{name:'مكسرات مشكلة',emoji:'🌰',qty:50,unit:'جم',kcal:286,p:9,c:10,f:24}],targetKcal:286},
-            'مشروب 1':{items:[{name:'عصير ليمون طازج',emoji:'🍋',qty:300,unit:'مل',kcal:15,p:0,c:4,f:0}],targetKcal:15} } },
-];
-
-function renderSmartPlans(goalKcal){
-  const list = $('smartPlansList');
-  const rec  = $('smartPlanRecommend');
-  const gv   = $('smartGoalVal');
-  if(!list) return;
-
-  if(goalKcal){
-    if(rec){ rec.style.display='block'; }
-    if(gv)  gv.textContent = goalKcal;
-  }
-
-  list.innerHTML = SMART_PLANS_DATA.map(plan=>{
-    const planTotal = Object.values(plan.meals).reduce((s,m)=>{
-      return s + (m.items||[]).reduce((ss,it)=>ss+it.kcal,0);
-    },0);
-    const diff = goalKcal ? Math.abs(planTotal - goalKcal) : 9999;
-    const isNearest = goalKcal && diff < 200;
-    const border = isNearest ? `border:2px solid ${plan.color};box-shadow:0 0 12px ${plan.color}44` : 'border:1px solid var(--border2)';
-
-    return `<div style="background:rgba(26,71,49,.25);${border};border-radius:var(--r-sm);padding:.9rem 1rem;cursor:pointer;transition:all .2s" onclick="loadSmartPlan('${plan.id}')">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem">
-        <span style="font-weight:800;font-size:.95rem;color:${plan.color}">${plan.label} ${isNearest?'← مقترحة':''}` +
-        `</span>
-        <span style="font-size:.78rem;background:rgba(16,185,129,.12);padding:.2rem .6rem;border-radius:20px;color:var(--muted2)">${plan.tag}</span>
-      </div>
-      <div style="font-size:.8rem;color:var(--muted2);margin-top:.35rem">
-        🔥 ${planTotal} سعرة | ${Object.keys(plan.meals).length} وجبات
-        ${isNearest?`<span style="color:${plan.color};font-weight:700"> — الأقرب لهدفك!</span>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function loadSmartPlan(planId){
-  const plan = SMART_PLANS_DATA.find(p=>p.id===planId);
-  if(!plan){ toast('⚠️ لم يُعثر على الخطة'); return; }
-
-  // ضبط حقل السعرات في الـ Planner
-  const planKcalEl = $('planKcal');
-  if(planKcalEl) planKcalEl.value = plan.kcal;
-
-  // تخزين الخطة كـ currentPlan مع هيكل {items, targetKcal}
-  S.currentPlan = plan.meals;
-  S._planKcal   = plan.kcal;
-
-  // حساب المجموع
-  const grandTotal = Object.values(plan.meals).reduce((s,m)=>s+(m.items||[]).reduce((ss,i)=>ss+i.kcal,0),0);
-
-  // عرضها في renderStructuredPlan
-  renderStructuredPlan(plan.meals, plan.kcal, '');
-
-  // الانتقال لتبويب مخطط الوجبات
-  const plannerBtn = document.querySelector('[data-tab="planner"]');
-  if(plannerBtn) plannerBtn.click();
-
-  toast(`✅ تم تحميل ${plan.label} — اضغط "تطبيق" لنقلها لتتبع اليوم`);
-}
-
-function autoSelectWeeklyLevel(goalKcal){
-  const sel = $('weekPlanSelect');
-  if(!sel || !goalKcal) return;
-  // مستويات FIXED_WEEKLY_PLANS
-  const levels = [1200,1400,1600,1800,2000];
-  let best = levels[0];
-  levels.forEach(l=>{ if(Math.abs(l-goalKcal) < Math.abs(best-goalKcal)) best=l; });
-  // options قد تكون نصية مثل "1200" أو "1800"
-  for(let i=0;i<sel.options.length;i++){
-    if(parseInt(sel.options[i].value)===best){ sel.selectedIndex=i; break; }
-  }
-  // أعد رسم الأسبوعي إذا كان التبويب مفتوحاً
-  if($('week') && $('week').classList.contains('active')) renderWeekly();
-}
-
 function generateAIPlan(){
   const type=getStr('dietType');
   const meals=parseInt(getStr('aiMeals'))||5;
@@ -3341,9 +3150,8 @@ function renderWeekly(){
                 <div class="plan-txt">${m.txt}</div>
               </div>
             </div>`).join('')}
-          <div style="padding:.65rem;border-top:1px solid var(--border2);display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-            <button class="btn btn-sm" onclick="applyWeekDay(${i},${safeIdx},'${planKey}')">✅ تطبيق على تتبع اليوم</button>
-            <span style="font-size:.72rem;color:var(--muted2)">💧 3-4 لتر ماء &nbsp;|&nbsp; ☕ قهوة/شاي بدون سكر &nbsp;|&nbsp; 🚶 30 دقيقة مشي</span>
+          <div style="text-align:center;padding:.5rem;background:rgba(16,185,129,.05);font-size:.73rem;color:var(--muted2);border-top:1px solid var(--border2)">
+            💧 3-4 لتر ماء &nbsp;|&nbsp; ☕ قهوة/شاي بدون سكر &nbsp;|&nbsp; 🚶 30 دقيقة مشي
           </div>
         </div>
       </div>`).join('');
@@ -3355,6 +3163,7 @@ function toggleDay(i){
   arrow.textContent=body.classList.contains('open')?'▲':'▼';
 }
 function toggleAllDays(open){
+  // نستخدم كل عناصر pdb الموجودة فعلاً في الـ DOM
   let i=0;
   while(true){
     const body=$('pdb'+i), arrow=$('pdArrow'+i);
@@ -3363,43 +3172,6 @@ function toggleAllDays(open){
     else     { body.classList.remove('open'); if(arrow) arrow.textContent='▼'; }
     i++;
   }
-}
-
-// تطبيق يوم من الأسبوعي على تتبع اليوم
-function applyWeekDay(dayIdx, varIdx, planKey){
-  const planData=FIXED_WEEKLY_PLANS[parseInt(planKey)||planKey];
-  if(!planData||!planData.variants){ toast('⚠️ لم يُعثر على بيانات الخطة'); return; }
-  const variant=planData.variants[varIdx];
-  if(!variant||!variant.days) return;
-  const day=variant.days[dayIdx];
-  if(!day) return;
-
-  const mealSlotMap={
-    'مشروب الاستيقاظ':'wake','الفطار':'break','قهوة + بلح':'coffee',
-    'سناك صباحي':'morn','مشروب قبل الغداء':'pre','الغداء':'lunch',
-    'سناك العصر':'after','العشاء':'din','قبل النوم':'night',
-  };
-
-  const hasData=MEAL_SLOTS.some(m=>(S.tracker[m.id]||[]).length>0);
-  if(hasData && !confirm('⚠️ لديك وجبات اليوم. هل تريد استبدالها بيوم '+day.day+'؟')) return;
-
-  MEAL_SLOTS.forEach(m=>{ if(m.id!=='exercise_burn') S.tracker[m.id]=[]; });
-  day.meals.forEach(meal=>{
-    const slotId=mealSlotMap[meal.name]||'lunch';
-    if(!S.tracker[slotId]) S.tracker[slotId]=[];
-    S.tracker[slotId].push({
-      uid:Date.now()+Math.random(),
-      fid:-1,
-      name:meal.txt.split('+')[0].trim().replace(/\d+.*$/,'').trim()||meal.name,
-      emoji:meal.ico,
-      qty:100,unit:'جم',
-      kcal:meal.kcal,p:0,c:0,f:0
-    });
-  });
-
-  save(); renderMealSlots(); renderTrackerSummary();
-  toast('✅ تم تطبيق يوم '+day.day+' على تتبع اليوم');
-  document.querySelector('[data-tab="tracker"]').click();
 }
 
 // ════════════════════════════════════════════════════════
@@ -3477,7 +3249,11 @@ function deleteCustom(id){
 // MODAL HELPERS
 // ════════════════════════════════════════════════════════
 function openModal(id){$(id).classList.add('show');}
-function closeModal(id){$(id).classList.remove('show');}
+function closeModal(id){
+  $(id).classList.remove('show');
+  // تنظيف المؤقتات عند إغلاق المودال
+  safeRun(cleanupTimers, null, 'closeModal cleanup');
+}
 window.addEventListener('keydown',e=>{if(e.key==='Escape') document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'));});
 
 // ════════════════════════════════════════════════════════
@@ -3522,15 +3298,20 @@ function importData(input){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const d=JSON.parse(e.target.result);
+      let d=JSON.parse(e.target.result);
       if(!d.profile&&!d.custom&&!d.savedPlans){
         toast('⚠️ الملف لا يبدو صحيحاً');return;
       }
+      // ترحيل وتنظيف
+      const oldVer = d.version || 1;
+      if(oldVer < 3) d = migrateState(oldVer, d);
+      validateState(d);
       if(d.profile)      S.profile={...S.profile,...d.profile};
       if(d.custom)       S.custom=d.custom;
       if(d.savedPlans)   S.savedPlans=d.savedPlans;
       if(d.weightLog)    S.weightLog=d.weightLog;
       if(d.macros)       S.macros={...S.macros,...d.macros};
+      if(d.favorites)    S.favorites=d.favorites||[];
       save();
       fillProfileForm();
       renderFilters();renderFoodGrid();renderCustomList();
@@ -4494,6 +4275,11 @@ async function generateMonthlyReport(){
     console.error('Report error',err);
     toast('⚠️ خطأ في إنشاء التقرير، جرب مرة أخرى');
   }
+  }catch(err){
+    if(document.body.contains(reportDiv)) document.body.removeChild(reportDiv);
+    console.error('Report error',err);
+    toast('⚠️ خطأ في إنشاء التقرير، جرب مرة أخرى');
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -4595,7 +4381,585 @@ function renderChallenges(){
 }
 
 // ════════════════════════════════════════════════════════
-// START
+// COUNTRY FOOD DATABASE — قاعدة بيانات أكل الدول
+// ════════════════════════════════════════════════════════
+const COUNTRY_FOODS = {
+  'مصر': [
+    // فطار
+    {id:3001,name:'فول مدمس',emoji:'🫘',kcal:180,p:10,c:25,f:6,cat:'فطار مصري',country:'مصر',tags:['بروتين','ألياف']},
+    {id:3002,name:'بيض مسلوق مصري',emoji:'🥚',kcal:155,p:13,c:1.1,f:11,cat:'فطار مصري',country:'مصر',tags:['بروتين']},
+    {id:3003,name:'جبنة قريش',emoji:'🧀',kcal:100,p:16,c:4,f:1,cat:'فطار مصري',country:'مصر',tags:['بروتين','منخفض']},
+    {id:3004,name:'جبنة بيضاء',emoji:'🧀',kcal:260,p:16,c:2,f:21,cat:'فطار مصري',country:'مصر',tags:['بروتين']},
+    {id:3005,name:'عيش بلدي',emoji:'🫓',kcal:270,p:9,c:55,f:3,cat:'فطار مصري',country:'مصر',tags:['ألياف']},
+    {id:3006,name:'زبادي',emoji:'🫙',kcal:59,p:3.5,c:5,f:1.6,cat:'فطار مصري',country:'مصر',tags:['بروتين']},
+    {id:3007,name:'زيتون أسود مصري',emoji:'🫒',kcal:145,p:1,c:4,f:15,cat:'فطار مصري',country:'مصر',tags:[]},
+    {id:3008,name:'طماطم',emoji:'🍅',kcal:18,p:0.9,c:3.9,f:0.2,cat:'فطار مصري',country:'مصر',tags:['منخفض']},
+    {id:3009,name:'شوفان بلبن',emoji:'🌾',kcal:158,p:6,c:27,f:3,cat:'فطار مصري',country:'مصر',tags:['ألياف']},
+    {id:3010,name:'طعمية',emoji:'🟡',kcal:330,p:13,c:32,f:16,cat:'فطار مصري',country:'مصر',tags:['بروتين']},
+    // غداء
+    {id:3011,name:'دجاج مشوي مصري',emoji:'🍗',kcal:165,p:31,c:0,f:4,cat:'غداء مصري',country:'مصر',tags:['بروتين']},
+    {id:3012,name:'سمك بلطي مشوي',emoji:'🐟',kcal:128,p:26,c:0,f:2,cat:'غداء مصري',country:'مصر',tags:['بروتين']},
+    {id:3013,name:'كفتة مشوية',emoji:'🥩',kcal:250,p:20,c:8,f:16,cat:'غداء مصري',country:'مصر',tags:['بروتين']},
+    {id:3014,name:'أرز مصري',emoji:'🍚',kcal:175,p:3.5,c:38,f:0.5,cat:'غداء مصري',country:'مصر',tags:[]},
+    {id:3015,name:'مكرونة مسلوقة',emoji:'🍝',kcal:158,p:5.5,c:32,f:1,cat:'غداء مصري',country:'مصر',tags:[]},
+    {id:3016,name:'عدس مصري',emoji:'🫘',kcal:116,p:9,c:20,f:0.4,cat:'غداء مصري',country:'مصر',tags:['بروتين','ألياف']},
+    {id:3017,name:'ملوخية بالدجاج',emoji:'🥬',kcal:210,p:22,c:8,f:8,cat:'غداء مصري',country:'مصر',tags:['بروتين']},
+    {id:3018,name:'كشري',emoji:'🍲',kcal:350,p:12,c:65,f:6,cat:'غداء مصري',country:'مصر',tags:['ألياف']},
+    {id:3019,name:'بامية بالطماطم',emoji:'🟢',kcal:65,p:2,c:12,f:1,cat:'غداء مصري',country:'مصر',tags:['ألياف']},
+    {id:3020,name:'محشي',emoji:'🍃',kcal:180,p:5,c:35,f:4,cat:'غداء مصري',country:'مصر',tags:['ألياف']},
+    // عشاء
+    {id:3021,name:'تونة مصرية',emoji:'🐟',kcal:132,p:29,c:0,f:1,cat:'عشاء مصري',country:'مصر',tags:['بروتين']},
+    {id:3022,name:'بيض مسلوق للعشاء',emoji:'🥚',kcal:155,p:13,c:1.1,f:11,cat:'عشاء مصري',country:'مصر',tags:['بروتين']},
+    {id:3023,name:'سلطة خضراء',emoji:'🥗',kcal:40,p:2,c:7,f:0.5,cat:'عشاء مصري',country:'مصر',tags:['منخفض','ألياف']},
+    {id:3024,name:'شوربة عدس',emoji:'🥣',kcal:130,p:8,c:22,f:2,cat:'عشاء مصري',country:'مصر',tags:['ألياف']},
+    // سناك
+    {id:3025,name:'تفاحة مصرية',emoji:'🍎',kcal:52,p:0.3,c:14,f:0.2,cat:'سناك مصري',country:'مصر',tags:['ألياف']},
+    {id:3026,name:'موز مصري',emoji:'🍌',kcal:89,p:1.1,c:23,f:0.3,cat:'سناك مصري',country:'مصر',tags:['ألياف']},
+    {id:3027,name:'برتقال مصري',emoji:'🍊',kcal:47,p:0.9,c:12,f:0.1,cat:'سناك مصري',country:'مصر',tags:['ألياف']},
+    {id:3028,name:'جوافة',emoji:'🍈',kcal:68,p:2.5,c:14,f:0.9,cat:'سناك مصري',country:'مصر',tags:['ألياف']},
+    {id:3029,name:'تمر',emoji:'🟤',kcal:277,p:1.8,c:75,f:0.2,cat:'سناك مصري',country:'مصر',tags:['ألياف','تحذير_سكر']},
+    {id:3030,name:'لوز مصري',emoji:'🌰',kcal:579,p:21,c:22,f:50,cat:'سناك مصري',country:'مصر',tags:['بروتين']},
+    // مشروبات
+    {id:3031,name:'شاي أسود',emoji:'🍵',kcal:2,p:0,c:0.5,f:0,cat:'مشروب مصري',country:'مصر',tags:['منخفض']},
+    {id:3032,name:'قهوة سادة',emoji:'☕',kcal:5,p:0.3,c:0,f:0,cat:'مشروب مصري',country:'مصر',tags:['منخفض']},
+    {id:3033,name:'كركديه',emoji:'🌺',kcal:5,p:0,c:1.2,f:0,cat:'مشروب مصري',country:'مصر',tags:['منخفض']},
+    {id:3034,name:'زنجبيل مغلي',emoji:'🫚',kcal:8,p:0.2,c:1.8,f:0,cat:'مشروب مصري',country:'مصر',tags:['حرق']},
+    {id:3035,name:'ليمون بالنعناع',emoji:'🍋',kcal:12,p:0.2,c:3,f:0,cat:'مشروب مصري',country:'مصر',tags:['حرق','منخفض']},
+  ],
+  'سوريا': [
+    {id:3101,name:'حمص بطحينة',emoji:'🫘',kcal:166,p:9,c:14,f:10,cat:'فطار سوري',country:'سوريا',tags:['بروتين','ألياف']},
+    {id:3102,name:'فول سوري بزيت',emoji:'🫘',kcal:190,p:9,c:22,f:7,cat:'فطار سوري',country:'سوريا',tags:['بروتين']},
+    {id:3103,name:'زيت زيتون وزعتر',emoji:'🫒',kcal:90,p:0.5,c:2,f:9,cat:'فطار سوري',country:'سوريا',tags:[]},
+    {id:3104,name:'جبنة بيضاء سورية',emoji:'🧀',kcal:260,p:16,c:2,f:21,cat:'فطار سوري',country:'سوريا',tags:['بروتين']},
+    {id:3105,name:'خبز عربي سوري',emoji:'🫓',kcal:274,p:9,c:56,f:1.2,cat:'فطار سوري',country:'سوريا',tags:[]},
+    {id:3106,name:'شاورما دجاج',emoji:'🥙',kcal:270,p:22,c:18,f:12,cat:'غداء سوري',country:'سوريا',tags:['بروتين']},
+    {id:3107,name:'كباب سوري',emoji:'🍢',kcal:280,p:20,c:5,f:20,cat:'غداء سوري',country:'سوريا',tags:['بروتين']},
+    {id:3108,name:'كيبة سورية',emoji:'🟤',kcal:230,p:14,c:18,f:11,cat:'غداء سوري',country:'سوريا',tags:['بروتين']},
+    {id:3109,name:'مجدرة',emoji:'🍲',kcal:200,p:9,c:35,f:4,cat:'غداء سوري',country:'سوريا',tags:['بروتين','ألياف']},
+    {id:3110,name:'أرز بالشعرية',emoji:'🍚',kcal:200,p:4,c:42,f:4,cat:'غداء سوري',country:'سوريا',tags:[]},
+    {id:3111,name:'فتوش سوري',emoji:'🥗',kcal:120,p:3,c:18,f:5,cat:'عشاء سوري',country:'سوريا',tags:['ألياف']},
+    {id:3112,name:'تبولة',emoji:'🌿',kcal:80,p:3,c:12,f:3,cat:'عشاء سوري',country:'سوريا',tags:['ألياف']},
+    {id:3113,name:'متبل',emoji:'🍆',kcal:95,p:2,c:9,f:6,cat:'عشاء سوري',country:'سوريا',tags:['ألياف']},
+    {id:3114,name:'تين سوري',emoji:'🫐',kcal:74,p:0.8,c:19,f:0.3,cat:'سناك سوري',country:'سوريا',tags:['ألياف']},
+    {id:3115,name:'عنب سوري',emoji:'🍇',kcal:69,p:0.7,c:18,f:0.2,cat:'سناك سوري',country:'سوريا',tags:['ألياف']},
+    {id:3116,name:'مشمش سوري',emoji:'🍑',kcal:48,p:1.4,c:11,f:0.4,cat:'سناك سوري',country:'سوريا',tags:['ألياف']},
+    {id:3117,name:'فستق حلبي',emoji:'🟢',kcal:560,p:20,c:28,f:46,cat:'سناك سوري',country:'سوريا',tags:['بروتين']},
+    {id:3118,name:'شاي بالنعناع السوري',emoji:'🍵',kcal:3,p:0,c:0.5,f:0,cat:'مشروب سوري',country:'سوريا',tags:['منخفض']},
+    {id:3119,name:'قهوة عربية',emoji:'☕',kcal:10,p:0.2,c:2,f:0,cat:'مشروب سوري',country:'سوريا',tags:['منخفض']},
+    {id:3120,name:'عرق سوس',emoji:'🧋',kcal:30,p:0,c:7,f:0,cat:'مشروب سوري',country:'سوريا',tags:['تحذير_ضغط']},
+  ],
+  'لبنان': [
+    {id:3201,name:'حمص لبناني',emoji:'🫘',kcal:166,p:9,c:14,f:10,cat:'فطار لبناني',country:'لبنان',tags:['بروتين']},
+    {id:3202,name:'خبز مرقوق',emoji:'🫓',kcal:265,p:8,c:54,f:1.5,cat:'فطار لبناني',country:'لبنان',tags:[]},
+    {id:3203,name:'جبنة عكاوي',emoji:'🧀',kcal:240,p:20,c:1,f:17,cat:'فطار لبناني',country:'لبنان',tags:['بروتين']},
+    {id:3204,name:'كفتة لبنانية',emoji:'🥩',kcal:255,p:19,c:8,f:17,cat:'غداء لبناني',country:'لبنان',tags:['بروتين']},
+    {id:3205,name:'شيش طاووق',emoji:'🍢',kcal:195,p:28,c:5,f:8,cat:'غداء لبناني',country:'لبنان',tags:['بروتين']},
+    {id:3206,name:'فروج مشوي',emoji:'🍗',kcal:165,p:31,c:0,f:4,cat:'غداء لبناني',country:'لبنان',tags:['بروتين']},
+    {id:3207,name:'أرز لبناني',emoji:'🍚',kcal:175,p:3.5,c:38,f:0.5,cat:'غداء لبناني',country:'لبنان',tags:[]},
+    {id:3208,name:'تبولة لبنانية',emoji:'🌿',kcal:80,p:3,c:12,f:3,cat:'غداء لبناني',country:'لبنان',tags:['ألياف']},
+    {id:3209,name:'فتوش لبناني',emoji:'🥗',kcal:120,p:3,c:18,f:5,cat:'عشاء لبناني',country:'لبنان',tags:['ألياف']},
+    {id:3210,name:'ورق عنب لبناني',emoji:'🍃',kcal:230,p:6,c:33,f:9,cat:'عشاء لبناني',country:'لبنان',tags:['ألياف']},
+    {id:3211,name:'تفاح لبناني',emoji:'🍎',kcal:52,p:0.3,c:14,f:0.2,cat:'سناك لبناني',country:'لبنان',tags:['ألياف']},
+    {id:3212,name:'إجاص',emoji:'🍐',kcal:57,p:0.4,c:15,f:0.1,cat:'سناك لبناني',country:'لبنان',tags:['ألياف']},
+    {id:3213,name:'مكسرات لبنانية',emoji:'🌰',kcal:600,p:18,c:20,f:54,cat:'سناك لبناني',country:'لبنان',tags:['بروتين']},
+    {id:3214,name:'عرق لبناني (بدون كحول)',emoji:'🥛',kcal:20,p:0,c:5,f:0,cat:'مشروب لبناني',country:'لبنان',tags:['منخفض']},
+    {id:3215,name:'ليموناضة لبنانية',emoji:'🍋',kcal:50,p:0.3,c:13,f:0.1,cat:'مشروب لبناني',country:'لبنان',tags:[]},
+    {id:3216,name:'شاي أحمر',emoji:'🍵',kcal:2,p:0,c:0.5,f:0,cat:'مشروب لبناني',country:'لبنان',tags:['منخفض']},
+  ],
+  'السعودية': [
+    {id:3301,name:'تمر سعودي',emoji:'🟤',kcal:277,p:1.8,c:75,f:0.2,cat:'فطار سعودي',country:'السعودية',tags:['ألياف','تحذير_سكر']},
+    {id:3302,name:'لبن سعودي',emoji:'🥛',kcal:98,p:3.5,c:4.7,f:3.3,cat:'فطار سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3303,name:'بيض سعودي',emoji:'🥚',kcal:155,p:13,c:1.1,f:11,cat:'فطار سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3304,name:'خبز تنور',emoji:'🫓',kcal:290,p:9,c:59,f:2.5,cat:'فطار سعودي',country:'السعودية',tags:[]},
+    {id:3305,name:'حليب بالعسل',emoji:'🥛',kcal:120,p:4,c:18,f:3,cat:'فطار سعودي',country:'السعودية',tags:[]},
+    {id:3306,name:'كبسة دجاج',emoji:'🍗',kcal:320,p:25,c:38,f:8,cat:'غداء سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3307,name:'مندي سعودي',emoji:'🍖',kcal:380,p:28,c:40,f:12,cat:'غداء سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3308,name:'جريش سعودي',emoji:'🌾',kcal:210,p:8,c:42,f:2,cat:'غداء سعودي',country:'السعودية',tags:['ألياف']},
+    {id:3309,name:'مرقوق سعودي',emoji:'🥣',kcal:280,p:14,c:32,f:10,cat:'غداء سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3310,name:'هريس سعودي',emoji:'🫙',kcal:220,p:12,c:35,f:4,cat:'غداء سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3311,name:'فول سعودي',emoji:'🫘',kcal:180,p:10,c:25,f:6,cat:'عشاء سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3312,name:'حمص سعودي',emoji:'🫘',kcal:166,p:9,c:14,f:10,cat:'عشاء سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3313,name:'مكسرات سعودية',emoji:'🌰',kcal:600,p:18,c:20,f:54,cat:'سناك سعودي',country:'السعودية',tags:['بروتين']},
+    {id:3314,name:'قهوة عربية بالهيل',emoji:'☕',kcal:15,p:0.3,c:3,f:0.2,cat:'مشروب سعودي',country:'السعودية',tags:['منخفض']},
+    {id:3315,name:'شاي بالهيل',emoji:'🍵',kcal:8,p:0.1,c:1.5,f:0,cat:'مشروب سعودي',country:'السعودية',tags:['منخفض']},
+  ],
+  'العراق': [
+    {id:3401,name:'بيض عراقي',emoji:'🥚',kcal:155,p:13,c:1.1,f:11,cat:'فطار عراقي',country:'العراق',tags:['بروتين']},
+    {id:3402,name:'جبنة عراقية',emoji:'🧀',kcal:260,p:16,c:2,f:21,cat:'فطار عراقي',country:'العراق',tags:['بروتين']},
+    {id:3403,name:'خبز عراقي',emoji:'🫓',kcal:270,p:9,c:55,f:3,cat:'فطار عراقي',country:'العراق',tags:[]},
+    {id:3404,name:'تمر عراقي',emoji:'🟤',kcal:277,p:1.8,c:75,f:0.2,cat:'فطار عراقي',country:'العراق',tags:['تحذير_سكر']},
+    {id:3405,name:'تمن عراقي',emoji:'🍚',kcal:180,p:4,c:38,f:2,cat:'غداء عراقي',country:'العراق',tags:[]},
+    {id:3406,name:'مرق عراقي',emoji:'🥣',kcal:180,p:14,c:15,f:7,cat:'غداء عراقي',country:'العراق',tags:['بروتين']},
+    {id:3407,name:'دولمة عراقية',emoji:'🍃',kcal:200,p:8,c:28,f:7,cat:'غداء عراقي',country:'العراق',tags:['ألياف']},
+    {id:3408,name:'كباب عراقي',emoji:'🍢',kcal:275,p:20,c:5,f:20,cat:'غداء عراقي',country:'العراق',tags:['بروتين']},
+    {id:3409,name:'قوزي عراقي',emoji:'🍖',kcal:350,p:28,c:30,f:15,cat:'غداء عراقي',country:'العراق',tags:['بروتين']},
+    {id:3410,name:'برياني عراقي',emoji:'🍛',kcal:380,p:18,c:52,f:12,cat:'غداء عراقي',country:'العراق',tags:['بروتين']},
+    {id:3411,name:'شوربة عدس عراقية',emoji:'🥣',kcal:130,p:8,c:22,f:2,cat:'عشاء عراقي',country:'العراق',tags:['ألياف']},
+    {id:3412,name:'رمان عراقي',emoji:'❤️',kcal:83,p:1.7,c:19,f:1.2,cat:'سناك عراقي',country:'العراق',tags:['ألياف']},
+    {id:3413,name:'تمرهندي',emoji:'🟤',kcal:239,p:2.8,c:63,f:0.6,cat:'سناك عراقي',country:'العراق',tags:['ألياف']},
+    {id:3414,name:'شاي عراقي',emoji:'🍵',kcal:3,p:0,c:0.6,f:0,cat:'مشروب عراقي',country:'العراق',tags:['منخفض']},
+    {id:3415,name:'شربت عراقي',emoji:'🧃',kcal:45,p:0,c:11,f:0,cat:'مشروب عراقي',country:'العراق',tags:[]},
+  ],
+  'تونس': [
+    {id:3501,name:'بريك بالبيض',emoji:'🥐',kcal:280,p:12,c:28,f:14,cat:'فطار تونسي',country:'تونس',tags:['بروتين']},
+    {id:3502,name:'خبز تونسي',emoji:'🍞',kcal:265,p:8,c:54,f:1.5,cat:'فطار تونسي',country:'تونس',tags:[]},
+    {id:3503,name:'زيت زيتون تونسي',emoji:'🫒',kcal:884,p:0,c:0,f:100,cat:'فطار تونسي',country:'تونس',tags:['حرق']},
+    {id:3504,name:'زيتون تونسي',emoji:'🫒',kcal:145,p:1,c:4,f:15,cat:'فطار تونسي',country:'تونس',tags:[]},
+    {id:3505,name:'كسكسي تونسي',emoji:'🌾',kcal:240,p:8,c:48,f:2,cat:'غداء تونسي',country:'تونس',tags:['ألياف']},
+    {id:3506,name:'مرق تونسي',emoji:'🥣',kcal:180,p:12,c:15,f:8,cat:'غداء تونسي',country:'تونس',tags:['بروتين']},
+    {id:3507,name:'مشوي تونسي',emoji:'🍢',kcal:220,p:22,c:5,f:13,cat:'غداء تونسي',country:'تونس',tags:['بروتين']},
+    {id:3508,name:'مرق الكفتة',emoji:'🥘',kcal:250,p:18,c:12,f:14,cat:'غداء تونسي',country:'تونس',tags:['بروتين']},
+    {id:3509,name:'شكشوكة تونسية',emoji:'🍳',kcal:210,p:12,c:14,f:12,cat:'عشاء تونسي',country:'تونس',tags:['بروتين']},
+    {id:3510,name:'سلاطة مشوية',emoji:'🥗',kcal:85,p:2,c:10,f:4.5,cat:'عشاء تونسي',country:'تونس',tags:['ألياف']},
+    {id:3511,name:'تمر تونسي',emoji:'🟤',kcal:277,p:1.8,c:75,f:0.2,cat:'سناك تونسي',country:'تونس',tags:['تحذير_سكر']},
+    {id:3512,name:'تين تونسي',emoji:'🫐',kcal:74,p:0.8,c:19,f:0.3,cat:'سناك تونسي',country:'تونس',tags:['ألياف']},
+    {id:3513,name:'رمان',emoji:'❤️',kcal:83,p:1.7,c:19,f:1.2,cat:'سناك تونسي',country:'تونس',tags:['ألياف']},
+    {id:3514,name:'شاي بالصنوبر',emoji:'🍵',kcal:10,p:0.3,c:1.5,f:0.5,cat:'مشروب تونسي',country:'تونس',tags:['منخفض']},
+    {id:3515,name:'عصير رمان تونسي',emoji:'🧃',kcal:54,p:1.5,c:13,f:0.3,cat:'مشروب تونسي',country:'تونس',tags:['ألياف']},
+  ],
+  'المغرب': [
+    {id:3601,name:'خبز مغربي',emoji:'🍞',kcal:270,p:9,c:55,f:3,cat:'فطار مغربي',country:'المغرب',tags:[]},
+    {id:3602,name:'زيت أرجان',emoji:'🫒',kcal:884,p:0,c:0,f:100,cat:'فطار مغربي',country:'المغرب',tags:[]},
+    {id:3603,name:'زيت زيتون مغربي',emoji:'🫒',kcal:884,p:0,c:0,f:100,cat:'فطار مغربي',country:'المغرب',tags:['حرق']},
+    {id:3604,name:'جبنة مغربية',emoji:'🧀',kcal:260,p:16,c:2,f:21,cat:'فطار مغربي',country:'المغرب',tags:['بروتين']},
+    {id:3605,name:'طاجين دجاج',emoji:'🥘',kcal:290,p:26,c:18,f:12,cat:'غداء مغربي',country:'المغرب',tags:['بروتين']},
+    {id:3606,name:'كسكسي مغربي',emoji:'🌾',kcal:240,p:8,c:48,f:2,cat:'غداء مغربي',country:'المغرب',tags:['ألياف']},
+    {id:3607,name:'حريرة مغربية',emoji:'🥣',kcal:170,p:9,c:25,f:4,cat:'غداء مغربي',country:'المغرب',tags:['بروتين','ألياف']},
+    {id:3608,name:'بسطيلة خفيفة',emoji:'🥮',kcal:280,p:16,c:22,f:13,cat:'غداء مغربي',country:'المغرب',tags:['بروتين']},
+    {id:3609,name:'حريرة للعشاء',emoji:'🥣',kcal:170,p:9,c:25,f:4,cat:'عشاء مغربي',country:'المغرب',tags:['ألياف']},
+    {id:3610,name:'زيتون مغربي',emoji:'🫒',kcal:145,p:1,c:4,f:15,cat:'عشاء مغربي',country:'المغرب',tags:[]},
+    {id:3611,name:'تمر مغربي',emoji:'🟤',kcal:277,p:1.8,c:75,f:0.2,cat:'سناك مغربي',country:'المغرب',tags:['تحذير_سكر']},
+    {id:3612,name:'تين مغربي',emoji:'🫐',kcal:74,p:0.8,c:19,f:0.3,cat:'سناك مغربي',country:'المغرب',tags:['ألياف']},
+    {id:3613,name:'لوز مغربي',emoji:'🌰',kcal:579,p:21,c:22,f:50,cat:'سناك مغربي',country:'المغرب',tags:['بروتين']},
+    {id:3614,name:'شاي مغربي بالنعناع',emoji:'🍵',kcal:8,p:0,c:1.5,f:0,cat:'مشروب مغربي',country:'المغرب',tags:['منخفض']},
+    {id:3615,name:'قهوة بالحليب مغربية',emoji:'☕',kcal:70,p:3.5,c:7,f:3,cat:'مشروب مغربي',country:'المغرب',tags:[]},
+  ],
+};
+
+// الحصول على كل أطعمة الدول
+function getCountryFoods(country='الكل'){
+  if(country==='الكل') return Object.values(COUNTRY_FOODS).flat();
+  return COUNTRY_FOODS[country]||[];
+}
+
+let _activeCountry = 'الكل';
+
+function filterCountry(btn, country){
+  _activeCountry = country;
+  document.querySelectorAll('#countryFilterBar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFiltersForCountry();
+  renderFoodGrid();
+}
+
+function renderFiltersForCountry(){
+  const foods = _activeCountry==='الكل' ? allFoods() : getCountryFoods(_activeCountry);
+  const cats = ['الكل', '⭐ مفضلتي', ...new Set(foods.map(f=>f.cat))];
+  _activeCat = 'الكل';
+  $('filterBar').innerHTML = cats.map(c=>{
+    if(c==='الكل') return `<button class="filter-btn active" onclick="filterCat(this,'الكل')">الكل</button>`;
+    if(c==='⭐ مفضلتي') return `<button class="filter-btn" onclick="filterCat(this,'⭐ مفضلتي')">⭐ مفضلتي</button>`;
+    return `<button class="filter-btn" onclick="filterCat(this,'${escapeHtml(c)}')">${escapeHtml(c)}</button>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// 15 SMART READY PLANS — الخطط الذكية الجاهزة
+// ════════════════════════════════════════════════════════
+const SMART_PLANS = [
+  // ═══ متوازن ═══
+  {
+    id:'bal_a', type:'متوازن', label:'A', name:'متوازن — يومي كلاسيكي', emoji:'⚖️',
+    desc:'خطة متوازنة بوجبات مصرية أصيلة — مناسبة لكل يوم',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + عصرة ليمون', pct:1},
+      {slot:'break', txt:'فول مدمس 150جم + بيضتين مسلوقتين + رغيف بلدي + طماطم وخيار', pct:30},
+      {slot:'coffee', txt:'قهوة سادة + 2 تمرة', pct:5},
+      {slot:'morn', txt:'زبادي لايت 150جم + تفاحة', pct:8},
+      {slot:'pre', txt:'كوب ماء + شرائح خيار', pct:1},
+      {slot:'lunch', txt:'صدر دجاج مشوي 150جم + أرز 5 معالق + سلطة خضراء', pct:35},
+      {slot:'after', txt:'موزة + لوز 15جم', pct:8},
+      {slot:'din', txt:'تونة بالماء 100جم + سلطة خضراء + شريحة عيش أسمر', pct:12},
+    ]
+  },
+  {
+    id:'bal_b', type:'متوازن', label:'B', name:'متوازن — تنوع أسبوعي', emoji:'⚖️',
+    desc:'بدائل متنوعة للوجبات لتجنب الملل',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + زنجبيل', pct:1},
+      {slot:'break', txt:'شوفان 50جم + لبن لايت + موزة + 10 حبة لوز', pct:30},
+      {slot:'coffee', txt:'شاي أخضر + 2 تمرة', pct:5},
+      {slot:'morn', txt:'جبنة قريش 100جم + خيار', pct:8},
+      {slot:'pre', txt:'كوب كركديه بارد', pct:1},
+      {slot:'lunch', txt:'سمك بلطي مشوي 180جم + أرز بني 5 معالق + خضار مشوية', pct:35},
+      {slot:'after', txt:'برتقالة + زبادي لايت', pct:8},
+      {slot:'din', txt:'شوربة عدس + بيض مسلوق 2 + رغيف أسمر', pct:12},
+    ]
+  },
+  {
+    id:'bal_c', type:'متوازن', label:'C', name:'متوازن — رشيق وبسيط', emoji:'⚖️',
+    desc:'وجبات قليلة التعقيد مع حفاظ كامل على القيمة الغذائية',
+    meals:[
+      {slot:'wake', txt:'كوب ماء + ليمون + نعناع', pct:1},
+      {slot:'break', txt:'3 بيض مسلوق + جبنة قريش 100جم + رغيف بلدي + طماطم', pct:30},
+      {slot:'coffee', txt:'قهوة سادة بدون سكر', pct:2},
+      {slot:'morn', txt:'تفاحة + 15 حبة لوز', pct:8},
+      {slot:'pre', txt:'كوب شاي أخضر', pct:1},
+      {slot:'lunch', txt:'كفتة مشوية 120جم + أرز 4 معالق + سلطة كبيرة', pct:35},
+      {slot:'after', txt:'جبنة قريش 100جم', pct:7},
+      {slot:'din', txt:'شوربة خضار + سلطة + شريحة عيش أسمر', pct:16},
+    ]
+  },
+  // ═══ عالي بروتين ═══
+  {
+    id:'pro_a', type:'عالي بروتين', label:'A', name:'عالي بروتين — بناء عضل', emoji:'💪',
+    desc:'تركيز عالي على البروتين لحماية العضلات أثناء الرجيم',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + ليمون', pct:1},
+      {slot:'break', txt:'3 بيض مسلوق + جبنة قريش 150جم + رغيف أسمر + طماطم', pct:30},
+      {slot:'coffee', txt:'قهوة سادة + تمرتين', pct:4},
+      {slot:'morn', txt:'زبادي يوناني 200جم + موزة', pct:8},
+      {slot:'pre', txt:'كوب ماء + ليمون', pct:1},
+      {slot:'lunch', txt:'صدر دجاج مشوي 200جم + أرز بني 4 معالق + سلطة كبيرة', pct:36},
+      {slot:'after', txt:'تونة 100جم + خيار', pct:8},
+      {slot:'din', txt:'سمك بلطي مشوي 150جم + خضار مشوية + شريحة عيش أسمر', pct:12},
+    ]
+  },
+  {
+    id:'pro_b', type:'عالي بروتين', label:'B', name:'عالي بروتين — بدون منتجات ألبان', emoji:'💪',
+    desc:'بروتين عالٍ من مصادر حيوانية فقط — مناسب لعدم تحمل اللاكتوز',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + كمون', pct:1},
+      {slot:'break', txt:'4 بيض مسلوق + رغيف بلدي + طماطم وخيار وزيتون', pct:30},
+      {slot:'coffee', txt:'شاي أسود بدون سكر', pct:1},
+      {slot:'morn', txt:'تونة 100جم + خيار وطماطم', pct:8},
+      {slot:'pre', txt:'كوب شاي أخضر', pct:1},
+      {slot:'lunch', txt:'دجاج مشوي 200جم + أرز 4 معالق + سلطة خضراء', pct:36},
+      {slot:'after', txt:'بيضتين مسلوقتين + طماطم', pct:7},
+      {slot:'din', txt:'سمك بلطي مشوي 180جم + خضار سوتيه', pct:16},
+    ]
+  },
+  {
+    id:'pro_c', type:'عالي بروتين', label:'C', name:'عالي بروتين — ميزانية مناسبة', emoji:'💪',
+    desc:'بروتين عالٍ من بروتينات رخيصة ومتاحة في مصر',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + ليمون', pct:1},
+      {slot:'break', txt:'فول مدمس 200جم + 3 بيض مسلوق + رغيف بلدي', pct:30},
+      {slot:'coffee', txt:'قهوة سادة', pct:2},
+      {slot:'morn', txt:'جبنة قريش 150جم + خيار', pct:8},
+      {slot:'pre', txt:'كوب كركديه', pct:1},
+      {slot:'lunch', txt:'كبدة دجاج مشوية 150جم + أرز 4 معالق + سلطة', pct:35},
+      {slot:'after', txt:'زبادي لايت + موزة', pct:8},
+      {slot:'din', txt:'عدس مسلوق 200جم + بيضتان + رغيف أسمر', pct:15},
+    ]
+  },
+  // ═══ منخفض كارب ═══
+  {
+    id:'lc_a', type:'منخفض كارب', label:'A', name:'منخفض كارب — كيتو مصري', emoji:'🥑',
+    desc:'أقل من 50جم كارب يومياً — أكل مصري منخفض الكربوهيدرات',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + ليمون', pct:1},
+      {slot:'break', txt:'3 بيض مسلوق + جبنة بيضاء 50جم + زيتون + طماطم وخيار', pct:30},
+      {slot:'coffee', txt:'قهوة سادة بدون سكر', pct:1},
+      {slot:'morn', txt:'لوز 25جم + جبنة قريش 100جم', pct:8},
+      {slot:'pre', txt:'كوب شاي أخضر', pct:1},
+      {slot:'lunch', txt:'دجاج مشوي 200جم + سلطة كبيرة + زيت زيتون + بروكلي مسلوق', pct:36},
+      {slot:'after', txt:'تونة 100جم + خيار وطماطم', pct:8},
+      {slot:'din', txt:'سمك بلطي مشوي 180جم + خضار سوتيه بزيت زيتون', pct:15},
+    ]
+  },
+  {
+    id:'lc_b', type:'منخفض كارب', label:'B', name:'منخفض كارب — دهون صحية', emoji:'🥑',
+    desc:'مع تركيز أعلى على الدهون الصحية من الأسماك والمكسرات',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + زنجبيل', pct:1},
+      {slot:'break', txt:'2 بيضة عيون بزيت زيتون + جبنة بيضاء 40جم + طماطم خيار + زيتون', pct:30},
+      {slot:'coffee', txt:'قهوة بدون سكر', pct:1},
+      {slot:'morn', txt:'مكسرات مشكلة 30جم', pct:8},
+      {slot:'pre', txt:'كوب ماء', pct:1},
+      {slot:'lunch', txt:'سمك بلطي مشوي 200جم + سلطة كبيرة + أفوكادو 50جم', pct:36},
+      {slot:'after', txt:'جبنة قريش 120جم', pct:7},
+      {slot:'din', txt:'دجاج مشوي 160جم + خضار مشوية بزيت زيتون', pct:16},
+    ]
+  },
+  {
+    id:'lc_c', type:'منخفض كارب', label:'C', name:'منخفض كارب — بسيط', emoji:'🥑',
+    desc:'منخفض كارب بدون تعقيد — وجبات سهلة التحضير',
+    meals:[
+      {slot:'wake', txt:'كوب ماء + قرفة', pct:1},
+      {slot:'break', txt:'4 بيض مسلوق + زيتون 10 حبات + طماطم وخيار', pct:30},
+      {slot:'coffee', txt:'شاي أخضر', pct:1},
+      {slot:'morn', txt:'جبنة قريش 100جم + خيار', pct:8},
+      {slot:'pre', txt:'كوب ماء', pct:1},
+      {slot:'lunch', txt:'كفتة مشوية 150جم + سلطة كبيرة + خضار مسلوقة', pct:36},
+      {slot:'after', txt:'بيضتان مسلوقتان', pct:7},
+      {slot:'din', txt:'تونة 150جم + سلطة خضراء كبيرة', pct:16},
+    ]
+  },
+  // ═══ نباتي ═══
+  {
+    id:'veg_a', type:'نباتي', label:'A', name:'نباتي — مصري أصيل', emoji:'🌱',
+    desc:'نظام نباتي مصري كامل بدون لحوم أو دواجن',
+    meals:[
+      {slot:'wake', txt:'كوب ماء دافئ + ليمون', pct:1},
+      {slot:'break', txt:'فول مدمس 200جم + رغيف بلدي + طماطم وخيار + زيتون', pct:30},
+      {slot:'coffee', txt:'شاي أخضر + 2 تمرة', pct:5},
+      {slot:'morn', txt:'تفاحة + لوز 20جم', pct:8},
+      {slot:'pre', txt:'كوب كركديه', pct:1},
+      {slot:'lunch', txt:'عدس مسلوق 200جم + أرز 5 معالق + سلطة خضراء كبيرة', pct:35},
+      {slot:'after', txt:'زبادي لايت + موزة', pct:8},
+      {slot:'din', txt:'فول مدمس 150جم + بيضتان + طماطم وخيار', pct:12},
+    ]
+  },
+  {
+    id:'veg_b', type:'نباتي', label:'B', name:'نباتي — عالي بروتين نباتي', emoji:'🌱',
+    desc:'نباتي مع التركيز على مصادر البروتين النباتي',
+    meals:[
+      {slot:'wake', txt:'كوب ماء + زنجبيل', pct:1},
+      {slot:'break', txt:'بيض مسلوق 3 + جبنة قريش 100جم + رغيف أسمر', pct:30},
+      {slot:'coffee', txt:'قهوة سادة', pct:2},
+      {slot:'morn', txt:'زبادي يوناني 200جم + عسل ملعقة', pct:8},
+      {slot:'pre', txt:'كوب شاي أخضر', pct:1},
+      {slot:'lunch', txt:'كشري 300جم + سلطة خضراء', pct:35},
+      {slot:'after', txt:'جبنة قريش 100جم + تفاحة', pct:8},
+      {slot:'din', txt:'عدس مسلوق 200جم + بيضتان + خضار مشوية', pct:15},
+    ]
+  },
+  {
+    id:'veg_c', type:'نباتي', label:'C', name:'نباتي — منخفض سعرات', emoji:'🌱',
+    desc:'نظام نباتي منخفض السعرات للفقدان السريع',
+    meals:[
+      {slot:'wake', txt:'كوب ماء + ليمون + نعناع', pct:1},
+      {slot:'break', txt:'شوفان 50جم + لبن لايت + موزة', pct:30},
+      {slot:'coffee', txt:'شاي أخضر بدون سكر', pct:1},
+      {slot:'morn', txt:'تفاحة + جبنة قريش 80جم', pct:7},
+      {slot:'pre', txt:'كوب ماء', pct:1},
+      {slot:'lunch', txt:'عدس مسلوق 180جم + أرز 3 معالق + سلطة كبيرة', pct:35},
+      {slot:'after', txt:'برتقالة + زبادي لايت', pct:8},
+      {slot:'din', txt:'فول مدمس 120جم + بيضة + طماطم وخيار', pct:17},
+    ]
+  },
+  // ═══ صيام متقطع ═══
+  {
+    id:'if_a', type:'صيام متقطع', label:'A', name:'صيام 16/8 — كلاسيكي', emoji:'⏰',
+    desc:'فترة أكل 12-8م — أكل مصري حقيقي',
+    meals:[
+      {slot:'wake', txt:'كوب ماء فقط — لا أكل قبل 12', pct:0},
+      {slot:'lunch', txt:'فول مدمس 200جم + 3 بيض مسلوق + رغيف بلدي + طماطم وخيار (12 ظهراً)', pct:35},
+      {slot:'after', txt:'زبادي لايت 150جم + تفاحة (3 عصراً)', pct:10},
+      {slot:'din', txt:'دجاج مشوي 180جم + أرز 5 معالق + سلطة كبيرة (6 مساءً)', pct:35},
+      {slot:'night', txt:'تونة 100جم + خيار + شريحة عيش أسمر (7:45 مساءً)', pct:20},
+    ]
+  },
+  {
+    id:'if_b', type:'صيام متقطع', label:'B', name:'صيام 16/8 — عالي بروتين', emoji:'⏰',
+    desc:'صيام متقطع مع التركيز على البروتين لحماية العضل',
+    meals:[
+      {slot:'wake', txt:'قهوة سادة فقط أو شاي أخضر بدون سكر', pct:0},
+      {slot:'lunch', txt:'3 بيض مسلوق + جبنة قريش 150جم + رغيف أسمر (12 ظهراً)', pct:30},
+      {slot:'after', txt:'دجاج مشوي 150جم + سلطة (3 عصراً)', pct:30},
+      {slot:'din', txt:'سمك بلطي مشوي 180جم + خضار مشوية (6 مساءً)', pct:25},
+      {slot:'night', txt:'زبادي لايت + موزة (7:30 مساءً)', pct:15},
+    ]
+  },
+  {
+    id:'if_c', type:'صيام متقطع', label:'C', name:'صيام 18/6 — متقدم', emoji:'⏰',
+    desc:'فترة أكل أقصر من 2م إلى 8م لنتائج أسرع',
+    meals:[
+      {slot:'wake', txt:'ماء + قهوة سادة — صيام حتى الساعة 2 ظهراً', pct:0},
+      {slot:'lunch', txt:'فول مدمس 200جم + 3 بيض + رغيف بلدي + طماطم وخيار (2 ظهراً)', pct:35},
+      {slot:'after', txt:'زبادي يوناني 200جم + مكسرات 20جم (5 عصراً)', pct:15},
+      {slot:'din', txt:'دجاج مشوي 200جم + أرز 4 معالق + سلطة كبيرة (7:30 مساءً)', pct:50},
+    ]
+  },
+];
+
+let _activeSmartPlanFilter = 'all';
+let _currentSmartPlan = null;
+
+function filterSmartPlans(btn, type){
+  _activeSmartPlanFilter = type;
+  document.querySelectorAll('#ai .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSmartPlans();
+}
+
+function renderSmartPlans(){
+  const plans = _activeSmartPlanFilter === 'all'
+    ? SMART_PLANS
+    : SMART_PLANS.filter(p=>p.type===_activeSmartPlanFilter);
+
+  const target = calcDailyGoal() || 1500;
+
+  $('smartPlansList').innerHTML = plans.map(plan=>`
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);padding:1rem;margin-bottom:.85rem;cursor:pointer;transition:var(--tr)" onclick="showSmartPlanDetail('${plan.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span style="font-size:1.5rem">${plan.emoji}</span>
+          <div>
+            <div style="font-weight:800;color:var(--cream);font-size:.92rem">${plan.name}</div>
+            <div style="font-size:.75rem;color:var(--muted2);margin-top:.1rem">${plan.desc}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span style="font-size:.72rem;background:rgba(16,185,129,.12);border:1px solid var(--border);border-radius:50px;padding:.2rem .65rem;color:var(--g1);font-weight:700">${plan.type} — ${plan.label}</span>
+          <span style="font-size:.72rem;color:var(--gold);font-weight:700">~${target} سعرة</span>
+          <span style="font-size:1rem;color:var(--g1)">←</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function showSmartPlanDetail(planId){
+  const plan = SMART_PLANS.find(p=>p.id===planId);
+  if(!plan) return;
+  _currentSmartPlan = plan;
+  const target = calcDailyGoal() || 1500;
+
+  let html = `<div style="background:rgba(4,120,87,.1);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem;margin-bottom:1rem;font-size:.85rem">
+    <strong>🎯 السعرات المستهدفة من ملفك:</strong> <span style="color:var(--gold);font-weight:800">${target}</span> سعرة/يوم
+  </div>`;
+
+  const mealNames = {
+    wake:'🌅 مشروب الاستيقاظ', break:'🍳 الفطار', coffee:'☕ قهوة + بلح',
+    morn:'🍎 سناك صباحي', pre:'🥤 مشروب قبل الغداء', lunch:'🍗 الغداء',
+    after:'🥜 سناك العصر', din:'🥗 العشاء', night:'🌙 قبل النوم'
+  };
+
+  plan.meals.forEach(meal=>{
+    const kcal = Math.round(target * meal.pct / 100);
+    html += `<div style="border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden;margin-bottom:.6rem">
+      <div style="background:rgba(4,120,87,.18);padding:.5rem .9rem;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:800;color:#6ee7b7;font-size:.88rem">${mealNames[meal.slot]||meal.slot}</span>
+        ${kcal>0?`<span style="font-size:.75rem;color:var(--gold);font-weight:700">${kcal} سعرة</span>`:'<span style="font-size:.72rem;color:var(--muted2)">فترة صيام</span>'}
+      </div>
+      <div style="padding:.6rem .9rem;font-size:.85rem;color:var(--cream)">${meal.txt}</div>
+    </div>`;
+  });
+
+  setText('smartPlanDetailTitle', plan.emoji+' '+plan.name);
+  $('smartPlanDetailContent').innerHTML = html;
+  $('smartPlanDetail').style.display = 'block';
+  $('smartPlansList').style.display = 'none';
+  $('smartPlanDetail').scrollIntoView({behavior:'smooth'});
+}
+
+function applySmartPlan(){
+  const plan = _currentSmartPlan;
+  if(!plan){ toast('⚠️ اختر خطة أولاً'); return; }
+  const target = calcDailyGoal() || 1500;
+  const hasData = MEAL_SLOTS.some(m=>(S.tracker[m.id]||[]).length>0);
+
+  const doApply = (replace) => {
+    if(replace) MEAL_SLOTS.forEach(m=>S.tracker[m.id]=[]);
+    plan.meals.forEach(meal=>{
+      if(meal.pct===0) return; // تجاوز وجبات الصيام
+      const kcal = Math.round(target * meal.pct / 100);
+      if(!S.tracker[meal.slot]) S.tracker[meal.slot]=[];
+      S.tracker[meal.slot].push({
+        uid: Date.now()+Math.random(),
+        fid: null,
+        name: meal.txt,
+        emoji:'🍽️',
+        qty:1, unit:'وجبة',
+        kcal, p:Math.round(kcal*0.25/4),
+        c:Math.round(kcal*0.40/4),
+        f:Math.round(kcal*0.35/9)
+      });
+    });
+    save(); renderMealSlots(); renderTrackerSummary();
+    toast('✅ تم تطبيق خطة: '+plan.name);
+    document.querySelector('[data-tab="tracker"]').click();
+  };
+
+  if(hasData){
+    if(confirm('لديك وجبات محفوظة. هل تريد استبدالها؟')){
+      doApply(true);
+    } else {
+      doApply(false);
+    }
+  } else {
+    doApply(false);
+  }
+  // إعادة الشاشة للقائمة
+  $('smartPlanDetail').style.display='none';
+  $('smartPlansList').style.display='';
+}
+
+// ════════════════════════════════════════════════════════
+// حساب الوجبة اللحظية
+// ════════════════════════════════════════════════════════
+function calcInstantMeal(){
+  const kcal = parseInt($('instantMealKcal')?.value)||0;
+  if(!kcal || kcal<1){toast('⚠️ أدخل عدد السعرات');return;}
+  const name = getStr('instantMealName')||'وجبة مخصصة';
+  const p = parseFloat($('instantMealP')?.value)||Math.round(kcal*0.25/4);
+  const c = Math.round(kcal*0.40/4);
+  const f = Math.round(kcal*0.35/9);
+  const prev=$('instantMealPreview');
+  if(prev){
+    prev.style.display='block';
+    prev.textContent=`🍽️ ${name} — ${kcal} سعرة | بروتين: ${p}جم | كارب: ${c}جم | دهون: ${f}جم`;
+  }
+}
+
+function addInstantMeal(){
+  const kcal = parseInt($('instantMealKcal')?.value)||0;
+  if(!kcal || kcal<1){toast('⚠️ أدخل عدد السعرات أولاً');return;}
+  const name = (getStr('instantMealName')||'وجبة مخصصة').trim();
+  const slot = getStr('instantMealSlot')||'lunch';
+  const p = parseFloat($('instantMealP')?.value)||Math.round(kcal*0.25/4);
+  const c = Math.round(kcal*0.40/4);
+  const f = Math.round(kcal*0.35/9);
+  if(!S.tracker[slot]) S.tracker[slot]=[];
+  S.tracker[slot].push({
+    uid:Date.now()+Math.random(), fid:null,
+    name:escapeHtml(name.substring(0,60)), emoji:'🍽️',
+    qty:1, unit:'وجبة', kcal, p, c, f
+  });
+  save(); renderMealSlots(); renderTrackerSummary(); renderSmartSuggestions();
+  // مسح الحقول
+  if($('instantMealName')) $('instantMealName').value='';
+  if($('instantMealKcal')) $('instantMealKcal').value='';
+  if($('instantMealP'))    $('instantMealP').value='';
+  if($('instantMealPreview')) $('instantMealPreview').style.display='none';
+  toast(`✅ "${escapeHtml(name.substring(0,30))}" أُضيف للوجبة`);
+  document.querySelector('[data-tab="tracker"]').click();
+}
+
+// ════════════════════════════════════════════════════════
+// اقتراحات ذكية للتتبع اليومي
+// ════════════════════════════════════════════════════════
+function renderSmartSuggestions(){
+  const box = $('smartSuggestionsBox');
+  if(!box) return;
+  const goal = calcDailyGoal()||1500;
+  const all = MEAL_SLOTS.flatMap(m=>S.tracker[m.id]||[]);
+  const kcal = all.reduce((s,i)=>s+i.kcal,0);
+  const pro  = all.reduce((s,i)=>s+(i.p||0),0);
+  const proGoal = Math.round(goal * (S.macros?.p||30) / 100 / 4);
+  const remain = Math.max(0, goal - kcal);
+  const suggestions = [];
+
+  if(pro < proGoal * 0.6 && kcal < goal*0.9){
+    suggestions.push({ico:'💪', msg:`البروتين ${Math.round(pro)}جم من ${proGoal}جم — أضف مصدر بروتين (دجاج/بيض/تونة/جبنة قريش)`});
+  }
+  if(remain > 300 && all.length > 0){
+    suggestions.push({ico:'🔥', msg:`متبقي ${remain} سعرة — لديك مجال لوجبة أو سناك إضافي`});
+  }
+  if(kcal < goal*0.3 && new Date().getHours()>=14){
+    suggestions.push({ico:'⚠️', msg:'لم تأكل كافياً اليوم — تناول وجبة الغداء لتجنب الجوع المفرط'});
+  }
+  if(!suggestions.length){ box.innerHTML=''; return; }
+
+  box.innerHTML=`<div style="background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(4,120,87,.08));border:1px solid var(--border);border-radius:var(--r-sm);padding:.75rem 1rem">
+    <div style="font-size:.78rem;font-weight:800;color:var(--g1);margin-bottom:.4rem">💡 اقتراحات ذكية</div>
+    ${suggestions.map(s=>`<div style="font-size:.82rem;color:var(--cream);margin-bottom:.2rem">${s.ico} ${s.msg}</div>`).join('')}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// START — v14
 // ════════════════════════════════════════════════════════
 init();
 </script>
