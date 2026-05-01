@@ -540,17 +540,18 @@ input[type=range]:focus{box-shadow:none;border:none}
 
 <!-- ═══ TABS ═══ -->
 <div class="tabs">
+  <!-- ترتيب التبويبات v20-reorder: ملفي ← تخطيط ← تتبع ← ذكاء ← أسبوعي ← تمارين ← تحديات ← مكتبة ← تحليلات ← نصائح ← دليل -->
   <button class="tab-btn active" data-tab="profile">👤 ملفي</button>
   <button class="tab-btn" data-tab="planner">🧮 مخطط الوجبات</button>
   <button class="tab-btn" data-tab="tracker">📅 تتبع اليوم</button>
-  <button class="tab-btn" data-tab="insights">💡 تحليلات</button>
   <button class="tab-btn" data-tab="ai">✨ خطة ذكية</button>
-  <button class="tab-btn" data-tab="exercises">🏋️ تمارين</button>
   <button class="tab-btn" data-tab="week">📋 أسبوعي</button>
-  <button class="tab-btn" data-tab="library">📚 المكتبة</button>
-  <button class="tab-btn" data-tab="tips">🔥 نصائح</button>
+  <button class="tab-btn" data-tab="exercises">🏋️ تمارين</button>
   <button class="tab-btn" data-tab="challenges">🏆 تحديات</button>
-  <button class="tab-btn" data-tab="guide">📖 دليل الاستخدام</button>
+  <button class="tab-btn" data-tab="library">📚 المكتبة</button>
+  <button class="tab-btn" data-tab="insights">💡 تحليلات</button>
+  <button class="tab-btn" data-tab="tips">🔥 نصائح</button>
+  <button class="tab-btn" data-tab="guide">📖 دليل المستخدم</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -1144,11 +1145,11 @@ input[type=range]:focus{box-shadow:none;border:none}
 </div>
 
 <!-- ══════════════════════════════════════
-     TAB — دليل الاستخدام
+     TAB — دليل المستخدم
 ══════════════════════════════════════ -->
 <div id="guide" class="tab">
   <div class="card">
-    <div class="card-title">📖 دليل الاستخدام الكامل</div>
+    <div class="card-title">📖 دليل المستخدم الكامل</div>
     <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(4,120,87,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;margin-bottom:1rem;text-align:center">
       <div style="font-size:1.5rem;font-weight:900;color:var(--g1)">🌿 مرشدك الصحي — v14</div>
       <div style="font-size:.78rem;color:var(--muted2);margin-top:.25rem">Prepared by: <strong style="color:var(--g1)">Mohamed Elghtrefy</strong> | All data stored locally</div>
@@ -1361,7 +1362,7 @@ input[type=range]:focus{box-shadow:none;border:none}
 </div>
 
 <!-- ═══ HELP BUTTON (floating) ═══ -->
-<button onclick="openModal('helpModal')" title="دليل الاستخدام"
+<button onclick="openModal('helpModal')" title="دليل المستخدم"
   style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:990;
     width:52px;height:52px;border-radius:50%;border:2px solid var(--g1);
     background:var(--bg-mid);color:var(--g1);font-size:1.4rem;cursor:pointer;
@@ -1391,7 +1392,7 @@ input[type=range]:focus{box-shadow:none;border:none}
 <div class="modal" id="helpModal">
   <div class="modal-box" style="max-width:680px">
     <div class="modal-hdr">
-      <h3>📖 User Guide — دليل الاستخدام الكامل</h3>
+      <h3>📖 User Guide — دليل المستخدم الكامل</h3>
       <button class="close-btn" onclick="closeModal('helpModal')">✕</button>
     </div>
     <div style="font-size:.85rem;line-height:1.75;overflow-y:auto;max-height:68vh">
