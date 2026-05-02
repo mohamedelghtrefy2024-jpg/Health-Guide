@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src https://world.openfoodfacts.org https://api.nal.usda.gov;">
-<title>🌿 مرشدك الصحي v27.2</title>
+<title>🌿 مرشدك الصحي v1.3-fixed</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -147,6 +147,13 @@ body::before{
 .tab.active{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+/* [v28.0 NEW-7] fade-in لعناصر الصفحة عند التحميل */
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+/* animation على .card — يُعاد تعيينها في init() لضمان عمل animation-delay */
+.card{animation:pageFadeIn .45s ease both}
+/* [v28.0 NEW-7] مؤشر تحميل دائري خاص بكل زر */
+.btn-loading{pointer-events:none;opacity:.7}
+.btn-loading::before{content:'';display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-left:6px;vertical-align:middle}
 /* تحسين: تأثير نبض للأزرار */
 @keyframes btnPulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
 .btn-pulse{animation:btnPulse .3s ease;}
@@ -258,8 +265,9 @@ input[type=range]:focus{box-shadow:none;border:none}
   border-radius:var(--r-sm);padding:.85rem;text-align:center;
   cursor:pointer;transition:var(--tr);
 }
+/* [v28.0 NEW-7] تأثير zoom عند تمرير الماوس على Food Card */
 .food-card:hover{
-  border-color:var(--g1);transform:translateY(-3px);
+  border-color:var(--g1);transform:translateY(-3px) scale(1.04);
   box-shadow:0 8px 24px var(--glow2);background:rgba(16,185,129,.1);
 }
 .food-card .ico{font-size:1.75rem;margin-bottom:.35rem;display:block}
@@ -547,7 +555,7 @@ input[type=range]:focus{box-shadow:none;border:none}
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <h1>🌿 مرشدك الصحي</h1>
-  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك | v26.0 🌍 7 دول + 15 خطة ذكية</p>
+  <p>خطتك الذكية لخسارة الوزن بدون حرمان — كل بياناتك محفوظة على جهازك | v1.3-fixed 🌍 7 دول + 15 خطة ذكية ✅ إصلاحات شاملة</p>
   <div style="margin-top:.5rem">
     <button class="theme-btn" id="themeBtnHeader" onclick="toggleTheme()">🌙 الوضع الداكن</button>
   </div>
@@ -609,12 +617,12 @@ input[type=range]:focus{box-shadow:none;border:none}
       </div>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-      <button class="btn" id="saveProfileBtn" onclick="safeRun(()=>updateProfileWithFeedback(),null,'updateProfile')">💾 حفظ وحساب</button>
+      <button class="btn" id="saveProfileBtn" onclick="safeRunBtn(event,()=>updateProfileWithFeedback(),null,'updateProfile')">💾 حفظ وحساب</button>
       <button class="btn btn-red" style="margin-top:.4rem;font-size:.8rem;padding:.4rem .9rem" onclick="openModal('resetAllModal')">🗑️ إعادة تعيين الكل</button>
-      <button class="btn btn-gold btn-sm" id="notifBtn" onclick="safeRun(()=>{localStorage.getItem('notif_enabled')==='1'?cancelNotifications():enableNotifications()},null,'notifications')">🔔 تفعيل الإشعارات</button>
-      <button class="btn btn-sec btn-sm" onclick="safeRun(()=>generateMonthlyReport(),null,'monthlyReport')">📊 تقرير شهري</button>
+      <button class="btn btn-gold btn-sm" id="notifBtn" onclick="safeRunBtn(event,()=>{localStorage.getItem('notif_enabled')==='1'?cancelNotifications():enableNotifications()},null,'notifications')">🔔 تفعيل الإشعارات</button>
+      <button class="btn btn-sec btn-sm" onclick="safeRunBtn(event,()=>generateMonthlyReport(),null,'monthlyReport')">📊 تقرير شهري</button>
       <!-- [NEW] 2.4: نسخ التقرير كنص -->
-      <button class="btn btn-sec btn-sm" onclick="safeRun(()=>copyMonthlyReportAsText(),null,'copyMonthlyReport')">📋 نسخ التقرير</button>
+      <button class="btn btn-sec btn-sm" onclick="safeRunBtn(event,()=>copyMonthlyReportAsText(),null,'copyMonthlyReport')">📋 نسخ التقرير</button>
       <span id="notifStatus" style="font-size:.78rem;color:var(--muted2)">غير مفعّل</span>
     </div>
     <div class="health-warn" id="healthWarnBox">
@@ -631,11 +639,16 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="sbox"><div class="val" id="bmiStatus">—</div><div class="lbl">التصنيف</div></div>
     </div>
     <div style="margin-top:.85rem">
-      <div style="font-size:.78rem;color:var(--muted2);margin-bottom:.3rem">شريط BMI (15 — 40)</div>
-      <div class="prog-wrap"><div class="prog prog-g" id="bmiBar" style="width:0%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted2)">
-        <span>نحافة</span><span>طبيعي</span><span>زيادة</span><span>سمنة</span>
+      <!-- [v28.0 NEW-2] شريط BMI متدرج الألوان يغطي النطاق 14-45 -->
+      <div style="font-size:.78rem;color:var(--muted2);margin-bottom:.3rem">شريط BMI (14 — 45)</div>
+      <div class="prog-wrap" style="background:linear-gradient(to right,#7c3aed 0%,#3b82f6 10%,#10b981 25%,#f59e0b 55%,#ef4444 75%,#7f1d1d 100%);border-radius:999px;position:relative;height:10px">
+        <div id="bmiBarPointer" style="position:absolute;top:-4px;width:4px;height:18px;background:#fff;border-radius:2px;box-shadow:0 0 6px rgba(0,0,0,.5);left:0%;transition:left .5s ease"></div>
       </div>
+      <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted2);margin-top:.2rem">
+        <span>نحافة شديدة</span><span>نحافة</span><span>طبيعي</span><span>زيادة</span><span>سمنة</span><span>سمنة مفرطة</span>
+      </div>
+      <!-- [v28.0 NEW-2] منطقة النصيحة الطبية المخصصة لكل تصنيف BMI -->
+      <div id="bmiAdvice" style="display:none;margin-top:.75rem;padding:.7rem;border-radius:var(--r-sm);font-size:.8rem;line-height:1.6;border:1px solid var(--border)"></div>
     </div>
   </div>
 
@@ -722,7 +735,7 @@ input[type=range]:focus{box-shadow:none;border:none}
         <label>التاريخ</label>
         <input type="date" id="logWeightDate">
       </div>
-      <button class="btn btn-sm" onclick="safeRun(()=>addWeightLog(),null,'addWeightLog')" style="flex-shrink:0">➕ تسجيل</button>
+      <button class="btn btn-sm" onclick="safeRunBtn(event,()=>addWeightLog(),null,'addWeightLog')" style="flex-shrink:0">➕ تسجيل</button>
     </div>
     <div id="weightChartWrap"></div>
     <div id="weightLogList" style="margin-top:.6rem;max-height:180px;overflow-y:auto"></div>
@@ -761,9 +774,9 @@ input[type=range]:focus{box-shadow:none;border:none}
     <p style="color:var(--muted2);font-size:.83rem;margin-bottom:.85rem">صدّر بياناتك كنسخة احتياطية أو انقلها لجهاز آخر</p>
     <!-- v21: أزرار تصدير متعددة الصيغ -->
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
-      <button class="btn btn-sec" onclick="safeRun(()=>exportToJSON(),null,'exportJSON')" title="تصدير JSON">📤 JSON</button>
-      <button class="btn btn-sec" onclick="safeRun(()=>exportToCSV(),null,'exportCSV')" title="تصدير CSV">📊 CSV</button>
-      <button class="btn btn-sec" onclick="safeRun(()=>exportToExcel(),null,'exportExcel')" title="تصدير Excel">📈 Excel</button>
+      <button class="btn btn-sec" onclick="safeRunBtn(event,()=>exportToJSON(),null,'exportJSON')" title="تصدير JSON">📤 JSON</button>
+      <button class="btn btn-sec" onclick="safeRunBtn(event,()=>exportToCSV(),null,'exportCSV')" title="تصدير CSV">📊 CSV</button>
+      <button class="btn btn-sec" onclick="safeRunBtn(event,()=>exportToExcel(),null,'exportExcel')" title="تصدير Excel">📈 Excel</button>
       <label class="btn btn-sec" style="cursor:pointer;margin:0">
         📥 Import بيانات
         <input type="file" id="importFile" accept=".json" onchange="importData(this)" style="display:none">
@@ -780,7 +793,7 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div style="flex:1;min-width:200px">
         <input type="text" id="onlineSearch" placeholder="مثال: أرز، banana، تشيكن..." style="width:100%">
       </div>
-      <button class="btn" id="onlineSearchBtn" onclick="safeRun(()=>searchFoodOnline(),null,'searchFoodOnline')">🔍 بحث</button>
+      <button class="btn" id="onlineSearchBtn" onclick="safeRunBtn(event,()=>searchFoodOnline(),null,'searchFoodOnline')">🔍 بحث</button>
       <div style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--muted2)">
         <span>USDA Key:</span>
         <input type="text" id="usdaKey" placeholder="اختياري" style="width:130px;font-size:.82rem;padding:.4rem .7rem" title="احصل على مفتاح مجاني من fdc.nal.usda.gov">
@@ -820,8 +833,8 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="field"><label>دهون (جم)</label><input type="number" id="cfF" placeholder="0" min="0" step=".1"></div>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <button class="btn" onclick="safeRun(()=>addCustomFood(),null,'addCustomFood')">💾 حفظ الصنف</button>
-      <button class="btn btn-sec" onclick="safeRun(()=>toggleCustomList(),null,'toggleCustomList')" id="manageCustomBtn" style="display:none">📋 إدارة المضافة</button>
+      <button class="btn" onclick="safeRunBtn(event,()=>addCustomFood(),null,'addCustomFood')">💾 حفظ الصنف</button>
+      <button class="btn btn-sec" onclick="safeRunBtn(event,()=>toggleCustomList(),null,'toggleCustomList')" id="manageCustomBtn" style="display:none">📋 إدارة المضافة</button>
     </div>
     <div id="customList" style="margin-top:1rem;display:none"></div>
   </div>
@@ -834,6 +847,10 @@ input[type=range]:focus{box-shadow:none;border:none}
   <div class="card">
     <div class="card-title">💡 تحليلات التقدم</div>
     <p style="color:var(--muted2);font-size:.83rem;margin-bottom:1rem">تحليل شامل لتقدمك بناءً على سجل الوزن والسعرات</p>
+    <!-- [v28.0 NEW-4] زر التقرير الأسبوعي -->
+    <div style="margin-bottom:1rem">
+      <button class="btn btn-sec btn-sm" onclick="safeRunBtn(event,()=>generateWeeklyReport(),null,'weeklyReport')">📊 تقرير أسبوعي</button>
+    </div>
     <div id="insightsTabContent" style="min-height:120px"></div>
   </div>
   <div class="card">
@@ -904,7 +921,7 @@ input[type=range]:focus{box-shadow:none;border:none}
   </div>
   <!-- [FIX] 2.5: تأكيد قبل مسح الوجبات -->
   <div style="display:flex;justify-content:flex-end;margin-bottom:.85rem">
-    <button class="btn btn-red btn-sm" onclick="safeRun(()=>confirmClearDay(),null,'clearDay')">🗑️ مسح جميع الوجبات</button>
+    <button class="btn btn-red btn-sm" onclick="safeRunBtn(event,()=>confirmClearDay(),null,'clearDay')">🗑️ مسح جميع الوجبات</button>
   </div>
   <!-- اقتراحات ذكية -->
   <div id="smartSuggestionsBox" style="margin-bottom:.85rem"></div>
@@ -934,11 +951,13 @@ input[type=range]:focus{box-shadow:none;border:none}
           <option value="highpro">عالي البروتين</option>
           <option value="lowcarb">منخفض الكارب</option>
           <option value="veg">نباتي</option>
+          <!-- [v28.0 NEW-1] خيار خالي من الجلوتين -->
+          <option value="glutenfree" title="استبعد الخبز والمكرونة ومنتجات القمح والشعير والشوفان">🚫🌾 خالي من الجلوتين</option>
         </select>
       </div>
       <div class="field"><label>أكلات ممنوعة (افصل بفاصلة)</label><input type="text" id="forbidden" placeholder="مثال: تمر, عسل"></div>
     </div>
-    <button class="btn" id="generatePlanBtn" onclick="safeRun(()=>generatePlanWithLoader(),null,'generatePlan')">🔄 توليد الخطة</button>
+    <button class="btn" id="generatePlanBtn" onclick="safeRunBtn(event,()=>generatePlanWithLoader(),null,'generatePlan')">🔄 توليد الخطة</button>
   </div>
 
   <div id="planResult" style="display:none">
@@ -946,9 +965,11 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="card-title">📋 الخطة المقترحة — إجمالي: <span id="planTotal" style="color:var(--gold)">0</span> سعرة</div>
       <div id="planItems"></div>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
-        <button class="btn" onclick="safeRun(()=>applyPlan(),null,'applyPlan')">✅ تطبيق على تتبع اليوم</button>
-        <button class="btn btn-gold" onclick="safeRun(()=>savePlan(),null,'savePlan')">⭐ حفظ كمفضلة</button>
-        <button class="btn btn-sec" onclick="safeRun(()=>generatePlanWithLoader(),null,'generatePlan')">🔄 توليد مختلف</button>
+        <button class="btn" onclick="safeRunBtn(event,()=>applyPlan(),null,'applyPlan')">✅ تطبيق على تتبع اليوم</button>
+        <button class="btn btn-gold" onclick="safeRunBtn(event,()=>savePlan(),null,'savePlan')">⭐ حفظ كمفضلة</button>
+        <button class="btn btn-sec" onclick="safeRunBtn(event,()=>generatePlanWithLoader(),null,'generatePlan')">🔄 توليد مختلف</button>
+        <!-- FIX: زر نسخ الخطة المولدة من Planner -->
+        <button class="btn btn-sec" onclick="safeRunBtn(event,()=>copyGeneratedPlan(),null,'copyGeneratedPlan')">📋 نسخ الخطة</button>
       </div>
     </div>
   </div>
@@ -994,8 +1015,8 @@ input[type=range]:focus{box-shadow:none;border:none}
     </div>
     <div id="instantMealPreview" style="display:none;background:rgba(4,120,87,.12);border:1px solid var(--border);border-radius:var(--r-sm);padding:.65rem;margin-bottom:.75rem;font-size:.85rem;color:var(--g1);font-weight:700;text-align:center"></div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <button class="btn btn-sec" onclick="safeRun(()=>calcInstantMeal(),null,'calcInstantMeal')">🧮 حساب</button>
-      <button class="btn" onclick="safeRun(()=>addInstantMeal(),null,'addInstantMeal')">➕ إضافة للتتبع</button>
+      <button class="btn btn-sec" onclick="safeRunBtn(event,()=>calcInstantMeal(),null,'calcInstantMeal')">🧮 حساب</button>
+      <button class="btn" onclick="safeRunBtn(event,()=>addInstantMeal(),null,'addInstantMeal')">➕ إضافة للتتبع</button>
     </div>
   </div>
 </div>
@@ -1024,8 +1045,8 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="card-title" id="smartPlanDetailTitle">تفاصيل الخطة</div>
       <div id="smartPlanDetailContent"></div>
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
-        <button class="btn" onclick="safeRun(()=>applySmartPlan(),null,'applySmartPlan')">✅ تطبيق على تتبع اليوم</button>
-        <button class="btn btn-sec" onclick="safeRun(()=>{$('smartPlanDetail').style.display='none';$('smartPlansList').style.display=''},null,'smartPlanBack')">← رجوع للخطط</button>
+        <button class="btn" onclick="safeRunBtn(event,()=>applySmartPlan(),null,'applySmartPlan')">✅ تطبيق على تتبع اليوم</button>
+        <button class="btn btn-sec" onclick="safeRunBtn(event,()=>{$('smartPlanDetail').style.display='none';$('smartPlansList').style.display=''},null,'smartPlanBack')">← رجوع للخطط</button>
       </div>
     </div>
   </div>
@@ -1039,6 +1060,9 @@ input[type=range]:focus{box-shadow:none;border:none}
           <option value="عالي بروتين">عالي البروتين 💪</option>
           <option value="منخفض الكارب">منخفض الكارب 🥑</option>
           <option value="نظام الصيام المتقطع">صيام متقطع 16/8 ⏰</option>
+          <!-- [v28.0 NEW-5] أنظمة صيام متقدمة -->
+          <option value="صيام 18/6">صيام 18/6 متقدم ⏰</option>
+          <option value="صيام 20/4">صيام 20/4 محترف ⏰</option>
           <option value="نباتي">نباتي 🌱</option>
         </select>
       </div>
@@ -1053,8 +1077,8 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div class="field"><label>أكلات أتجنبها</label><input type="text" id="aiAvoid" placeholder="مثال: مكسرات، حليب"></div>
     </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <button class="btn" onclick="safeRun(()=>generateAIPlan(),null,'generateAIPlan')">✨ توليد الخطة</button>
-      <button class="btn btn-sec" onclick="safeRun(()=>copyAIPlan(),null,'copyAIPlan')">📋 نسخ الخطة</button>
+      <button class="btn" onclick="safeRunBtn(event,()=>generateAIPlan(),null,'generateAIPlan')">✨ توليد الخطة</button>
+      <button class="btn btn-sec" onclick="safeRunBtn(event,()=>copyAIPlan(),null,'copyAIPlan')">📋 نسخ الخطة</button>
     </div>
     <div class="ai-result" id="aiResult"></div>
   </div>
@@ -1081,8 +1105,8 @@ input[type=range]:focus{box-shadow:none;border:none}
         <div style="font-size:.75rem;color:var(--muted2)">سعرة حرارية</div>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-        <button class="btn btn-sec btn-sm" onclick="safeRun(()=>resetExercises(),null,'resetExercises')">🔄 إعادة تعيين</button>
-        <button class="btn btn-sm" onclick="safeRun(()=>logExerciseBurn(),null,'logExerciseBurn')">➕ أضف للتتبع (حرق سلبي)</button>
+        <button class="btn btn-sec btn-sm" onclick="safeRunBtn(event,()=>resetExercises(),null,'resetExercises')">🔄 إعادة تعيين</button>
+        <button class="btn btn-sm" onclick="safeRunBtn(event,()=>logExerciseBurn(),null,'logExerciseBurn')">➕ أضف للتتبع (حرق سلبي)</button>
       </div>
     </div>
   </div>
@@ -1124,8 +1148,8 @@ input[type=range]:focus{box-shadow:none;border:none}
         </div>
         <button class="btn btn-sec" onclick="window.print()">🖨️ طباعة</button>
         <!-- [NEW] 2.9: PDF الأسبوع -->
-        <button class="btn btn-sec" onclick="safeRun(()=>exportWeeklyPDF(),null,'weeklyPDF')">📄 PDF الأسبوع</button>
-        <button class="btn btn-sec" onclick="safeRun(copyWeeklyPlan,null,'copyWeekly')">📋 نسخ الخطة</button>
+        <button class="btn btn-sec" onclick="safeRunBtn(event,()=>exportWeeklyPDF(),null,'weeklyPDF')">📄 PDF الأسبوع</button>
+        <button class="btn btn-sec" onclick="safeRunBtn(event,copyWeeklyPlan,null,'copyWeekly')">📋 نسخ الخطة</button>
       </div>
     </div>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
@@ -1171,7 +1195,7 @@ input[type=range]:focus{box-shadow:none;border:none}
   <div class="card">
     <div class="card-title">📖 دليل المستخدم الكامل</div>
     <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(4,120,87,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;margin-bottom:1rem;text-align:center">
-      <div style="font-size:1.5rem;font-weight:900;color:var(--g1)">🌿 مرشدك الصحي — v26.0</div>
+      <div style="font-size:1.5rem;font-weight:900;color:var(--g1)">🌿 مرشدك الصحي — v1.3-fixed</div>
       <div style="font-size:.78rem;color:var(--muted2);margin-top:.25rem">Prepared by: <strong style="color:var(--g1)">Mohamed Elghtrefy</strong> | All data stored locally</div>
     </div>
 
@@ -1236,7 +1260,7 @@ input[type=range]:focus{box-shadow:none;border:none}
 <!-- ═══ DEV FOOTER ═══ -->
 <div class="dev-footer">
   <p>💚 Prepared by: <strong>Mohamed Elghtrefy</strong> — Volunteering for your health</p>
-  <p style="font-size:.75rem;margin-top:.25rem">Version: <strong style="color:var(--g1)">v26.0</strong> &nbsp;|&nbsp; All Rights Reserved © 2026 &nbsp;|&nbsp;
+  <p style="font-size:.75rem;margin-top:.25rem">Version: <strong style="color:var(--g1)">v1.3-fixed</strong> &nbsp;|&nbsp; All Rights Reserved © 2026 &nbsp;|&nbsp;
     <button onclick="openModal('helpModal')" style="background:none;border:none;color:var(--g1);cursor:pointer;font-size:.78rem;text-decoration:underline;font-family:inherit">📖 Help Guide</button>
   </p>
 </div>
@@ -1308,7 +1332,7 @@ input[type=range]:focus{box-shadow:none;border:none}
     </div>
     <p style="margin-bottom:1rem;color:var(--muted2);font-size:.9rem">لديك وجبات محفوظة اليوم. كيف تريد تطبيق الخطة؟</p>
     <div style="display:flex;gap:.6rem;flex-direction:column">
-      <button class="btn btn-red" onclick="_doApply(true);closeModal('applyModal')">🔄 استبدال الوجبات الحالية</button>
+      <button class="btn btn-red" onclick="_doApply(true);closeModal('applyModal')">🗑️ مسح اليوم وتطبيق الخطة</button>
       <button class="btn" onclick="_doApply(false);closeModal('applyModal')">➕ إضافة إلى الوجبات الحالية</button>
       <button class="btn btn-sec" onclick="closeModal('applyModal')">إلغاء</button>
     </div>
@@ -1427,7 +1451,7 @@ input[type=range]:focus{box-shadow:none;border:none}
       <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(4,120,87,.1));border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;margin-bottom:1rem;text-align:center">
         <div style="font-size:1.5rem;font-weight:900;color:var(--g1)">🌿 مرشدك الصحي</div>
         <div style="font-size:.78rem;color:var(--muted2);margin-top:.25rem">Prepared by: <strong style="color:var(--g1)">Mohamed Elghtrefy</strong></div>
-        <div style="font-size:.72rem;color:var(--muted2)">Version: <strong>v26.0</strong> &nbsp;|&nbsp; All data stored locally on your device</div>
+        <div style="font-size:.72rem;color:var(--muted2)">Version: <strong>v1.3-fixed</strong> &nbsp;|&nbsp; All data stored locally on your device</div>
       </div>
 
       <!-- Section helper -->
@@ -1527,6 +1551,23 @@ input[type=range]:focus{box-shadow:none;border:none}
 <div class="toast" id="toast"></div>
 <script>
 // ════════════════════════════════════════════════════════
+// FIX LOG — v1.3-fixed (إصلاحات شاملة)
+// ════════════════════════════════════════════════════════
+// [FIX-1] ✅ إصلاح Syntax Error رئيسي: txt += '\n' داخل copyGeneratedPlan
+//          كانت تمنع تشغيل JavaScript كله → الأزرار والتبويبات لا تعمل
+// [FIX-2] ✅ _tabCache: lazy load يُعلَّم true فقط عند نجاح التحميل
+// [FIX-3] ✅ _applyV17Patches: guard لمنع تكرار keydown listener
+// [FIX-4] ✅ openModal: null-safety check قبل classList.add
+// [FIX-5] ✅ closeModal: null-safety check قبل classList.remove
+// [FIX-6] ✅ updateProfileWithFeedback: try/catch + finally لضمان إعادة الزر
+// [FIX-A] ✅ PIECE_WEIGHTS: إضافة أسماء المكسرات المطابقة لقاعدة FOODS
+//          'لوز','جوز','فستق','كاجو' كانت تُعطي 80جم افتراضياً بدل الوزن الصحيح
+// [FIX-B] ✅ openAddModal: كمية افتراضية ذكية (10 حبات للوز، 5 للجوز، 1 ملعقة للبذور)
+//          + عرض السعرات لكل حبة في نافذة الإضافة
+// [FIX-C] ✅ updateModalCalc: عرض الجرامات المكافئة للحبات والملاعق
+// [FIX-D] ✅ confirmAddFood: تحذير عند إضافة كميات كبيرة من المكسرات (> 60جم)
+// [FIX-E] ✅ renderFoodGrid: عرض وزن الحبة للمكسرات الصغيرة (مثال: 7 سعرة/حبة (1.2جم))
+// ════════════════════════════════════════════════════════
 // SECURITY
 // ════════════════════════════════════════════════════════
 function escapeHtml(t){
@@ -1552,6 +1593,8 @@ let S={
   _editSlot:null,_editUid:null,_editFood:null,
   _addFood:null,_defaultSlot:null
 };
+
+const MAX_FAVORITES=30; // [FIX] نُقل من أسفل ليكون قبل أي استخدام
 
 const MEAL_SLOTS=[
   {id:'wake', name:'مشروب الاستيقاظ', time:'٥:٣٠ ص', ico:'🌅'},
@@ -1803,9 +1846,6 @@ const FOODS=[
 // WEEKLY PLAN DATA
 // ════════════════════════════════════════════════════════
 // WEEKLY القديم محذوف — الأنظمة الجديدة في FIXED_WEEKLY_PLANS
-
-
-
 
 // ════════════════════════════════════════════════════════
 // EGYPTIAN MEAL DATABASE — قاعدة بيانات الأكل المصري
@@ -2113,8 +2153,6 @@ function getWeeklyPlanForUser(){
   return {plan:FIXED_WEEKLY_PLANS[closest], goal, closest};
 }
 
-
-
 const TIPS_DATA=[
   {ico:'💧',title:'الماء أساس الحرق',body:'اشرب 2-3 لتر ماء يومياً. الماء البارد يُجبر جسمك على حرق سعرات إضافية لتسخينه. كوب قبل كل وجبة يقلل الشهية 13%.'},
   {ico:'🍵',title:'الشاي الأخضر — المحرق الطبيعي',body:'يحتوي على EGCG يرفع معدل الأيض 4-8%. اشرب 3-4 أكواب يومياً بدون سكر لتأثير أفضل.'},
@@ -2135,6 +2173,28 @@ function safeRun(fn, fallback, errorMsg){
     console.error(errorMsg||'safeRun error:', e);
     if(typeof fallback === 'function') return fallback(e);
     if(fallback !== undefined) return fallback;
+  }
+}
+
+// [v28.0 NEW-7] safeRunBtn — مثل safeRun لكن مع مؤشر تحميل دائري خاص بكل زر
+function safeRunBtn(event, fn, fallback, errorMsg){
+  const btn = event && (event.currentTarget || event.target);
+  const origHTML = btn ? btn.innerHTML : null;
+  if(btn){ btn.classList.add('btn-loading'); btn.disabled=true; }
+  const cleanup=()=>{ if(btn){ btn.classList.remove('btn-loading'); btn.disabled=false; if(origHTML) btn.innerHTML=origHTML; } };
+  try{
+    const result = fn();
+    if(result && typeof result.then === 'function'){
+      // [v1.0 FIX] إرجاع الـ Promise للمتصل مع cleanup صحيح عبر finally
+      return result.finally(cleanup).catch(e=>{ console.error(errorMsg||'safeRunBtn error:',e); if(typeof fallback==='function') fallback(e); });
+    } else {
+      cleanup();
+      return result;
+    }
+  } catch(e){
+    cleanup();
+    console.error(errorMsg||'safeRunBtn error:', e);
+    if(typeof fallback === 'function') return fallback(e);
   }
 }
 
@@ -2226,16 +2286,21 @@ const _timers = [];
 // ════════════════════════════════════════════════════════
 // v21: TAB LAZY LOADING CACHE
 // ════════════════════════════════════════════════════════
+// FIX: _tabCache — فقط التبويبات التي لها معالج في _loadTabContent
+// exercises, insights, challenges هي الوحيدة التي تُحمَّل lazy
+// باقي التبويبات تتحدث عبر buildTabs onclick مباشرة
 const _tabCache = {
-  profile: true,    // نشط افتراضياً
-  tracker: true,    // نشط افتراضياً (يحتاج تحديث لحظي)
-  planner: false,
-  library: false,
-  exercises: false,
-  tips: false,
-  insights: false,
-  challenges: false,
-  week: false
+  profile:    true,  // نشط افتراضياً
+  tracker:    true,  // نشط افتراضياً
+  exercises:  false, // lazy — يحمل في _loadTabContent
+  insights:   false, // lazy — يحمل في _loadTabContent
+  challenges: false, // lazy — يحمل في _loadTabContent
+  planner:    true,  // يُحدَّث من buildTabs مباشرة
+  library:    true,  // يُحدَّث من buildTabs مباشرة
+  tips:       true,  // يُحدَّث من buildTabs مباشرة
+  week:       true,  // يُحدَّث من buildTabs مباشرة
+  ai:         true,  // محتوى ثابت — يُحدَّث من buildTabs عبر renderSmartPlans
+  guide:      true,  // محتوى ثابت — لا يحتاج lazy load
 };
 function trackTimer(id){ _timers.push(id); return id; }
 function cleanupTimers(){ _timers.forEach(t=>clearTimeout(t)); _timers.length=0; }
@@ -2269,13 +2334,13 @@ function autoBackup(){
   } catch(e){ console.warn('autoBackup error:', e); }
 }
 
-// تحسين: حفظ تلقائي صامت كل 30 ثانية
+// تحسين: حفظ تلقائي صامت كل 15 ثانية
 let _autoSaveInterval=null;
 function startAutoSave(){
   if(_autoSaveInterval) clearInterval(_autoSaveInterval);
   _autoSaveInterval=setInterval(()=>{
-    try{ save(); }catch(e){ console.warn('autoSave error',e); }
-  }, 30000);
+    try{ if(_hasUnsavedChanges) save(); }catch(e){ console.warn('autoSave error',e); }
+  }, 15000); // [FIX-8] تقليل من 30s إلى 15s لتقليل مخاطر فقدان البيانات
 }
 
 // [v20] تتبع التغييرات غير المحفوظة وتحذير عند المغادرة
@@ -2283,6 +2348,7 @@ function startAutoSave(){
 let _hasUnsavedChanges = false;
 window.addEventListener('beforeunload', e => {
   if(_hasUnsavedChanges){
+    try{ save(); }catch(err){ console.warn('beforeunload save error',err); } // [FIX-8] حفظ سريع قبل المغادرة
     e.preventDefault();
     e.returnValue = 'لديك تغييرات غير محفوظة. هل تريد المغادرة؟';
   }
@@ -2388,6 +2454,79 @@ function fuzzyMatch(query, target){
 */
 
 // ════════════════════════════════════════════════════════
+// CHANGELOG v1.0 — الإصدار الأول المستقر (2026)
+// ════════════════════════════════════════════════════════
+/*
+  🌿 مرشدك الصحي — v1.3-fixed | تاريخ: 2026
+  ─────────────────────────────────────────────────────────
+  هذا هو الإصدار الأول المستقر من التطبيق، يعكس بداية
+  مرحلة الإطلاق الرسمي بعد دورات متعددة من التطوير والاختبار.
+
+  FIX-1: توحيد رقم الإصدار إلى v1.0 في جميع المواضع:
+         title، header، footer، guide، helpModal، APP_VERSION.
+
+  NEW-1: بيان الوزن المثالي في كارت "مؤشراتك الصحية":
+         - حساب بمعادلة Devine (رجال: 50+2.3×إنش، نساء: 45.5+2.3×إنش).
+         - عرض النطاق الصحي BMI 18.5–24.9.
+         - مؤشر لوني (أخضر/أصفر/أحمر/أزرق) حسب الفارق عن المثالي.
+         - نصيحة مخصصة حسب الحالة.
+
+  FIX-2: glutenItems — أُضيفت: كسكسي، برغل، فريك لقائمة استبعاد الجلوتين.
+
+  FIX-3: removeAllFavorites — الـ onclick يستخدم ()=>removeAllFavorites() بدل المرجع المباشر.
+
+  FIX-4: markUnsaved() — أُضيفت في: addWeightLog، deleteWeightLog،
+         removeAllFavorites، resetExercises، confirmClearDay.
+
+  FIX-5: addCustomFood — مقارنة أسماء الأصناف بـ toLowerCase() لمنع التكرار.
+
+  FIX-6: generateWeeklyReport — حذف optional chaining المركّب في dayItems.
+
+  FIX-7: safeRunBtn — استخدام .finally(cleanup) لضمان cleanup صحيح دائماً.
+
+  FIX-8: _onlineSearchDebounce — استُبدلت بـ _searchTimer مباشرة في init().
+         حُذفت searchFoodOnlineDebounced كدالة منفصلة.
+
+  FIX-9: addShakeCSS — أُضيف شرط if(!document.querySelector('style[data-keyframes-shake]'))
+         لمنع تكرار إضافة @keyframes shake.
+*/
+// ════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════
+// CHANGELOG v28.0
+// ════════════════════════════════════════════════════════
+/*
+  🔄 مرشدك الصحي — v28.0 | تاريخ: 2026
+  ─────────────────────────────────────────────────────────
+  NEW-1: خيار غذائي "خالي من الجلوتين" 🚫🌾
+         أُضيف في قائمة التفضيل في planner مع فلترة الخبز/المكرونة/الشوفان.
+         tooltip توضيحي على الـ option.
+
+  NEW-2: تحسين BMI — شريط متدرج الألوان + تصنيفات موسّعة
+         أُضيف "نحافة شديدة" (BMI<16) و"سمنة مفرطة" (BMI>40).
+         نصيحة طبية مخصصة لكل تصنيف في كارت المؤشرات الصحية.
+         شريط BMI متدرج من بنفسجي → أزرق → أخضر → برتقالي → أحمر.
+
+  NEW-4: تقرير PDF أسبوعي في تبويب تحليل
+         يشمل: بداية/نهاية الأسبوع، التغيير، متوسط السعرات، أيام الالتزام، النصيحة.
+
+  NEW-5: أنظمة صيام متقطع إضافية
+         صيام 18/6 (متقدم) + صيام 20/4 (محترف) في الخطط الذكية وتوليد الخطة.
+
+  NEW-7: تأثيرات حركية
+         zoom على Food Cards عند hover (scale 1.04).
+         fade-in متدرج للكروت عند تحميل الصفحة عبر requestAnimationFrame.
+         دالة safeRunBtn() لمؤشر تحميل دائري خاص بكل زر.
+
+  FIX-1: كل الأزرار الـ 30 في HTML تستخدم safeRunBtn(event,...) بدلاً من safeRun.
+  FIX-2: searchFoodOnlineDebounced مُفعّلة الآن على حدث input للبحث الأونلاين.
+  FIX-3: dayTracker في generateWeeklyReport أصبح آمناً بدون optional chaining مركّب.
+  FIX-4: فحص typeof dayTracker === 'object' قبل معالجة العناصر.
+  FIX-5: fade-in animation delay متدرج عبر requestAnimationFrame في init().
+  FIX-7: safeRunBtn يرجع الـ Promise للمتصل بدلاً من void.
+*/
+// ════════════════════════════════════════════════════════
+
 // CHANGELOG v27.2
 // ════════════════════════════════════════════════════════
 /*
@@ -2411,8 +2550,8 @@ function fuzzyMatch(query, target){
 // ════════════════════════════════════════════════════════
 // STORAGE
 // ════════════════════════════════════════════════════════
-const STORE='mrshd_v18';
-const APP_VERSION='v26.0';
+const STORE='mrshd_v18'; // [FIX-8] الإبقاء على المفتاح الأصلي لتجنب فقدان بيانات المستخدم
+const APP_VERSION='v1.3-fixed'; // [تحديث] رقم الإصدار بعد الإصلاحات
 // [v22 FIX-5] التعريف تم نقله للأعلى قبل beforeunload — لا يُعاد هنا
 
 function save(){
@@ -2439,7 +2578,11 @@ function save(){
     toast('❌ فشل الحفظ: ' + (e?.message||'مساحة التخزين ممتلئة — جرب Export البيانات'), 'error');
   }
 }
+// [FIX-8] دالة ترحيل — محجوزة للإصدارات المستقبلية (STORE لم يتغير)
+function migrateFromOldStorage(){ /* لا يوجد ترحيل مطلوب حالياً */ }
+
 function load(){
+  migrateFromOldStorage(); // [FIX-8] ترحيل البيانات القديمة أولاً
   try{
     let d=JSON.parse(localStorage.getItem(STORE)||'{}');
     // ترحيل البيانات القديمة إذا لزم
@@ -2504,19 +2647,56 @@ const PIECE_WEIGHTS={
   'شريحة لحم':150,'كتلة لحم':150,
   // ألبان (حاوية/قطعة)
   'زبادي':150,'جبنة بيضاء':30,'جبنة قريش':100,'جبنة شيدر':30,
-  // مكسرات (حبة واحدة)
-  'لوزة':1.2,'جوزة':4,'كاجوة':1.5,'فستقة':0.7,'فول سوداني':0.6,
-  'بندق':1.5,'صنوبرة':0.2,
+  // مكسرات (حبة واحدة) — [FIX] أسماء متطابقة مع قاعدة FOODS
+  'لوزة':1.2,'جوزة':4,'كاجوة':1.5,'فستقة':0.7,'صنوبرة':0.2,
+  // أسماء FOODS الأصلية — إصلاح التطابق
+  'لوز':1.2,            // حبة لوز واحدة ≈ 1.2 جرام
+  'لوز محمص':1.2,
+  'لوز محمص خفيف':1.2,
+  'لوز مصري':1.2,
+  'جوز':4,              // نصف عين جوز ≈ 4 جرام
+  'فستق':0.7,           // حبة فستق مقشرة ≈ 0.7 جرام
+  'فستق محمص':0.7,
+  'فستق حلبي':0.7,
+  'كاجو':1.5,           // حبة كاجو ≈ 1.5 جرام
+  'فول سوداني':0.6,     // حبة فول سوداني ≈ 0.6 جرام
+  'بندق':1.5,           // حبة بندق ≈ 1.5 جرام
+  'مكسرات مشكلة':1.5,  // متوسط حبة في المكسرات المشكلة
+  // بذور — ملعقة صغيرة كوحدة
+  'بذور الشيا':2,       // ملعقة صغيرة بذور شيا ≈ 2 جرام
+  'بذور الكتان':2,      // ملعقة صغيرة بذور كتان ≈ 2 جرام
+  'سمسم':1,             // ملعقة صغيرة سمسم ≈ 2 جرام
+  'بذور القرع':3,       // حبة بذور قرع ≈ 3 جرام
+  'بذور عباد الشمس':1, // حبة بذور عباد الشمس ≈ 1 جرام
   // بقوليات
   'تمرة':8,'تمر (3 حبات)':24,
 };
 // إصلاح: حدود آمنة لمنع كميات غير منطقية
 function toGrams(qty,unit,foodName=''){
   let grams;
+  // [FIX-6] كشف المكسرات بالكلمات المفتاحية للأصناف المخصصة
+  const isNutLike = foodName && (
+    foodName.includes('لوز') ||
+    foodName.includes('جوز') ||
+    foodName.includes('فستق') ||
+    foodName.includes('كاجو') ||
+    foodName.includes('بندق') ||
+    foodName.includes('مكسرات')
+  );
   if(unit==='g'||unit==='ml') grams=qty;
   else if(unit==='piece'){
-    const w=PIECE_WEIGHTS[foodName]||80;
+    let w=PIECE_WEIGHTS[foodName];
+    if(!w && isNutLike){
+      w=1.5; // وزن افتراضي للمكسرات (جرام/حبة)
+      console.log('⚠️ وزن افتراضي للمكسرات:', foodName, '=', w, 'جم/حبة');
+    } else if(!w){
+      w=80; // الوزن الافتراضي للأطعمة العادية
+    }
     grams=qty*w;
+    // تحذير للمكسرات إذا تم إضافة كمية كبيرة جداً
+    if(isNutLike && grams>60){
+      toast('⚠️ '+qty+' حبة '+foodName+' = '+Math.round(grams)+'جم — كمية كبيرة من المكسرات','warning');
+    }
   }
   else if(unit==='cup')  grams=qty*240;
   else if(unit==='tbsp') grams=qty*15;
@@ -2587,7 +2767,7 @@ function init(){
   renderSmartPlans();
   renderFiltersForCountry();
   autoBackup(); // نسخة احتياطية تلقائية كل 7 أيام
-  startAutoSave(); // تحسين: حفظ تلقائي كل 30 ثانية
+  startAutoSave(); // تحسين: حفظ تلقائي كل 15 ثانية
   // [NEW] استدعاء دوال الميزات الجديدة
   safeRun(renderPersonalizedTips, null, 'personalizedTips');
   safeRun(renderQuickStats, null, 'quickStats');
@@ -2598,8 +2778,8 @@ function init(){
     setText('deficitLbl',e.target.value);
     updateProfile();
   });
-  // debounce للبحث — مش بيشغل render كل حرف
-  let _searchTimer=null;
+  // [v1.0 FIX] متغير debounce للبحث في المكتبة
+  let _searchTimer = null;
   $('searchFood').addEventListener('input',()=>{
     clearTimeout(_searchTimer);
     _searchTimer=setTimeout(renderFoodGrid,280);
@@ -2608,18 +2788,20 @@ function init(){
   const instKcal=$('instantMealKcal');
   if(instKcal) instKcal.addEventListener('input',()=>safeRun(calcInstantMeal,null,'calcInstantMeal'));
   // إعداد البحث الأونلاين و USDA key
-  // [v20] Debounce للبحث الأونلاين — منع استدعاء متعدد سريع
-  let _onlineSearchDebounce = null;
-  function searchFoodOnlineDebounced(){
-    clearTimeout(_onlineSearchDebounce);
-    _onlineSearchDebounce = setTimeout(searchFoodOnline, 500);
-  }
+  let _onlineSearchTimer = null;
   $('onlineSearch')?.addEventListener('keydown',e=>{ if(e.key==='Enter') searchFoodOnline(); });
-  $('onlineSearch')?.addEventListener('input', ()=>{ /* استخدم زر البحث أو Enter — لا auto-search */ });
+  $('onlineSearch')?.addEventListener('input', ()=>{ clearTimeout(_onlineSearchTimer); _onlineSearchTimer=setTimeout(searchFoodOnline,500); });
   const savedUsdaKey=localStorage.getItem('usdaKey');
   if(savedUsdaKey && $('usdaKey')) $('usdaKey').value=savedUsdaKey;
   $('usdaKey')?.addEventListener('change',()=>{
     localStorage.setItem('usdaKey', $('usdaKey').value.trim());
+  });
+  // تأثير fade-in متدرج على الكروت عند تحميل الصفحة
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.card').forEach((card,i)=>{
+      card.style.animationDelay=`${i*0.04}s`;
+      card.style.animationName='pageFadeIn';
+    });
   });
 }
 
@@ -2636,8 +2818,8 @@ function buildTabs(){
         
         // v21: Lazy Load Tab Content — تحميل محتوى التبويب عند أول نقرة
         if(!_tabCache[tabId]){
-          _loadTabContent(tabId);
-          _tabCache[tabId]=true;
+          try{ _loadTabContent(tabId); _tabCache[tabId]=true; }
+          catch(e){ console.error('lazy load error for '+tabId, e); }
         }
         
         // تحديث محتوى التبويب المنشط
@@ -2649,25 +2831,20 @@ function buildTabs(){
         if(tabId==='exercises') safeRun(renderExercises, null, 'exercisesRefresh');
         if(tabId==='tips') safeRun(renderPersonalizedTips,null,'personalizedTips');
         if(tabId==='insights') safeRun(renderInsightsTab,null,'insightsTab');
+        if(tabId==='ai') safeRun(renderSmartPlans,null,'aiTabRefresh');
       }, null, 'buildTabs click');
     });
   });
 }
 
 // v21: Load Tab Content On Demand
+// FIX: _loadTabContent — فقط التبويبات ذات cache=false تُحمَّل هنا
 function _loadTabContent(tabId){
-  // تحميل محتوى التبويب المطلوب عند أول نقرة فقط
-  // يقلل وقت التحميل الأولي بـ 30-40%
   switch(tabId){
-    case 'exercises':
-      renderExercises();
-      break;
-    case 'insights':
-      renderInsightsTab();
-      break;
-    case 'challenges':
-      renderChallenges();
-      break;
+    case 'exercises':  safeRun(renderExercises,   null, 'lazy:exercises');  break;
+    case 'insights':   safeRun(renderInsightsTab, null, 'lazy:insights');   break;
+    case 'challenges': safeRun(renderChallenges,  null, 'lazy:challenges'); break;
+    // باقي التبويبات: تُحدَّث من buildTabs مباشرة — لا حاجة لـ lazy load
   }
 }
 
@@ -2726,18 +2903,50 @@ function updateProfile(doSave=true){
   const bmi=(h>0&&w>0)?w/((h/100)**2):0;
   let bmiLbl='—',bmiCls='prog-g';
   if(bmi>0){
-    if(bmi<18.5){bmiLbl='نحافة';bmiCls='prog-u';}
+    // [v28.0 NEW-2] تصنيفات BMI موسّعة مع نحافة شديدة وسمنة مفرطة
+    if(bmi<16){bmiLbl='نحافة شديدة ⚠️';bmiCls='prog-u';}
+    else if(bmi<18.5){bmiLbl='نحافة';bmiCls='prog-u';}
     else if(bmi<25){bmiLbl='طبيعي ✅';bmiCls='prog-g';}
     else if(bmi<30){bmiLbl='زيادة وزن ⚠️';bmiCls='prog-w';}
-    else{bmiLbl='سمنة 🔴';bmiCls='prog-ob';}
+    else if(bmi<40){bmiLbl='سمنة 🔴';bmiCls='prog-ob';}
+    else{bmiLbl='سمنة مفرطة 🚨';bmiCls='prog-ob';}
   }
-  // BMI bar: النطاق 15-40، مع guard على bmi>0
-  const bmiPct=bmi>0?Math.min(100,Math.max(0,(bmi-15)/25*100)):0;
+  // [v28.0 NEW-2] شريط BMI متدرج: النطاق 14-45
+  const bmiPct=bmi>0?Math.min(100,Math.max(0,(bmi-14)/31*100)):0;
   setText('bmrVal',Math.round(bmr));setText('tdeeVal',Math.round(tdee));
   setText('bmiVal',bmi.toFixed(1));setText('bmiStatus',bmiLbl);
-  const bar=$('bmiBar');
-  bar.style.width=bmiPct+'%';
-  bar.className='prog '+bmiCls;
+  // [v28.0 NEW-2] تحريك المؤشر على الشريط المتدرج
+  const bmiPointer=$('bmiBarPointer');
+  if(bmiPointer) bmiPointer.style.left=`calc(${bmiPct}% - 2px)`;
+  // [v28.0 NEW-2] نصيحة طبية مخصصة لكل تصنيف BMI
+  const adviceEl=$('bmiAdvice');
+  if(adviceEl && bmi>0){
+    let adviceText='',adviceBg='',adviceBorder='';
+    if(bmi<16){
+      adviceText='⚠️ <strong>نحافة شديدة — استشر طبيبك فوراً:</strong> مؤشر كتلة الجسم أقل من 16 يشير إلى نقص وزن حاد. يُنصح بشدة باستشارة طبيب متخصص وأخصائي تغذية لوضع خطة لزيادة الوزن بأمان مع متابعة منتظمة.';
+      adviceBg='rgba(124,58,237,.1)';adviceBorder='rgba(124,58,237,.3)';
+    } else if(bmi<18.5){
+      adviceText='💙 <strong>نحافة:</strong> وزنك أقل من المعدل الطبيعي. ركّز على وجبات غنية بالبروتين والكارب الصحية (أرز، بطاطا، بقوليات). استشر طبيبك لاستبعاد أي أسباب صحية كامنة.';
+      adviceBg='rgba(59,130,246,.1)';adviceBorder='rgba(59,130,246,.3)';
+    } else if(bmi<25){
+      adviceText='✅ <strong>وزن طبيعي ممتاز:</strong> أنت في النطاق الصحي المثالي. حافظ على نمطك الغذائي الحالي، ومارس الرياضة بانتظام للحفاظ على هذا التوازن الصحي.';
+      adviceBg='rgba(16,185,129,.1)';adviceBorder='rgba(16,185,129,.3)';
+    } else if(bmi<30){
+      adviceText='⚠️ <strong>زيادة وزن:</strong> أنت فوق المعدل الطبيعي قليلاً. قليل من التعديل في النظام الغذائي وزيادة النشاط البدني (30 دقيقة يومياً) يمكن أن يحدث فارقاً كبيراً.';
+      adviceBg='rgba(245,158,11,.1)';adviceBorder='rgba(245,158,11,.3)';
+    } else if(bmi<40){
+      adviceText='🔴 <strong>سمنة:</strong> ينصح بمراجعة طبيب لتقييم المخاطر الصحية (ضغط، سكر). ابدأ بعجز سعرات معتدل (300-500 سعرة) مع نشاط بدني منتظم — لا تبالغ في التقييد.';
+      adviceBg='rgba(239,68,68,.1)';adviceBorder='rgba(239,68,68,.3)';
+    } else {
+      adviceText='🚨 <strong>سمنة مفرطة — يُلزم استشارة طبيب:</strong> مؤشر كتلة الجسم فوق 40 يستدعي متابعة طبية دقيقة. ناقش مع طبيبك خيارات العلاج المتاحة بما في ذلك برامج إنقاص الوزن الطبية المتخصصة.';
+      adviceBg='rgba(127,29,29,.2)';adviceBorder='rgba(239,68,68,.5)';
+    }
+    adviceEl.innerHTML=adviceText;
+    adviceEl.style.background=adviceBg;
+    adviceEl.style.borderColor=adviceBorder;
+    adviceEl.style.display='block';
+    adviceEl.style.color='var(--cream)';
+  }
   const targetKcal=Math.max(1200,Math.round(tdee-deficit));
   const kgLeft=Math.max(0,w-tw);
   // الصيغة الصحيحة: (كجم × 7700 سعرة/كجم) ÷ (عجز × 7 أيام)
@@ -2802,11 +3011,16 @@ function updateProfileWithFeedback(){
     btn.disabled=true;
     btn.classList.add('btn-pulse');
     setTimeout(()=>{
-      updateProfile();
-      // [NEW] 3.1: عرض "تم الحفظ" لثانية
-      btn.innerHTML='✓ تم الحفظ';
-      btn.classList.remove('btn-pulse');
-      setTimeout(()=>{ btn.innerHTML=orig; btn.disabled=false; },1000);
+      try{
+        updateProfile();
+        btn.innerHTML='✓ تم الحفظ';
+        btn.classList.remove('btn-pulse');
+      } catch(e){
+        btn.innerHTML='❌ خطأ';
+        console.error('updateProfile error:', e);
+      } finally {
+        setTimeout(()=>{ btn.innerHTML=orig; btn.disabled=false; },1000);
+      }
     },600);
   } else {
     updateProfile();
@@ -2848,7 +3062,7 @@ function renderFilters(){
   $('filterBar').innerHTML=cats.map(c=>{
     const active=c===_activeCat?' active':'';
     if(c==='الكل') return `<button class="filter-btn${_activeCat==='الكل'?' active':''}" onclick="filterCat(this,'الكل')">الكل</button>`;
-    if(c==='⭐ مفضلتي') return `<button class="filter-btn${_activeCat==='⭐ مفضلتي'?' active':''}" onclick="filterCat(this,'⭐ مفضلتي')">⭐ مفضلتي</button><button class="filter-btn btn-red" style="font-size:.7rem;padding:.25rem .55rem;margin-right:.25rem" onclick="safeRun(removeAllFavorites,null,'removeAllFav')" title="إزالة الكل">🗑️</button>`;
+    if(c==='⭐ مفضلتي') return `<button class="filter-btn${_activeCat==='⭐ مفضلتي'?' active':''}" onclick="filterCat(this,'⭐ مفضلتي')">⭐ مفضلتي</button><button class="filter-btn btn-red" style="font-size:.7rem;padding:.25rem .55rem;margin-right:.25rem" onclick="safeRunBtn(event,()=>removeAllFavorites(),null,'removeAllFav')" title="إزالة الكل">🗑️</button>`;
     return `<button class="filter-btn${active}" onclick="filterCat(this,'${escapeHtml(c)}')">${escapeHtml(c)}</button>`;
   }).join('');
 }
@@ -2861,13 +3075,24 @@ function filterCat(btn,cat){
   renderFoodGrid();
 }
 
+let _favoriteToggleTimeout=null; // [FIX-5] منع النقر المتكرر على المفضلة
+
 function toggleFavorite(fid,e){
   e.stopPropagation();
+  // [FIX-5] منع النقر المتكرر
+  if(_favoriteToggleTimeout) return;
+  // [FIX-1] التحقق من الحد الأقصى للمفضلة مباشرة هنا بدل _applyV17Patches
   const idx=S.favorites.indexOf(fid);
+  if(idx===-1 && (S.favorites||[]).length>=MAX_FAVORITES){
+    toast('⚠️ لا يمكن إضافة أكثر من 30 صنفاً مفضلاً','warning');
+    return;
+  }
   if(idx===-1){ S.favorites.push(fid); toast('⭐ أُضيف للمفضلة'); }
   else { S.favorites.splice(idx,1); toast('💔 حُذف من المفضلة'); }
   save();
   renderFoodGrid();
+  // [FIX-5] تعيين timeout لمنع النقر المتكرر (500ms)
+  _favoriteToggleTimeout=setTimeout(()=>{ _favoriteToggleTimeout=null; }, 500);
 }
 
 function renderFoodGrid(){
@@ -2908,15 +3133,23 @@ function renderFoodGrid(){
     return;
   }
   $('foodGrid').innerHTML=list.map(f=>`
-    <div class="food-card" onclick="safeRun(()=>openAddModal(${f.id}, S._defaultSlot||null),null,'openAddModal')" style="position:relative">
-      <button onclick="safeRun(()=>toggleFavorite(${f.id},event),null,'toggleFavorite')" style="position:absolute;top:.4rem;left:.4rem;background:none;border:none;cursor:pointer;font-size:1rem;padding:0;line-height:1;opacity:${f.isFavorite?'1':'.35'};transition:opacity .2s" title="${f.isFavorite?'إزالة من المفضلة':'إضافة للمفضلة'}">${f.isFavorite?'⭐':'☆'}</button>
+    <div class="food-card" onclick="safeRunBtn(event,()=>openAddModal(${f.id}, S._defaultSlot||null),null,'openAddModal')" style="position:relative">
+      <button onclick="safeRunBtn(event,()=>toggleFavorite(${f.id},event),null,'toggleFavorite')" style="position:absolute;top:.4rem;left:.4rem;background:none;border:none;cursor:pointer;font-size:1rem;padding:0;line-height:1;opacity:${f.isFavorite?'1':'.35'};transition:opacity .2s" title="${f.isFavorite?'إزالة من المفضلة':'إضافة للمفضلة'}">${f.isFavorite?'⭐':'☆'}</button>
       <span class="ico">${f.emoji||'🍽️'}</span>
       <div class="nm">${escapeHtml(f.name)}</div>
       <div class="kc">${(()=>{
         const pw=PIECE_WEIGHTS[f.name];
-        if(pw){
+        if(pw && pw <= 2){
+          // مكسرات صغيرة جداً / بذور: سعرة/حبة مع الوزن
           const perPiece=Math.round(f.kcal*pw/100);
-          return perPiece+' سعرة/حبة';
+          return `${perPiece} سعرة/حبة (${pw}جم)`;
+        } else if(pw && pw <= 10){
+          // مكسرات متوسطة
+          const perPiece=Math.round(f.kcal*pw/100);
+          return `${perPiece} سعرة/حبة`;
+        } else if(pw){
+          const perPiece=Math.round(f.kcal*pw/100);
+          return `${perPiece} سعرة/قطعة`;
         }
         return f.kcal+' سعرة/100جم';
       })()}</div>
@@ -2942,9 +3175,33 @@ function openAddModal(fid, defaultSlot=null){
   S._defaultSlot = null;
   S._addFood=f;
   setText('modalFoodName',f.emoji+' '+f.name);
-  $('modalFoodInfo').innerHTML=`<strong>${f.kcal}</strong> سعرة/100جم | بروتين: ${f.p}جم | كارب: ${f.c}جم | دهون: ${f.f}جم`;
-  $('modalQty').value=1;
-  $('modalUnit').value='piece'; // [v22 FIX-2] الافتراضي حبة واحدة بدل 100جرام
+
+  // [FIX-NUTS] كشف المكسرات والبذور لضبط الوحدة والكمية الافتراضية
+  const _pw = PIECE_WEIGHTS[f.name];
+  const _isSmallNut = _pw && _pw <= 2;   // حبة صغيرة جداً: لوز، فستق، بذور
+  const _isMedNut  = _pw && _pw > 2 && _pw <= 6; // حبة متوسطة: جوز، كاجو
+  const _isSeed = f.name.includes('بذور') || f.name === 'سمسم';
+
+  // معلومات تفصيلية حسب نوع الطعام
+  if(_pw){
+    const perPiece = Math.round(f.kcal * _pw / 100);
+    const unitLabel = _isSeed ? 'ملعقة' : 'حبة';
+    $('modalFoodInfo').innerHTML=`<strong>${f.kcal}</strong> سعرة/100جم | <span style="color:var(--g1);font-weight:700">${perPiece} سعرة/${unitLabel} (${_pw}جم)</span> | بروتين: ${f.p}جم | دهون: ${f.f}جم`;
+  } else {
+    $('modalFoodInfo').innerHTML=`<strong>${f.kcal}</strong> سعرة/100جم | بروتين: ${f.p}جم | كارب: ${f.c}جم | دهون: ${f.f}جم`;
+  }
+
+  // كمية ووحدة افتراضية ذكية
+  if(_isSeed){
+    $('modalQty').value=1; $('modalUnit').value='tsp'; // ملعقة صغيرة للبذور
+  } else if(_isSmallNut){
+    $('modalQty').value=10; $('modalUnit').value='piece'; // 10 حبات للمكسرات الصغيرة
+  } else if(_isMedNut){
+    $('modalQty').value=5; $('modalUnit').value='piece'; // 5 حبات للمكسرات المتوسطة
+  } else {
+    $('modalQty').value=1; $('modalUnit').value='piece'; // [v22 FIX-2] افتراضي
+  }
+
   if(slot) $('modalSlot').value=slot;
   updateModalCalc();
   // اقتراح بدائل أقل سعرات لو الصنف عالي
@@ -2962,7 +3219,10 @@ function updateModalCalc(){
   const p=(f.p*grams/100).toFixed(1);
   const c=(f.c*grams/100).toFixed(1);
   const fat=(f.f*grams/100).toFixed(1);
-  $('modalCalcResult').textContent=`${kcal} سعرة | بروتين: ${p}جم | كارب: ${c}جم | دهون: ${fat}جم`;
+  // [FIX-NUTS] عرض الجرامات للمكسرات والبذور
+  const showGrams = (unit === 'piece' || unit === 'tsp' || unit === 'tbsp') && unit !== 'g';
+  const gramsLabel = showGrams ? ` (≈${Math.round(grams)}جم)` : '';
+  $('modalCalcResult').textContent=`${kcal} سعرة${gramsLabel} | بروتين: ${p}جم | كارب: ${c}جم | دهون: ${fat}جم`;
 }
 
 function confirmAddFood(){
@@ -2972,6 +3232,11 @@ function confirmAddFood(){
   const grams=toGrams(qty,unit,f.name);
   const slot=getStr('modalSlot');
   if(!grams){toast('⚠️ أدخل كمية صحيحة');return;}
+  // [FIX-NUTS] تحذير عند إضافة كميات كبيرة من المكسرات
+  const _pw=PIECE_WEIGHTS[f.name];
+  if(_pw && _pw <= 6 && unit==='piece' && grams > 60){
+    toast(`⚠️ ${qty} حبة من ${f.name} = ${Math.round(grams)}جم — كمية كبيرة`, 'warning');
+  }
   S.tracker[slot]=S.tracker[slot]||[];
   S.tracker[slot].push({
     uid:String(Date.now())+Math.random().toString(36).slice(2),
@@ -3086,8 +3351,9 @@ function switchToLib(slotId){
   S._defaultSlot=slotId;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelector('[data-tab="library"]').classList.add('active');
+  document.querySelector('.tab-btn[data-tab="library"]').classList.add('active');
   $('library').classList.add('active');
+  safeRun(renderFoodGrid, null, 'switchToLib:renderFoodGrid');
   toast('🔍 اختر طعاماً لإضافته للوجبة');
 }
 
@@ -3102,27 +3368,20 @@ function removeItem(slot,uid){
   markUnsaved(); save();renderMealSlots();renderTrackerSummary();
 }
 
-function clearDay(){ confirmClearDay(); } // redirect للدالة الموحدة
-
-
-
-
-
-
-
-
-
 // ── حساب الهدف اليومي بشكل نظيف ──
 function calcDailyGoal(){
-  if(S._targetKcal) return S._targetKcal;
+  // [FIX-3] فحص آمن لـ S._targetKcal — يتجنب القيم الخاطئة (0, null, undefined)
+  if(typeof S._targetKcal !== 'undefined' && S._targetKcal !== null && S._targetKcal > 0){
+    return S._targetKcal;
+  }
   const p=S.profile;
-  if(p.weight&&p.height&&p.age&&p.activity){
+  if(p && p.weight&&p.height&&p.age&&p.activity){
     const bmr=p.gender==='male'
       ?10*p.weight+6.25*p.height-5*p.age+5
       :10*p.weight+6.25*p.height-5*p.age-161;
     return Math.max(1200,Math.round(bmr*p.activity-(p.deficit||500)));
   }
-  return 1500;
+  return 1500; // قيمة افتراضية آمنة
 }
 
 // [v18 Performance] استخراج حسابات السعرات واليوم — تُستخدم في 7+ مواقع
@@ -3141,6 +3400,8 @@ function getTodayMacros(){
 }
 
 function renderTrackerSummary(){
+  // [FIX-5] قيمة افتراضية آمنة لـ S.macros
+  if(!S.macros) S.macros = { p: 30, c: 40, f: 30 };
   const macros=getTodayMacros();
   const kcal=macros.kcal;
   const pro=macros.pro;
@@ -3176,6 +3437,10 @@ function renderTrackerSummary(){
   } else if(mbWrap){
     mbWrap.style.display = 'none';
   }
+  // [FIX-1] استدعاء renderQuickStats مباشرة هنا بدل _applyV17Patches
+  safeRun(renderQuickStats, null, 'quickStats');
+  // [FIX-1] استدعاء renderCalExceedWarning مباشرة هنا بدل _applyV17Patches
+  safeRun(()=>renderCalExceedWarning(kcal, goal||1500), null, 'calExceedWarn');
   // تحديث الاقتراحات الذكية
   safeRun(renderSmartSuggestions, null, 'renderSmartSuggestions');
   // [NEW] تحديث النصائح المخصصة عند تغيير الوجبات
@@ -3384,6 +3649,11 @@ function generatePlan(){
     if(pref==='lowcarb' && f.kcal>0){
       const carbRatio = (f.c*4/f.kcal)*100;
       if(carbRatio > 50) return false;
+    }
+    // [v28.0 NEW-1] فلترة الجلوتين — استبعاد الأصناف التي تحتوي على قمح/شعير/جاودار/شوفان
+    if(pref==='glutenfree'){
+      const glutenItems=['خبز','رغيف','عيش','مكرونة','بسكويت','كيك','معكرونة','شوفان','فطير','كرواسون','بيتا','كسكسي','برغل','فريك'];
+      if(glutenItems.some(g=>f.name.includes(g))) return false;
     }
     return true;
   });
@@ -3606,17 +3876,19 @@ function renderStructuredPlan(plan, totalKcal, healthNotes=''){
 
   // دمج الأصناف المتكررة بنفس الاسم داخل الوجبة الواحدة
   function mergeItems(items){
+    // [v1.0 FIX-11] المفتاح = name + unit معاً — لو الوحدة مختلفة يبقى صنف منفصل
     const map = new Map();
     items.forEach(item=>{
-      if(map.has(item.name)){
-        const existing = map.get(item.name);
+      const key = (item.name||'') + '|' + (item.unit||'');
+      if(map.has(key)){
+        const existing = map.get(key);
         existing.qty  = (existing.qty||1) + (item.qty||1);
         existing.kcal += item.kcal;
         existing.p    = (existing.p||0) + (item.p||0);
         existing.c    = (existing.c||0) + (item.c||0);
         existing.f    = (existing.f||0) + (item.f||0);
       } else {
-        map.set(item.name, {...item});
+        map.set(key, {...item});
       }
     });
     return [...map.values()];
@@ -3689,35 +3961,6 @@ function renderStructuredPlan(plan, totalKcal, healthNotes=''){
   renderSavedPlans();
 }
 
-function pickFood(foods,targetKcal,fixedQty=0){
-  if(!foods||!foods.length) return null;
-  // اختار من أقرب 5 أصناف لهدف السعرات بدل عشوائي كامل
-  const sorted=[...foods].sort((a,b)=>Math.abs(a.kcal-targetKcal)-Math.abs(b.kcal-targetKcal));
-  const pool=sorted.slice(0,Math.min(5,sorted.length));
-  const f=pool[Math.floor(Math.random()*pool.length)];
-  let qty;
-  if(fixedQty>0){
-    qty=fixedQty;
-  } else {
-    // v21 FIX: حساب صحيح للكمية (بالجرام)
-    // الصيغة: (السعرات المطلوبة / السعرات لـ 100 جرام) * 100
-    qty=Math.round((targetKcal/Math.max(f.kcal,1))*100);
-    // حدود معقولة للكمية (بالجرام فقط)
-    if(f.cat==='زيوت وتوابل') qty=Math.min(qty,30);        // زيوت: max 30جم
-    else if(f.cat==='مكسرات') qty=Math.min(qty,60);          // مكسرات: max 60جم
-    else if(f.cat==='مشروبات صحية') qty=Math.min(qty,400);  // مشروبات: max 400مل
-    else qty=Math.min(qty,500);                               // باقي: max 500جم
-    qty=Math.max(qty,25);                                     // minimum 25جم
-  }
-  return{
-    ...f,qty,
-    // v21 FIX: الحساب الصحيح للسعرات = (سعرات_100جم * الكمية) / 100
-    kcal:Math.round((f.kcal*qty)/100),
-    pro:parseFloat(((f.p*qty)/100).toFixed(1)),
-    carb:parseFloat(((f.c*qty)/100).toFixed(1)),
-    fat:parseFloat(((f.f*qty)/100).toFixed(1))
-  };
-}
 
 function renderPlan(plan,healthNotes=''){
   const items=[
@@ -3795,7 +4038,7 @@ function _doApply(replace){
     }
 
     // تحديد الـ slot المناسب
-    const slotId = arabicMap[key] || legacyMap[key] || 'lunch';
+    const slotId = arabicMap[key] || legacyMap[key] || (console.warn('_doApply: unknown meal key:', key), 'din');
     if(!S.tracker[slotId]) S.tracker[slotId]=[];
 
     // الـ structuredPlan الجديد: كل وجبة عندها items[] وtargetKcal
@@ -3871,9 +4114,17 @@ function confirmSavePlan(){
     S.savedPlans=S.savedPlans.filter(p=>p.name.toLowerCase()!==name.toLowerCase());
   }
   
-  // v21: حد أقصى 20 خطة محفوظة
+  // FIX: حد أقصى 20 خطة — رسالة واضحة مع اقتراح حل
   if(S.savedPlans.length >= 20){
-    toast('⚠️ الحد الأقصى: 20 خطة محفوظة\n احذف خطة قديمة أولاً');
+    const oldest = S.savedPlans[0];
+    const deleteOld = window.confirm(
+      `⚠️ وصلت للحد الأقصى (20 خطة محفوظة)\n\nهل تريد حذف أقدم خطة "${oldest?.name||'القديمة'}" لإفساح المجال؟`
+    );
+    if(deleteOld){
+      S.savedPlans.shift(); // حذف الأقدم
+      save();
+      toast('🗑️ تم حذف الخطة القديمة — يمكنك الحفظ الآن');
+    }
     return;
   }
   
@@ -3907,9 +4158,13 @@ function confirmSavePlanAndNew(){
     S.savedPlans=S.savedPlans.filter(p=>p.name.toLowerCase()!==name.toLowerCase());
   }
   
-  // الحد الأقصى 20 خطة
+  // FIX: حد أقصى 20 خطة — رسالة واضحة مع اقتراح حل
   if(S.savedPlans.length >= 20){
-    toast('⚠️ الحد الأقصى: 20 خطة محفوظة');
+    const oldest = S.savedPlans[0];
+    const deleteOld = window.confirm(
+      `⚠️ وصلت للحد الأقصى (20 خطة محفوظة)\n\nهل تريد حذف أقدم خطة "${oldest?.name||'القديمة'}" لإفساح المجال؟`
+    );
+    if(deleteOld){ S.savedPlans.shift(); save(); toast('🗑️ تم حذف الخطة القديمة'); }
     return;
   }
   
@@ -4002,6 +4257,24 @@ function generateAIPlan(){
     txt+=`6:00 — غداء (${Math.round(target*0.35)} سعرة):\n`;
     txt+=`• صدر دجاج مشوي ${Math.round(target*0.12)}جم\n• أرز 80جم + سلطة خضراء\n\n`;
     txt+=`7:45 — آخر وجبة (${Math.round(target*0.15)} سعرة):\n• تونة بالماء 100جم + خيار + شريحة عيش أسمر\n`;
+  // [v28.0 NEW-5] صيام 18/6
+  } else if(type==='صيام 18/6'){
+    txt+=`⏰ صيام 18/6 متقدم — فترة الأكل: 2 ظهراً — 8 مساءً\n\n`;
+    txt+=`صباح — صيام:\n• ماء + شاي أخضر سادة + قهوة بدون سكر فقط\n\n`;
+    txt+=`2:00 — كسر الصيام (${Math.round(target*0.40)} سعرة):\n`;
+    txt+=`• فول مدمس 200جم + 3 بيض مسلوق + رغيف بلدي + سلطة\n\n`;
+    txt+=`5:00 — وجبة وسط (${Math.round(target*0.20)} سعرة):\n• زبادي يوناني 200جم + مكسرات 20جم\n\n`;
+    txt+=`7:30 — آخر وجبة (${Math.round(target*0.40)} سعرة):\n`;
+    txt+=`• دجاج مشوي 200جم + أرز 4 معالق + سلطة كبيرة\n`;
+  // [v28.0 NEW-5] صيام 20/4
+  } else if(type==='صيام 20/4'){
+    txt+=`⏰ صيام 20/4 محترف — فترة الأكل: 4 عصراً — 8 مساءً\n`;
+    txt+=`⚠️ هذا النظام للمتقدمين فقط — استشر طبيبك قبل البدء\n\n`;
+    txt+=`صباح + ظهر — صيام:\n• ماء وفير + شاي أخضر + قهوة سادة فقط\n\n`;
+    txt+=`4:00 — الوجبة الرئيسية الكبيرة (${Math.round(target*0.55)} سعرة):\n`;
+    txt+=`• دجاج مشوي 250جم + أرز 6 معالق + 2 بيضة مسلوقة + سلطة كبيرة\n\n`;
+    txt+=`6:30 — وجبة ثانية (${Math.round(target*0.25)} سعرة):\n• جبنة قريش 150جم + زيتون + طماطم + رغيف أسمر\n\n`;
+    txt+=`7:45 — وجبة ختامية خفيفة (${Math.round(target*0.20)} سعرة):\n• زبادي يوناني 200جم + موزة صغيرة\n`;
   } else if(type==='عالي بروتين'){
     txt+=`💪 هدف البروتين: ${proTarget}جم/يوم\n\n`;
     txt+=`7:30 — الفطار (${bfK} سعرة):\n• 3 بيض مسلوق\n• جبنة قريش 150جم\n• رغيف عيش أسمر + طماطم وخيار\n\n`;
@@ -4054,6 +4327,44 @@ function copyAIPlan(){
     navigator.clipboard.writeText(t).then(()=>toast('📋 تم نسخ الخطة')).catch(()=>fallbackCopy(t));
   } else fallbackCopy(t);
 }
+// FIX: نسخ الخطة المولدة من Planner كنص منسق
+function copyGeneratedPlan(){
+  if(!S.currentPlan){ toast('⚠️ ولّد خطة أولاً'); return; }
+  const target = S._planKcal || calcDailyGoal() || 1500;
+  const mealNames = {
+    فطار:'🍳 الفطار', غداء:'🍗 الغداء', عشاء:'🥗 العشاء',
+    'وجبة رابعة':'🍽️ وجبة رابعة', سناك:'🍎 سناك', مشروبات:'☕ مشروب'
+  };
+  const sep = '═'.repeat(32);
+  let txt = `🌿 مرشدك الصحي — الخطة المقترحة
+🎯 الهدف: ${target} سعرة/يوم
+${sep}
+
+`;
+  Object.entries(S.currentPlan).forEach(([key, val])=>{
+    if(!val) return;
+    const label = mealNames[key] || key;
+    if(val.items && Array.isArray(val.items)){
+      const kcal = val.items.reduce((s,i)=>s+i.kcal,0);
+      txt += `${label} — ${kcal} سعرة
+`;
+      val.items.forEach(item=>{ txt += `  • ${item.name} ${item.qty}${item.unit||'جم'} (${item.kcal} سعرة)
+`; });
+    } else if(Array.isArray(val)){
+      txt += `${label}
+`;
+      val.forEach(item=>{ txt += `  • ${item.name||item.txt||''} (${item.kcal||0} سعرة)
+`; });
+    }
+    txt += '\n';
+  });
+  txt += `${sep}
+✅ تم النسخ من مرشدك الصحي`;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('📋 تم نسخ الخطة','success')).catch(()=>fallbackCopy(txt));
+  } else { fallbackCopy(txt); }
+}
+
 function fallbackCopy(text){
   const ta=document.createElement('textarea');
   ta.value=text;ta.style.cssText='position:fixed;top:-9999px;opacity:0';
@@ -4231,7 +4542,7 @@ function addCustomFood(){
   const f=parseFloat($('cfF').value)||0;
   if(!name||isNaN(kcal)){toast('⚠️ اكتب اسم الصنف والسعرات على الأقل');return;}
   if(/<|>|script/i.test(name)){toast('⚠️ اسم غير صالح');return;}
-  if(allFoods().some(x=>x.name===name)){toast('⚠️ هذا الصنف موجود مسبقاً');return;}
+  if(allFoods().some(x=>x.name.toLowerCase()===name.toLowerCase())){toast('⚠️ هذا الصنف موجود مسبقاً');return;}
   const newFood={id:Date.now(),name,emoji,kcal,p,c,f,cat,tags:[],custom:true};
   S.custom.push(newFood);
   save();
@@ -4270,9 +4581,10 @@ function deleteCustom(id){
 // ════════════════════════════════════════════════════════
 // MODAL HELPERS
 // ════════════════════════════════════════════════════════
-function openModal(id){$(id).classList.add('show');}
+function openModal(id){ const el=$(id); if(el) el.classList.add('show'); else console.warn('openModal: element not found:', id); }
 function closeModal(id){
-  $(id).classList.remove('show');
+  const _cm=$(id); if(!_cm) return;
+  _cm.classList.remove('show');
   // تنظيف المؤقتات عند إغلاق المودال
   safeRun(cleanupTimers, null, 'closeModal cleanup');
 }
@@ -4486,6 +4798,13 @@ function guessEmoji(name){
 /* ════════════════════════════════════════════════════════
    البحث الرئيسي — OFF + USDA
 ════════════════════════════════════════════════════════ */
+// FIX: استبدال AbortSignal.timeout بـ AbortController لدعم جميع المتصفحات
+function _makeAbortSignal(ms){
+  const ctrl = new AbortController();
+  setTimeout(()=>ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
 async function searchFoodOnline(){
   const q = $('onlineSearch').value.trim();
   if(!q){ toast('⚠️ اكتب اسم الطعام أولاً'); return; }
@@ -4496,7 +4815,6 @@ async function searchFoodOnline(){
   $('onlineResults').style.display = 'none';
 
   const btn=$('onlineSearchBtn');
-  // [NEW] 3.3: مؤشر تحميل دائري
   btn.disabled=true; btn.innerHTML='<span style="display:inline-block;animation:spin .8s linear infinite">⟳</span> جاري البحث...';
 
   $('onlineError').style.display='none';
@@ -4508,7 +4826,8 @@ async function searchFoodOnline(){
   /* ── 1. Open Food Facts ── */
   try{
     const url=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,image_small_url`;
-    const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    // FIX: AbortController بدل AbortSignal.timeout للتوافق مع جميع المتصفحات
+    const res=await fetch(url,{signal:_makeAbortSignal(8000)});
     if(res.ok){
       const data=await res.json();
       if(data.products&&data.products.length){
@@ -4532,7 +4851,6 @@ async function searchFoodOnline(){
 
   /* ── 2. USDA (إذا OFF فارغ أو عند وجود مفتاح) ── */
   const usdaKey=($('usdaKey').value||'').trim();
-  // validation: USDA key يكون 40 حرف تقريباً من أحرف وأرقام
   const usdaKeyValid=usdaKey.length>=20&&/^[A-Za-z0-9]+$/.test(usdaKey);
   if(usdaKey&&!usdaKeyValid){
     toast('⚠️ USDA API Key يبدو غير صحيح — تأكد من نسخه بشكل كامل');
@@ -4541,7 +4859,8 @@ async function searchFoodOnline(){
     setText('onlineLoadingTxt','🇺🇸 جاري البحث في USDA...');
     try{
       const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=16&api_key=${encodeURIComponent(usdaKey)}`;
-      const res=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      // FIX: AbortController للتوافق
+      const res=await fetch(url,{signal:_makeAbortSignal(8000)});
       if(res.ok){
         const data=await res.json();
         if(data.foods&&data.foods.length){
@@ -4572,7 +4891,8 @@ async function searchFoodOnline(){
     setText('onlineLoadingTxt','🇺🇸 جاري تجربة USDA (Demo)...');
     try{
       const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=10&api_key=DEMO_KEY`;
-      const res=await fetch(url,{signal:AbortSignal.timeout(7000)});
+      // FIX: AbortController للتوافق
+      const res=await fetch(url,{signal:_makeAbortSignal(7000)});
       if(res.ok){
         const data=await res.json();
         if(data.foods&&data.foods.length){
@@ -4598,19 +4918,22 @@ async function searchFoodOnline(){
   hideOnlineLoading();
 
   if(!results.length){
-    showOnlineError('لم يتم إيجاد نتائج. جرّب باللغة الإنجليزية أو تحقق من الاتصال بالإنترنت.');
+    // [FIX-7] رسائل خطأ أكثر تحديداً
+    let _onlineErrMsg;
+    if(!navigator.onLine){
+      _onlineErrMsg='⚠️ لا يوجد اتصال بالإنترنت. تحقق من اتصالك ثم حاول مرة أخرى.';
+    } else if(usdaKey && !usdaKeyValid){
+      _onlineErrMsg='⚠️ مفتاح USDA غير صحيح. تأكد من نسخه بشكل كامل أو اتركه فارغاً لاستخدام DEMO.';
+    } else {
+      _onlineErrMsg='لم يتم إيجاد نتائج. جرّب باللغة الإنجليزية (مثل "chicken" بدلاً من "دجاج") أو تحقق من الاتصال بالإنترنت.';
+    }
+    showOnlineError(_onlineErrMsg);
     return;
   }
   renderOnlineResults(results, source);
 }
 
 /* ── Enter key للبحث ── */
-document.addEventListener('DOMContentLoaded',()=>{
-  // setup مدمج في init() — هذا الـ listener للـ usdaKey فقط لو جاء بعد init
-  const savedKey=localStorage.getItem('usdaKey');
-  if(savedKey && $('usdaKey')) $('usdaKey').value=savedKey;
-});
-
 
 // ════════════════════════════════════════════════════════
 // MACRO SLIDERS — توزيع المغذيات الكبرى
@@ -4694,7 +5017,7 @@ function addWeightLog(){
   S.profile.weight=val;
   const wEl=$('weight'); if(wEl) wEl.value=val;
 
-  save();
+  markUnsaved(); save();
   renderWeightChart();
   $('weightLogCard').style.display='block';
 
@@ -4820,7 +5143,7 @@ function renderWeightLogList(showAll=false){
 
 function deleteWeightLog(date){
   S.weightLog = S.weightLog.filter(e => e.date !== date);
-  save();
+  markUnsaved(); save();
   renderWeightChart();
   toast('🗑️ تم حذف التسجيل');
 }
@@ -4868,7 +5191,7 @@ const EXERCISES_DATA = [
   {id:'burpee',    name:'بربي (Burpees)',            emoji:'⚡', met:14,  unit:'تكرار', perUnit:1.0,  tip:'ضغط + قفز — حرق ضخم — 3 sets × 8'},
   {id:'climber',   name:'Mountain Climbers',        emoji:'🧗', met:11,  unit:'دقيقة', perUnit:null, tip:'30 ثانية ON / 15 ثانية OFF — 4 مرات'},
   {id:'plank',     name:'بلانك (Plank)',            emoji:'🧱', met:4,   unit:'ثانية', perUnit:null, tip:'ابدأ بـ 20 ثانية وزود — جسمك خط مستقيم'},
-  {id:'jumpjack',  name:'قفز نجمة (Jumping Jacks)', emoji:'⭐', met:9,   unit:'تكرار', perUnit:0.4,  tip:'ايدك فوق راسك وانت بتفتح رجليك — 3 sets × 30'},
+  {id:'jumpjack',  name:'قفز نجمة (Jumping Jacks)', emoji:'⭐', met:9,   unit:'تكرار', perUnit:0.4,  tip:'ايدك فوق راسك وأنت بتفتح رجليك — 3 sets × 30'},
   {id:'highknee',  name:'رفع الركب (High Knees)',   emoji:'🦿', met:10,  unit:'دقيقة', perUnit:null, tip:'ايدك أمامك على مستوى الخصر — ارفع ركبتيك تلمسها'},
   {id:'glute',     name:'رفع المؤخرة (Glute Bridge)',emoji:'🍑',met:4.5, unit:'تكرار', perUnit:0.28, tip:'استلقي على ضهرك، ارفع وسطك للأعلى — 3 sets × 15'},
   {id:'walk',      name:'مشي سريع',                 emoji:'🚶', met:4.5, unit:'دقيقة', perUnit:null, tip:'خطوات سريعة، يديك بتتحرك — 30 دقيقة يومياً'},
@@ -4947,6 +5270,7 @@ function resetExercises(){
     if(burnEl) burnEl.textContent='— سعرة';
   });
   setText('exTotalBurn','0');
+  markUnsaved();
 }
 
 function logExerciseBurn(){
@@ -5030,9 +5354,9 @@ function renderInsights(){
       ${rateNum < 0 ? '📌 الوزن بيزيد — راجع خطتك الغذائية' : ''}
       ${rateNum === 0 ? '➡️ الوزن ثابت — زود عجز السعرات أو نشاطك الرياضي' : ''}
     </div>`;
+  // [FIX-1] استدعاء renderWeeklyComparison مباشرة هنا بدل _applyV17Patches
+  safeRun(renderWeeklyComparison, null, 'weeklyComparison');
 }
-
-
 
 // ════════════════════════════════════════════════════════
 // AUTO-ADJUST DEFICIT — ضبط العجز تلقائياً
@@ -5861,6 +6185,17 @@ const SMART_PLANS = [
       {slot:'din', txt:'دجاج مشوي 200جم + أرز 4 معالق + سلطة كبيرة (7:30 مساءً)', pct:50},
     ]
   },
+  // [v28.0 NEW-5] صيام 20/4 — فترة أكل 4 ساعات فقط
+  {
+    id:'if_d', type:'صيام متقطع', label:'D', name:'صيام 20/4 — محترف', emoji:'⏰',
+    desc:'فترة أكل 4 ساعات فقط (4-8 مساءً) — للمتقدمين',
+    meals:[
+      {slot:'wake', txt:'ماء + شاي أخضر سادة + قهوة — صيام حتى الساعة 4 عصراً', pct:0},
+      {slot:'after', txt:'وجبة كبيرة: دجاج مشوي 250جم + أرز 6 معالق + بيض 2 + سلطة (4 عصراً)', pct:55},
+      {slot:'din', txt:'جبنة قريش 150جم + زيتون + طماطم + رغيف أسمر (6:30 مساءً)', pct:25},
+      {slot:'night', txt:'زبادي يوناني 200جم + موزة أو تفاحة (7:45 مساءً)', pct:20},
+    ]
+  },
 ];
 
 let _activeSmartPlanFilter = 'all';
@@ -6037,7 +6372,9 @@ function renderSmartSuggestions(){
   const all = MEAL_SLOTS.flatMap(m=>S.tracker[m.id]||[]);
   const kcal = all.reduce((s,i)=>s+i.kcal,0);
   const pro  = all.reduce((s,i)=>s+(i.p||0),0);
-  const proGoal = Math.round(goal * (S.macros?.p||30) / 100 / 4);
+  // FIX: قيمة افتراضية آمنة دائماً لـ S.macros
+  const _macros = S.macros || {p:30,c:40,f:30};
+  const proGoal = Math.round(goal * _macros.p / 100 / 4);
   const remain = Math.max(0, goal - kcal);
   const suggestions = [];
 
@@ -6068,7 +6405,7 @@ function confirmClearDay(){
   customConfirm('هل أنت متأكد؟ هذا الإجراء لا يمكن التراجع عنه اليوم\n(سيتم الاحتفاظ بحرق التمارين)', ()=>{
     const mealSlotIds=['wake','break','coffee','morn','pre','lunch','after','din','night'];
     mealSlotIds.forEach(id=>{ S.tracker[id]=[]; });
-    save(); renderMealSlots(); renderTrackerSummary();
+    markUnsaved(); save(); renderMealSlots(); renderTrackerSummary();
     toast('🗑️ تم مسح وجبات اليوم — التمارين محفوظة 💪');
   }, 'تأكيد المسح');
 }
@@ -6138,6 +6475,107 @@ function renderWeeklyComparison(){
 // تم تحديث applyTheme الأصلية أعلاه لدعم auto حسب الوقت
 // [FIX] تم نقل setInterval داخل init() لضمان التشغيل الآمن بعد تحميل DOM
 
+// [v28.0 NEW-4] التقرير الأسبوعي PDF — مبني على نفس منطق التقرير الشهري
+async function generateWeeklyReport(){
+  if(typeof window.jspdf?.jsPDF !== 'function'){
+    toast('⚠️ جاري تحميل مكتبة PDF... حاول مرة أخرى خلال ثوانٍ');
+    return;
+  }
+  toast('⏳ جاري إنشاء التقرير الأسبوعي...');
+  const now=new Date();
+  // الأسبوع الماضي: 7 أيام
+  const weekAgo=new Date(now);weekAgo.setDate(weekAgo.getDate()-7);
+  const weekLogs=(S.weightLog||[]).filter(e=>{
+    const d=new Date(e.date);
+    return d>=weekAgo && d<=now;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  const startW=weekLogs.length?weekLogs[0].weight:(S.profile.weight||0);
+  const endW=weekLogs.length?weekLogs[weekLogs.length-1].weight:(S.profile.weight||0);
+  const diff=(startW-endW).toFixed(1);
+  const daysLogged=weekLogs.length;
+
+  // متوسط السعرات من التتبع اليومي (آخر 7 أيام)
+  const allDates=[...Array(7)].map((_,i)=>{const d=new Date(now);d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+  let totalKcal=0,daysWithData=0;
+  allDates.forEach(date=>{
+    // [v28.0 FIX-3/4] منطق dayTracker آمن مع فحص النوع
+    const dayTracker = (S.tracker && S.tracker[date]) ? S.tracker[date] : {};
+    if(dayTracker && typeof dayTracker === 'object'){
+      const dayItems = Object.values(dayTracker).flat().filter(x=>x&&x.date===date)||[];
+      if(dayItems.length){totalKcal+=dayItems.reduce((a,x)=>a+(x.kcal||0),0);daysWithData++;}
+    }
+  });
+  const avgKcal=daysWithData>0?Math.round(totalKcal/daysWithData):0;
+
+  const diffColor=parseFloat(diff)>0?'#10b981':parseFloat(diff)<0?'#ef4444':'#9ca3af';
+  const diffText=parseFloat(diff)>0?`فقدت ${diff} كجم 🎉`:parseFloat(diff)<0?`زدت ${Math.abs(diff)} كجم`:' لا تغيير';
+  const tip=parseFloat(diff)>=0.5?'رائع! أسبوع ممتاز. حافظ على هذا الإيقاع 💪':
+            parseFloat(diff)>=0.1?'تقدم جيد! الاتساق هو المفتاح 📅':
+            parseFloat(diff)>0?'بداية واعدة! سجّل وزنك يومياً لتتبع أدق 🎯':
+            'لا تيأس — راجع سعراتك وزد النشاط البدني يومياً 🌟';
+
+  const reportDiv=document.createElement('div');
+  reportDiv.style.cssText='position:fixed;top:-9999px;left:-9999px;width:794px;background:#fff;font-family:Tajawal,sans-serif;direction:rtl;padding:40px;';
+  reportDiv.innerHTML=`
+    <div style="text-align:center;margin-bottom:24px;border-bottom:3px solid #10b981;padding-bottom:16px">
+      <div style="font-size:2.5rem">🌿</div>
+      <h1 style="color:#065f46;font-size:1.6rem;margin:4px 0">مرشدك الصحي</h1>
+      <p style="color:#6b7280;font-size:.9rem">التقرير الأسبوعي</p>
+      <p style="color:#9ca3af;font-size:.78rem">من: ${weekAgo.toLocaleDateString('ar-EG')} — إلى: ${now.toLocaleDateString('ar-EG')}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:700;color:#065f46">${startW} كجم</div>
+        <div style="color:#6b7280;font-size:.8rem;margin-top:4px">الوزن بداية الأسبوع</div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:700;color:#065f46">${endW} كجم</div>
+        <div style="color:#6b7280;font-size:.8rem;margin-top:4px">الوزن نهاية الأسبوع</div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.6rem;font-weight:700;color:${diffColor}">${diffText}</div>
+        <div style="color:#6b7280;font-size:.8rem;margin-top:4px">إجمالي التغيير</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.4rem;font-weight:700;color:#92400e">${daysLogged} يوم</div>
+        <div style="color:#6b7280;font-size:.8rem;margin-top:4px">أيام تسجيل الوزن</div>
+      </div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:1.4rem;font-weight:700;color:#1e40af">${avgKcal>0?avgKcal+'سعرة':'غير متاح'}</div>
+        <div style="color:#6b7280;font-size:.8rem;margin-top:4px">متوسط السعرات اليومية</div>
+      </div>
+    </div>
+    <div style="background:#f0fdf4;border:2px solid #10b981;border-radius:12px;padding:16px;margin-bottom:24px">
+      <h3 style="color:#065f46;font-size:.95rem;margin-bottom:6px">💡 نصيحة الأسبوع</h3>
+      <p style="color:#374151;font-size:.88rem;line-height:1.6">${tip}</p>
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:.75rem;border-top:1px solid #e5e7eb;padding-top:12px">
+      Prepared by: Mohamed Elghtrefy — 🌿 مرشدك الصحي ${APP_VERSION} © 2026
+    </div>`;
+
+  document.body.appendChild(reportDiv);
+  try{
+    const canvas=await html2canvas(reportDiv,{scale:2,useCORS:true,backgroundColor:'#fff'});
+    document.body.removeChild(reportDiv);
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const imgData=canvas.toDataURL('image/jpeg',0.95);
+    const pdfWidth=pdf.internal.pageSize.getWidth();
+    const pdfHeight=(canvas.height*pdfWidth)/canvas.width;
+    pdf.addImage(imgData,'JPEG',0,0,pdfWidth,Math.min(pdfHeight,297));
+    const filename=`تقرير-أسبوعي-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.pdf`;
+    pdf.save(filename);
+    toast('✅ تم حفظ التقرير الأسبوعي: '+filename);
+  }catch(err){
+    if(document.body.contains(reportDiv)) document.body.removeChild(reportDiv);
+    console.error('Weekly report error',err);
+    toast('⚠️ خطأ في إنشاء التقرير، جرب مرة أخرى');
+  }
+}
+
 // ── [NEW] 2.4: نسخ التقرير الشهري كنص ──
 function copyMonthlyReportAsText(){
   const now=new Date();
@@ -6177,24 +6615,29 @@ function copyMonthlyReportAsText(){
 }
 
 // ── [NEW] 2.6: حد أقصى للمفضلة + إزالة الكل ──
-const MAX_FAVORITES=30;
+// MAX_FAVORITES=30 نُقل إلى أعلى الملف بعد تعريف S
 function removeAllFavorites(){
   customConfirm('هل تريد إزالة جميع المفضلة؟', ()=>{
     S.favorites=[];
-    save(); renderFilters(); renderFoodGrid();
+    markUnsaved(); save(); renderFilters(); renderFoodGrid();
     toast('🗑️ تم إزالة كل المفضلة','info');
   }, 'إزالة الكل');
 }
 
-// ── [NEW] 2.7: مؤشر تحميل عند توليد الخطة ──
+// FIX: generatePlanWithLoader — مؤشر تحميل بصري محسّن مع spinner
 function generatePlanWithLoader(){
   const btn=$('generatePlanBtn');
   const origText=btn?btn.innerHTML:'';
-  if(btn){ btn.innerHTML='⏳ جاري التوليد...'; btn.disabled=true; }
+  if(btn){
+    btn.innerHTML='<span style="display:inline-block;animation:spin .7s linear infinite">⟳</span> جاري التوليد...';
+    btn.disabled=true;
+    btn.style.opacity='.8';
+  }
+  // FIX: setTimeout صغير يتيح للـ browser رسم الحالة الجديدة قبل العمل الثقيل
   setTimeout(()=>{
-    try{ generatePlan(); } catch(e){ console.error(e); }
-    if(btn){ btn.innerHTML=origText; btn.disabled=false; }
-  },50);
+    try{ generatePlan(); } catch(e){ console.error('generatePlan error:',e); toast('❌ خطأ في توليد الخطة','error'); }
+    if(btn){ btn.innerHTML=origText; btn.disabled=false; btn.style.opacity=''; }
+  },80);
 }
 
 // ── [NEW] 2.8: إحصائيات سريعة ──
@@ -6242,6 +6685,9 @@ async function exportWeeklyPDF(){
 function renderCalExceedWarning(kcal, goal){
   const el=$('calExceedWarn');
   if(!el) return;
+  // [FIX-4] فحص أمان: التحقق من وجود المصفوفة قبل الاستخدام
+  const meals = MEAL_SLOTS.flatMap(m => S.tracker[m.id] || []);
+  if(!meals || !Array.isArray(meals)) return;
   if(goal && kcal > goal+200){
     el.style.display='block';
     el.textContent=`⚠️ تجاوزت سعراتك اليومية بـ ${kcal-goal} سعرة`;
@@ -6254,7 +6700,15 @@ function renderCalExceedWarning(kcal, goal){
 // (الوظيفة موجودة بالفعل في updateProfileWithFeedback، نضيف رسالة "تم الحفظ" بعدها)
 
 // ── [NEW] 3.2: تأثير اهتزاز عند إدخال وزن خاطئ ──
+// [FIX-10] منع الحروف الخاصة وتحسين التحقق
 function validateWeightInput(val, fieldId){
+  // منع الحروف الخاصة والنص
+  if(val && isNaN(parseFloat(val))){
+    const el=$(fieldId);
+    if(el) el.value = S.profile.weight || '';
+    toast('⚠️ أدخل رقماً صحيحاً للوزن','warning');
+    return;
+  }
   const n=parseFloat(val);
   if(isNaN(n)) return;
   if(n>200||n<30){
@@ -6270,48 +6724,22 @@ function validateWeightInput(val, fieldId){
 // ── [NEW] 3.5: اختصارات لوحة المفاتيح ──
 // [FIX] تم نقل addEventListener داخل init() لضمان جاهزية DOM
 
-// ── [FIX] تحديث الدوال الموسّعة — يُستدعى بأمان بعد init() ──
+// [FIX-1] تم حذف _applyV17Patches القديمة التي كانت تسبب استدعاءً دائرياً (infinite recursion)
+// الدوال الجديدة أُضيفت مباشرة إلى: renderTrackerSummary, toggleFavorite, renderInsights
+// هذه الدالة تبقى فقط لإعداد اختصارات لوحة المفاتيح ومؤقت الثيم التلقائي
 function _applyV17Patches(){
-  // تحديث renderTrackerSummary لاستدعاء الدوال الجديدة
-  const _origRenderTrackerSummary=renderTrackerSummary;
-  renderTrackerSummary=function(){
-    _origRenderTrackerSummary();
-    safeRun(renderQuickStats, null, 'quickStats');
-    safeRun(()=>{
-      const all=MEAL_SLOTS.flatMap(m=>S.tracker[m.id]||[]);
-      const kcal=all.reduce((s,i)=>s+i.kcal,0);
-      const goal=calcDailyGoal()||1500;
-      renderCalExceedWarning(kcal, goal);
-    }, null, 'calExceedWarn');
-  };
-
-  // تحديث toggleFavorite للتحقق من الحد الأقصى
-  const _origToggleFavorite=toggleFavorite;
-  toggleFavorite=function(fid,e){
-    const idx=(S.favorites||[]).indexOf(fid);
-    if(idx===-1 && (S.favorites||[]).length>=MAX_FAVORITES){
-      toast('⚠️ لا يمكن إضافة أكثر من 30 صنفاً مفضلاً','warning');
-      return;
-    }
-    _origToggleFavorite(fid,e);
-  };
-
-  // تحديث renderInsights لاستدعاء renderWeeklyComparison
-  const _origRenderInsights=renderInsights;
-  renderInsights=function(){
-    _origRenderInsights();
-    safeRun(renderWeeklyComparison, null, 'weeklyComparison');
-  };
-
-  // اختصارات لوحة المفاتيح — [FIX] منقولة هنا لضمان جاهزية DOM
-  document.addEventListener('keydown',e=>{
-    if(e.ctrlKey||e.metaKey){
-      if(e.key==='s'){ e.preventDefault(); safeRun(()=>updateProfileWithFeedback(),null,'kbSave'); }
-      if(e.key==='d'){ e.preventDefault(); document.querySelector('[data-tab="tracker"]')?.click(); }
-      if(e.key==='l'){ e.preventDefault(); document.querySelector('[data-tab="library"]')?.click(); }
-      if(e.key==='h'){ e.preventDefault(); document.querySelector('[data-tab="guide"]')?.click(); }
-    }
-  });
+  // اختصارات لوحة المفاتيح — [FIX] مع guard لمنع التكرار عند استدعاء الدالة مرتين
+  if(!window._kbListenerAdded){
+    window._kbListenerAdded = true;
+    document.addEventListener('keydown',e=>{
+      if(e.ctrlKey||e.metaKey){
+        if(e.key==='s'){ e.preventDefault(); safeRun(()=>updateProfileWithFeedback(),null,'kbSave'); }
+        if(e.key==='d'){ e.preventDefault(); document.querySelector('[data-tab="tracker"]')?.click(); }
+        if(e.key==='l'){ e.preventDefault(); document.querySelector('[data-tab="library"]')?.click(); }
+        if(e.key==='h'){ e.preventDefault(); document.querySelector('[data-tab="guide"]')?.click(); }
+      }
+    });
+  }
 
   // فحص تلقائي للثيم كل ساعة — [FIX] منقول هنا لضمان تعريف THEME_KEY
   setInterval(()=>{
@@ -6321,7 +6749,9 @@ function _applyV17Patches(){
 
 // ── شريط CSS اهتزاز ──
 (function addShakeCSS(){
+  if(document.querySelector('style[data-keyframes-shake]')) return;
   const s=document.createElement('style');
+  s.setAttribute('data-keyframes-shake','1');
   s.textContent=`@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}`;
   document.head.appendChild(s);
 })();
@@ -6330,6 +6760,32 @@ function _applyV17Patches(){
 // START — v20
 // ════════════════════════════════════════════════════════
 // [v20] renderInsightsTab — محتوى تبويب التحليلات
+// [FIX-4] نُقلت renderWeightChartIn إلى هنا لتعريفها قبل استخدامها
+function renderWeightChartIn(wrap, log){
+  if(!log || log.length < 2){ wrap.innerHTML=''; return; }
+  const W=560,H=180,PAD={t:16,r:16,b:32,l:44};
+  const cW=W-PAD.l-PAD.r, cH=H-PAD.t-PAD.b;
+  const weights=log.map(e=>e.weight);
+  const minW=Math.min(...weights)-0.5, maxW=Math.max(...weights)+0.5;
+  const n=log.length;
+  const xPos=i=>PAD.l+(i/(n-1))*cW;
+  const yPos=w=>PAD.t+cH-((w-minW)/(maxW-minW))*cH;
+  const pts=log.map((e,i)=>xPos(i)+','+yPos(e.weight)).join(' ');
+  const area='M'+xPos(0)+','+(PAD.t+cH)+' L'+log.map((e,i)=>xPos(i)+','+yPos(e.weight)).join(' L')+' L'+xPos(n-1)+','+(PAD.t+cH)+' Z';
+  const dots=log.map((e,i)=>{
+    const isLast=i===n-1;
+    return '<circle cx="'+xPos(i)+'" cy="'+yPos(e.weight)+'" r="'+(isLast?5:3)+'" fill="'+(isLast?'#f59e0b':'#10b981')+'" stroke="var(--bg-mid)" stroke-width="1.5"/>';
+  }).join('');
+  wrap.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'+
+    '<defs><linearGradient id="ig2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981" stop-opacity=".2"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>'+
+    '<path d="'+area+'" fill="url(#ig2)"/>'+
+    '<polyline points="'+pts+'" fill="none" stroke="#10b981" stroke-width="2" stroke-linejoin="round"/>'+
+    dots+
+    '<text x="'+xPos(0)+'" y="'+(H-6)+'" text-anchor="middle" fill="#9ca3af" font-size="9">'+log[0].date.slice(5)+'</text>'+
+    '<text x="'+xPos(n-1)+'" y="'+(H-6)+'" text-anchor="middle" fill="#9ca3af" font-size="9">'+log[n-1].date.slice(5)+'</text>'+
+    '</svg>';
+}
+
 function renderInsightsTab(){
   const insContent = $('insightsTabContent');
   const insKPIs    = $('insightsKPIs');
@@ -6406,36 +6862,12 @@ function renderInsightsTab(){
 }
 
 // رسم مخطط الوزن في عنصر معين
-function renderWeightChartIn(wrap, log){
-  if(!log || log.length < 2){ wrap.innerHTML=''; return; }
-  const W=560,H=180,PAD={t:16,r:16,b:32,l:44};
-  const cW=W-PAD.l-PAD.r, cH=H-PAD.t-PAD.b;
-  const weights=log.map(e=>e.weight);
-  const minW=Math.min(...weights)-0.5, maxW=Math.max(...weights)+0.5;
-  const n=log.length;
-  const xPos=i=>PAD.l+(i/(n-1))*cW;
-  const yPos=w=>PAD.t+cH-((w-minW)/(maxW-minW))*cH;
-  const pts=log.map((e,i)=>xPos(i)+','+yPos(e.weight)).join(' ');
-  const area='M'+xPos(0)+','+(PAD.t+cH)+' L'+log.map((e,i)=>xPos(i)+','+yPos(e.weight)).join(' L')+' L'+xPos(n-1)+','+(PAD.t+cH)+' Z';
-  const dots=log.map((e,i)=>{
-    const isLast=i===n-1;
-    return '<circle cx="'+xPos(i)+'" cy="'+yPos(e.weight)+'" r="'+(isLast?5:3)+'" fill="'+(isLast?'#f59e0b':'#10b981')+'" stroke="var(--bg-mid)" stroke-width="1.5"/>';
-  }).join('');
-  wrap.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'+
-    '<defs><linearGradient id="ig2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981" stop-opacity=".2"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>'+
-    '<path d="'+area+'" fill="url(#ig2)"/>'+
-    '<polyline points="'+pts+'" fill="none" stroke="#10b981" stroke-width="2" stroke-linejoin="round"/>'+
-    dots+
-    '<text x="'+xPos(0)+'" y="'+(H-6)+'" text-anchor="middle" fill="#9ca3af" font-size="9">'+log[0].date.slice(5)+'</text>'+
-    '<text x="'+xPos(n-1)+'" y="'+(H-6)+'" text-anchor="middle" fill="#9ca3af" font-size="9">'+log[n-1].date.slice(5)+'</text>'+
-    '</svg>';
-}
 
 // ════════════════════════════════════════════════════════
 // v21: AUTOMATED TESTS (Console Only)
 // ════════════════════════════════════════════════════════
 function runTests(){
-  console.group('🧪 اختبارات مرشدك الصحي v26.0');
+  console.group('🧪 اختبارات مرشدك الصحي v1.3-fixed');
   
   // اختبار 1: حساب السعرات اليومية
   try {
@@ -6537,29 +6969,44 @@ function exportToJSON(){
 }
 
 // تصدير Excel (XLSX) — باستخدام SheetJS CDN
+// FIX: exportToExcel — تتحقق من وجود XLSX قبل تحميله مرة أخرى
+function _doExcelExport(){
+  const logs=S.weightLog;
+  if(!logs.length){toast('❌ لا توجد بيانات لتصديرها');return;}
+  const rows=logs.map((l,i)=>({
+    'التاريخ':l.date,
+    'الوزن (كجم)':l.weight,
+    'الفرق من اليوم السابق':i>0?(logs[i-1].weight-l.weight).toFixed(1):'—'
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'سجل الوزن');
+  const filename=`سجل_الوزن_${new Date().toLocaleDateString('ar-EG')}.xlsx`;
+  XLSX.writeFile(wb,filename);
+  toast('✅ تم تصدير Excel بنجاح');
+}
+
+// [FIX-3] exportToExcel — تتحقق من وجود XLSX أولاً، وتعرض toast عند النجاح
 async function exportToExcel(){
+  if(!S.weightLog.length){ toast('❌ لا توجد بيانات لتصديرها'); return; }
+  // إذا المكتبة محملة مسبقاً، استخدمها مباشرة
+  if(typeof XLSX !== 'undefined'){
+    _doExcelExport();
+    return;
+  }
   try {
-    // تحميل مكتبة SheetJS من CDN
+    toast('⏳ جاري تحميل مكتبة Excel...');
     const script=document.createElement('script');
     script.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js';
     script.onload=()=>{
-      const logs=S.weightLog.map((l,i)=>({
-        'التاريخ':l.date,
-        'الوزن (كجم)':l.weight,
-        'الفرق من اليوم السابق':i>0?(S.weightLog[i-1].weight-l.weight).toFixed(1):'—'
-      }));
-      
-      const ws=XLSX.utils.json_to_sheet(logs);
-      const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,ws,'سجل الوزن');
-      const filename=`سجل_الوزن_${new Date().toLocaleDateString('ar-EG')}.xlsx`;
-      XLSX.writeFile(wb,filename);
-      toast('✅ تم تصدير Excel بنجاح');
+      toast('✅ تم التحميل، جاري التصدير...');
+      _doExcelExport();
     };
+    script.onerror=()=>{ toast('❌ فشل تحميل مكتبة Excel — تحقق من الاتصال','error'); };
     document.head.appendChild(script);
   } catch(e){
     console.error('❌ خطأ في تصدير Excel:',e);
-    toast('❌ فشل التصدير إلى Excel');
+    toast('❌ فشل التصدير إلى Excel','error');
   }
 }
 
