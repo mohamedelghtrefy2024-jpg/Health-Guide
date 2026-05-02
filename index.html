@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src https://world.openfoodfacts.org https://api.nal.usda.gov;">
-<title>🌿 مرشدك الصحي v26.0</title>
+<title>🌿 مرشدك الصحي v27.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -455,11 +455,13 @@ input[type=range]:focus{box-shadow:none;border:none}
   background:var(--g4);border:1px solid var(--g2);
   color:#fff;padding:.7rem 1.5rem;
   border-radius:50px;font-weight:700;font-size:.9rem;
-  z-index:9999;transition:transform .3s cubic-bezier(.4,0,.2,1),background .2s;
+  z-index:9999;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .4s ease,background .2s;
   box-shadow:0 8px 30px rgba(0,0,0,.4);pointer-events:none;
   white-space:nowrap;max-width:90vw;text-align:center;
+  opacity:0;
 }
-.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.fade-out{opacity:0;transform:translateX(-50%) translateY(8px);}
 .toast.t-success{background:#065f46;border-color:#10b981;}
 .toast.t-error  {background:#7f1d1d;border-color:#ef4444;}
 .toast.t-warning{background:#78350f;border-color:#f59e0b;}
@@ -2289,7 +2291,7 @@ window.addEventListener('beforeunload', e => {
 // دالة مساعدة لتعيين التغييرات كغير محفوظة
 function markUnsaved(){ _hasUnsavedChanges = true; }
 
-// normArabic + fuzzyMatch — بحث ضبابي عربي
+// normArabic + fuzzyMatch — بحث ضبابي عربي [v27.1 FIX-9]
 function normArabic(str){
   return (str||'').toLowerCase()
     .replace(/[أإآا]/g,'ا').replace(/[ةه]/g,'ه').replace(/[يى]/g,'ي').replace(/[ئء]/g,'')
@@ -2299,12 +2301,17 @@ function fuzzyMatch(query, target){
   if(!query) return true;
   const q = normArabic(query);
   const t = normArabic(target);
+  // ١. includes سريع أولاً
   if(t.includes(q)) return true;
+  // ٢. subsequence مع حد أدنى 70% تطابق
+  if(q.length < 2) return false;
   let qi=0;
   for(let i=0;i<t.length&&qi<q.length;i++) if(t[i]===q[qi]) qi++;
-  return qi===q.length && q.length>=2;
+  const matchRatio = qi / q.length;
+  return matchRatio >= 0.7;
 }
 
+// ════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════
 // CHANGELOG v22.0
 // ════════════════════════════════════════════════════════
@@ -2339,6 +2346,67 @@ function fuzzyMatch(query, target){
 
   PRESERVED: جميع ميزات v21 محفوظة بالكامل (Lazy Loading, ARIA, runTests,
              CSV/JSON/Excel Export, الخطط الـ15 الذكية, التمارين, modal الحفظ).
+*/
+
+// ════════════════════════════════════════════════════════
+// CHANGELOG v27.1
+// ════════════════════════════════════════════════════════
+/*
+  🔄 مرشدك الصحي — v27.1 | تاريخ: 2026
+  ─────────────────────────────────────────────────────────
+  FIX-1: Carb Fallback للبروتين الحيواني
+         لو preferred فاضية بعد استبعاد الأرز والمكرونة، ترجع allowedCarbs
+         للقائمة الكاملة تلقائياً بدل ما الوجبة تفضل بدون كارب.
+
+  FIX-2: Carb Fallback للبروتين النباتي
+         نفس المنطق — لو preferred (أرز/مكرونة/خبز) فاضية، fallback تلقائي.
+
+  FIX-3: قائمة مركزية _C للأصناف المشتركة
+         أُنشئت const _C تحتوي على الأصناف المكررة بين BREAKFAST_ITEMS
+         وLIGHT_DINNER_ITEMS لتجنب تكرار البيانات وضمان الاتساق.
+
+  FIX-4: فلترة highpro/lowcarb بالنسبة المئوية
+         highpro: proteinRatio = (p×4/kcal)×100 ≥ 15% بدل p<5 المطلق.
+         lowcarb: carbRatio = (c×4/kcal)×100 > 50% بدل c>15 المطلق.
+
+  FIX-6: رسائل empty state أذكى في renderFoodGrid
+         رسائل سياقية مختلفة حسب (بحث + فلتر / مفضلة / تصنيف فاضي)
+         مع اقتراحات وزر "عرض كل الأصناف" في حالة المفضلة الفارغة.
+
+  FIX-7: Toast — تقليص + fade-out تدريجي
+         حد أقصى 60 حرفاً مع ... في النهاية. fade-out CSS بدل الإخفاء المفاجئ.
+
+  FIX-8: pickRandom آمنة من المصفوفة الفارغة
+         أُضيف guard: if(!arr||!arr.length) return [].
+         drinkPick محمية بـ .filter(Boolean).
+
+  FIX-9: fuzzyMatch بنسبة 70% بدل 100%
+         subsequence match يقبل 70% تطابق لتحسين البحث العربي.
+
+  FIX-10: LIGHT_DINNER_ITEMS — بدائل نباتية وhighpro
+          أُضيفت: حمص خفيف، فول بالليمون، عدس أحمر، صدر دجاج مسلوق، سردين.
+*/
+
+// ════════════════════════════════════════════════════════
+// CHANGELOG v27.2
+// ════════════════════════════════════════════════════════
+/*
+  🔄 مرشدك الصحي — v27.2 | تاريخ: 2026
+  ─────────────────────────────────────────────────────────
+  NEW-1: تنويع اختيار الكاربوهيدرات
+         استبدال allowedCarbs[0] بـ pickRandom(allowedCarbs,1)[0]
+         عشان الوجبات المولودة تختلف في كل مرة وما تتكررش.
+
+  NEW-2: زبادي يوناني في LIGHT_DINNER_ITEMS
+         أُضيف كخيار عشاء خفيف — بروتين 10جم / 100 سعرة / 150جم.
+
+  NEW-3: بيض مقلي بدون زيت في BREAKFAST_ITEMS
+         كان موجود في قاعدة FOODS (id:82) لكن ناقص من قوائم الفطار.
+         148 سعرة / 12جم بروتين / 2 بيضة.
+
+  FIX-4: معالجة proteinType === null
+         أُضيف شرط صريح: لو proteinType لسه null (مفيش بروتين اتاختار)،
+         استخدم allowedCarbs كامل بدون تصفية.
 */
 // ════════════════════════════════════════════════════════
 // STORAGE
@@ -2814,14 +2882,29 @@ function renderFoodGrid(){
   else if(_activeCat!=='الكل') list=list.filter(f=>f.cat===_activeCat);
   // بحث ضبابي محسّن
   if(q) list=list.filter(f=>fuzzyMatch(q, f.name) || f.name.toLowerCase().includes(q.toLowerCase()));
-  // تحسين: رسالة مخصصة توضح سبب عدم وجود نتائج
+  // [v27.1 FIX-6] رسائل فارغة أذكى مع اقتراحات
   if(!list.length){
     let reason='';
-    if(q && _activeCat!=='الكل') reason=`لا يوجد "<strong>${escapeHtml(q)}</strong>" في تصنيف "<strong>${escapeHtml(_activeCat)}</strong>"`;
-    else if(q) reason=`لا يوجد صنف بكلمة "<strong>${escapeHtml(q)}</strong>"`;
-    else if(_activeCat==='⭐ مفضلتي') reason='لم تضف أي أصناف للمفضلة بعد — اضغط ⭐ على أي صنف';
-    else reason=`لا توجد أصناف في تصنيف "<strong>${escapeHtml(_activeCat)}</strong>"`;
-    $('foodGrid').innerHTML=`<div class="empty"><div class="e-ico">🔍</div><p>${reason}</p>${q?'<p style="font-size:.78rem;color:var(--muted2);margin-top:.35rem">جرّب كلمة أخرى أو اختر تصنيف مختلف</p>':''}</div>`;
+    let hint='';
+    const isFav = _activeCat==='⭐ مفضلتي';
+    const hasSearch = !!q;
+    const hasFilter = _activeCat && _activeCat!=='الكل';
+
+    if(hasSearch && hasFilter && !isFav){
+      reason=`لا يوجد "<strong>${escapeHtml(q)}</strong>" في تصنيف "<strong>${escapeHtml(_activeCat)}</strong>"`;
+      hint=`<p style="font-size:.78rem;color:var(--muted2);margin-top:.35rem">💡 هل تريد البحث في تصنيف آخر؟ اضغط على "الكل" أعلاه</p>`;
+    } else if(hasSearch){
+      reason=`لا يوجد صنف بكلمة "<strong>${escapeHtml(q)}</strong>"`;
+      hint=`<p style="font-size:.78rem;color:var(--muted2);margin-top:.35rem">جرّب كلمة أخرى أو اختر تصنيف مختلف</p>`;
+    } else if(isFav){
+      reason='لم تضف أي أصناف للمفضلة بعد';
+      hint=`<p style="font-size:.78rem;color:var(--muted2);margin-top:.35rem">اضغط ⭐ على أي صنف لإضافته للمفضلة — مثلاً: صدر دجاج، بيض مسلوق، شوفان</p>
+            <button class="btn btn-sec" style="margin-top:.5rem;font-size:.8rem;padding:.35rem .9rem" onclick="filterCat(document.querySelector('.filter-btn'),'الكل')">📋 عرض كل الأصناف</button>`;
+    } else {
+      reason=`لا توجد أصناف في تصنيف "<strong>${escapeHtml(_activeCat)}</strong>"`;
+      hint='';
+    }
+    $('foodGrid').innerHTML=`<div class="empty"><div class="e-ico">🔍</div><p>${reason}</p>${hint}</div>`;
     return;
   }
   $('foodGrid').innerHTML=list.map(f=>`
@@ -3151,22 +3234,36 @@ const NON_VEG=['دجاج','فراخ','لحم','سمك','تونة','جمبري','
 
 // قوائم وجبات مصرية حقيقية لكل وجبة
 // ── قوائم الوجبات المصرية الحقيقية للمخطط الذكي ──
+
+// [v27.1 FIX-3] أصناف مشتركة بين أكثر من وجبة — تعريف مركزي واحد لتجنب تكرار البيانات
+const _C = {
+  baydMasloq:   {name:'بيض مسلوق',      emoji:'🥚',kcal:156,p:12, c:1.2,f:10,  qty:2,  unit:'بيضة'},
+  gobnqrish:    {name:'جبنة قريش',       emoji:'🧀',kcal:72, p:12, c:2.7,f:1,   qty:100,unit:'جم'},
+  gobnBayda:    {name:'جبنة بيضاء',      emoji:'🧀',kcal:70, p:4,  c:1,  f:5,   qty:40, unit:'جم'},
+  zabadiLight:  {name:'زبادي لايت',      emoji:'🫙',kcal:59, p:3.5,c:5,  f:1.6, qty:200,unit:'جم'},
+  salataKhdr:   {name:'خيار وسلاطة',     emoji:'🥒',kcal:20, p:0.8,c:4,  f:0.1, qty:1,  unit:'طبق'},
+  eishAsmar:    {name:'عيش أسمر',        emoji:'🍞',kcal:80, p:3,  c:15, f:1,   qty:1,  unit:'شريحة'},
+  labneh:       {name:'لبنة',            emoji:'🧀',kcal:100,p:6,  c:4,  f:7,   qty:80, unit:'جم'},
+};
+
 // الفطار: أكل مصري وعربي أصيل — بيض، جبن، فول، طعمية، خضار
 const BREAKFAST_ITEMS=[
-  {name:'بيض مسلوق',         emoji:'🥚',kcal:156,p:12, c:1.2,f:10,  qty:2,  unit:'بيضة'},  // 2 بيضة × 78 سعرة
+  _C.baydMasloq,
   {name:'بيض مقلي',          emoji:'🍳',kcal:180,p:12, c:0.8,f:14,  qty:2,  unit:'بيضة'},  // 2 بيضة × 90 سعرة
-  {name:'جبنة قريش',         emoji:'🧀',kcal:72, p:12, c:2.7,f:1,   qty:100,unit:'جم'},
-  {name:'جبنة بيضاء',        emoji:'🧀',kcal:70, p:4,  c:1,  f:5,   qty:40, unit:'جم'},
+  // [v27.2 NEW-3] بيض مقلي بدون زيت — موجود في FOODS (id:82) لكن كان ناقص هنا
+  {name:'بيض مقلي بدون زيت',emoji:'🍳',kcal:148,p:12, c:0.8,f:10,  qty:2,  unit:'بيضة'},
+  _C.gobnqrish,
+  _C.gobnBayda,
   {name:'فول مدمس',          emoji:'🫘',kcal:110,p:7,  c:18, f:0.5, qty:150,unit:'جم'},
   {name:'طعمية',             emoji:'🟡',kcal:60, p:3,  c:7,  f:2.5, qty:3,  unit:'حبة'},
   {name:'شوفان بالحليب',     emoji:'🥣',kcal:180,p:7,  c:28, f:4,   qty:1,  unit:'كوب'},
   {name:'عيش بلدي',          emoji:'🫓',kcal:130,p:4,  c:26, f:1,   qty:1,  unit:'رغيف'},
-  {name:'عيش أسمر',          emoji:'🍞',kcal:80, p:3,  c:15, f:1,   qty:1,  unit:'شريحة'},
-  {name:'زبادي لايت',        emoji:'🫙',kcal:59, p:3.5,c:5,  f:1.6, qty:200,unit:'جم'},
-  {name:'خيار وسلاطة',       emoji:'🥒',kcal:20, p:0.8,c:4,  f:0.1, qty:1,  unit:'طبق'},
+  _C.eishAsmar,
+  _C.zabadiLight,
+  _C.salataKhdr,
   {name:'زيتون أسود',        emoji:'🫒',kcal:40, p:0.3,c:1,  f:4,   qty:10, unit:'حبة'},
   {name:'عسل طبيعي',         emoji:'🍯',kcal:60, p:0,  c:16, f:0,   qty:1,  unit:'ملعقة صغيرة'},
-  {name:'لبنة',              emoji:'🧀',kcal:100,p:6,  c:4,  f:7,   qty:80, unit:'جم'},
+  _C.labneh,
 ];
 
 // الغداء: بروتين أساسي + نشويات + خضار — أكل مصري وعربي
@@ -3191,18 +3288,35 @@ const LUNCH_ITEMS=[
   {name:'شوربة خضار',       emoji:'🥣',kcal:60, p:3,  c:10, f:1,   qty:1,  unit:'كوب'},
 ];
 
-// العشاء: خفيف ومتوازن — بروتين خفيف + خضار
-const DINNER_ITEMS=[
-  {name:'بيض مسلوق',        emoji:'🥚',kcal:156,p:12, c:1.2,f:10,  qty:2,  unit:'بيضة'},  // 2 بيضة
+// [v27] العشاء الخفيف — بروتين خفيف + خضار فقط (لا وجبات ثقيلة)
+// [v27.1 FIX-10] أُضيفت بدائل نباتية (fav: veg) وبروتينات خفيفة إضافية (highpro)
+// [v27.1 FIX-3] يستخدم _C للأصناف المشتركة
+const LIGHT_DINNER_ITEMS=[
+  _C.baydMasloq,
   {name:'تونة في الماء',    emoji:'🐟',kcal:100,p:22, c:0,  f:1,   qty:100,unit:'جم'},
-  {name:'جبنة قريش',        emoji:'🧀',kcal:72, p:12, c:2.7,f:1,   qty:150,unit:'جم'},
-  {name:'شوربة عدس',        emoji:'🥣',kcal:130,p:8,  c:22, f:2,   qty:1,  unit:'كوب'},
-  {name:'زبادي لايت',       emoji:'🫙',kcal:59, p:3.5,c:5,  f:1.6, qty:200,unit:'جم'},
+  _C.gobnqrish,
+  _C.zabadiLight,
   {name:'سلطة خضراء',       emoji:'🥗',kcal:35, p:2,  c:6,  f:0.4, qty:1,  unit:'طبق'},
   {name:'خضار مسلوقة',      emoji:'🥦',kcal:55, p:3,  c:10, f:0.4, qty:1,  unit:'طبق'},
-  {name:'عيش أسمر',         emoji:'🍞',kcal:80, p:3,  c:15, f:1,   qty:1,  unit:'شريحة'},
+  _C.eishAsmar,
+  _C.labneh,
+  {name:'شوربة خضار',       emoji:'🥣',kcal:60, p:3,  c:10, f:1,   qty:1,  unit:'كوب'},
+  _C.gobnBayda,
+  // [v27.2 NEW-2] زبادي يوناني — بروتين خفيف ومفيد للعشاء (متوافق مع FOODS id:123)
+  {name:'زبادي يوناني',      emoji:'🥛',kcal:89, p:10, c:3.6,f:0.4, qty:150,unit:'جم'},
+  // [FIX-10] بدائل نباتية للعشاء الخفيف
+  {name:'حمص خفيف',         emoji:'🫘',kcal:120,p:6,  c:10, f:6,   qty:60, unit:'جم'},
+  {name:'فول بالليمون',     emoji:'🫘',kcal:90, p:6,  c:14, f:0.5, qty:100,unit:'جم'},
+  {name:'عدس أحمر مسلوق',  emoji:'🍲',kcal:80, p:6,  c:14, f:0.3, qty:100,unit:'جم'},
+  // [FIX-10] بروتينات خفيفة إضافية (highpro)
+  {name:'صدر دجاج مسلوق',  emoji:'🍗',kcal:120,p:25, c:0,  f:2,   qty:100,unit:'جم'},
+  {name:'سردين في الماء',   emoji:'🐟',kcal:100,p:19, c:0,  f:3,   qty:100,unit:'جم'},
+];
+
+// [v27] DINNER_ITEMS أصبحت للوجبات الثقيلة — تُستخدم في الغداء أيضاً
+const DINNER_ITEMS=[
+  {name:'شوربة عدس',        emoji:'🥣',kcal:130,p:8,  c:22, f:2,   qty:1,  unit:'كوب'},
   {name:'حمص بطحينة',       emoji:'🫘',kcal:166,p:9,  c:14, f:10,  qty:80, unit:'جم'},
-  {name:'لبنة',             emoji:'🧀',kcal:100,p:6,  c:4,  f:7,   qty:80, unit:'جم'},
   {name:'ملوخية بدون أرز',  emoji:'🥬',kcal:45, p:3,  c:7,  f:1,   qty:1,  unit:'كوب'},
 ];
 
@@ -3240,6 +3354,8 @@ function fisherYates(arr){
   return a;
 }
 function pickRandom(arr,n=1){
+  // [v27.1 FIX-8] حماية من المصفوفة الفارغة
+  if(!arr || !arr.length) return [];
   return fisherYates(arr).slice(0,n);
 }
 
@@ -3258,16 +3374,25 @@ function generatePlan(){
     if(forbidden.some(fb=>f.name.includes(fb))) return false;
     if(isDiabetic && ['تمر','عسل','عصير ليمون بدون سكر'].includes(f.name)) return false;
     if(isHyper && ['عرقسوس','مخلل','مملح'].some(h=>f.name.includes(h))) return false;
-    if(pref==='veg' && ['دجاج','سمك','لحم','تونة','كفتة'].some(m=>f.name.includes(m))) return false;
-    if(pref==='highpro' && f.p<5 && f.kcal>50) return false; // الخضروات الخفيفة تبقى حتى في highpro
-    if(pref==='lowcarb' && f.c>20) return false;
+    if(pref==='veg' && ['دجاج','سمك','لحم','تونة','كفتة','كبدة','شيش','كباب','شاورما'].some(m=>f.name.includes(m))) return false;
+    // [v27.1 FIX-4] نسبة البروتين بدلاً من الفلترة المطلقة
+    if(pref==='highpro' && f.kcal>100){
+      const proteinRatio = f.kcal>0 ? (f.p*4/f.kcal)*100 : 0;
+      if(proteinRatio < 15) return false;
+    }
+    // [v27.1 FIX-4] نسبة الكارب بدلاً من الحد المطلق
+    if(pref==='lowcarb' && f.kcal>0){
+      const carbRatio = (f.c*4/f.kcal)*100;
+      if(carbRatio > 50) return false;
+    }
     return true;
   });
 
   // بناء الخطة من قوائم الوجبات المصرية الحقيقية
+  // [v27] الغداء يشمل LUNCH_ITEMS + DINNER_ITEMS (الثقيلة) — العشاء من LIGHT_DINNER_ITEMS فقط
   const fBreakfast = filterItems(BREAKFAST_ITEMS);
-  const fLunch     = filterItems(LUNCH_ITEMS);
-  const fDinner    = filterItems(DINNER_ITEMS);
+  const fLunch     = filterItems([...LUNCH_ITEMS, ...DINNER_ITEMS]);
+  const fDinner    = filterItems(LIGHT_DINNER_ITEMS);
   const fSnack     = filterItems(SNACK_ITEMS);
   const fDrink     = filterItems(DRINK_ITEMS);
 
@@ -3286,14 +3411,15 @@ function generatePlan(){
   const dItems  = buildMealCombination(fDinner,    dinnerK, usedItems);
 
   // مشروب واحد فقط — مش 4 اختيارات — سعراته لا تُحسب
-  const drinkPick = drinkN>0 ? [pickRandom(fDrink,1)[0]] : [];
+  // [v27.1 FIX-8] pickRandom آمنة لو fDrink فاضية
+  const drinkPick = drinkN>0 && fDrink.length ? [pickRandom(fDrink,1)[0]].filter(Boolean) : [];
 
   const structuredPlan = {
     فطار:     { items: bfItems, targetKcal: bfKcal },
     غداء:     mainN>=2 ? { items: lItems,  targetKcal: lunchK }  : null,
     عشاء:     mainN>=3 ? { items: dItems,  targetKcal: dinnerK } : null,
     'وجبة رابعة': mainN>=4 ? { items: buildMealCombination(fLunch, Math.round(planKcal*0.15), usedItems), targetKcal: Math.round(planKcal*0.15) } : null,
-    سناك:     snackN>0 ? pickRandom(fSnack, Math.min(snackN,2)) : [],
+    سناك:     snackN>0 ? pickRandom(fSnack.filter(s=>!usedItems.has(s.name)), Math.min(snackN,2)) : [],
     مشروبات:  drinkPick,
   };
   S.currentPlan = structuredPlan;
@@ -3348,6 +3474,16 @@ const INCOMPATIBLE_GROUPS = [
   ['أرز أبيض','عيش بلدي'],
   ['أرز بني','عيش بلدي'],
   ['مكرونة مسلوقة','عيش بلدي'],
+  // [FIX-1] لا نوعين من الأرز في نفس الوجبة
+  ['أرز أبيض','أرز بني'],
+  // [FIX-2] لا نوعين من الخبز في نفس الوجبة
+  ['عيش بلدي','عيش أسمر'],
+  // [FIX-3] لا بيض مسلوق مع بيض مقلي (نفس المكون — طريقة طهي مختلفة)
+  ['بيض مسلوق','بيض مقلي'],
+  // [FIX-4] لا نوعين من الجبن في نفس الوجبة
+  ['جبنة قريش','جبنة بيضاء'],
+  ['جبنة قريش','لبنة'],
+  ['جبنة بيضاء','لبنة'],
 ];
 
 function isCompatibleWithChosen(newItem, chosenItems){
@@ -3371,39 +3507,81 @@ function buildMealCombinationAttempt(pool, targetKcal, usedItems){
     [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
   }
 
+  // [v27] تصنيف الأصناف حسب نوع البروتين
+  const ANIMAL_KEYS = ['بيض','جبنة','لبن','زبادي','لبنة','لحم','دجاج','سمك','تونة','جمبري','سردين','كفتة','كبدة','شيش','شاورما'];
+  const PLANT_KEYS  = ['فول','عدس','حمص','فاصوليا','سوياء'];
+
   const proteins = shuffled.filter(i=>i.p>=5);
   const carbs    = shuffled.filter(i=>i.c>=10 && i.p<8);
-  const extras   = shuffled.filter(i=>i.kcal<=80 && i.p<5); // خضروات وإضافات فقط — ليس بروتين
+  const extras   = shuffled.filter(i=>i.kcal<=80 && i.p<5);
+
+  const animalProteins = proteins.filter(i=>ANIMAL_KEYS.some(k=>i.name.includes(k)));
+  const plantProteins  = proteins.filter(i=>PLANT_KEYS.some(k=>i.name.includes(k)));
 
   const chosen=[];
   let total=0;
   const localUsed = new Set(usedItems);
+  let proteinType = null; // 'animal' | 'plant' | 'other'
 
-  // ١. اختر بروتين أساسي
+  // ١. اختر بروتين أساسي وحدد نوعه
   if(proteins.length){
-    const pro = proteins[0];
+    let pro;
+    if(animalProteins.length){
+      pro = animalProteins[Math.floor(Math.random()*animalProteins.length)];
+      proteinType = 'animal';
+    } else if(plantProteins.length){
+      pro = plantProteins[Math.floor(Math.random()*plantProteins.length)];
+      proteinType = 'plant';
+    } else {
+      pro = proteins[0];
+      proteinType = 'other';
+    }
     chosen.push(pro); total+=pro.kcal;
     localUsed.add(pro.name);
   }
 
-  // ٢. اختر نشوية واحدة فقط — مع التحقق من التوافق
+  // ٢. اختر نشوية مناسبة لنوع البروتين
   if(carbs.length && total<targetKcal*0.7){
-    const carb = carbs.find(c=>
-      !localUsed.has(c.name) && isCompatibleWithChosen(c, chosen)
-    );
-    if(carb && total+carb.kcal <= targetKcal+80){
-      chosen.push(carb); total+=carb.kcal;
-      localUsed.add(carb.name);
+    let allowedCarbs = carbs.filter(c=>!localUsed.has(c.name) && isCompatibleWithChosen(c, chosen));
+
+    if(proteinType === 'plant'){
+      // [v27.1 FIX-2] بروتين نباتي: يفضل أرز/مكرونة/خبز — مع fallback للقائمة الأصلية
+      const preferred = allowedCarbs.filter(c=>['أرز','مكرونة','خبز','عيش'].some(k=>c.name.includes(k)));
+      if(preferred.length) allowedCarbs = preferred;
+      // لو preferred فاضية، allowedCarbs تفضل زي ما هي (fallback تلقائي)
+    } else if(proteinType === 'animal'){
+      // [v27.1 FIX-1] بروتين حيواني: يبعد عن الأرز والمكرونة الثقيلة
+      const preferred = allowedCarbs.filter(c=>!['أرز أبيض','أرز بني','مكرونة مسلوقة'].includes(c.name));
+      // [v27.1 FIX-1] لو preferred فاضية → ارجع للقائمة الكاملة (fallback)
+      if(preferred.length) allowedCarbs = preferred;
+      // لو preferred فاضية، allowedCarbs تفضل زي ما هي (fallback تلقائي)
+    } else if(proteinType === null){
+      // [v27.2] proteinType لسه null (مفيش بروتين اتاختار) — استخدم كل الكاربوهيدرات المتاحة
+      // allowedCarbs تفضل زي ما هي بدون تصفية إضافية
+    }
+
+    // [v27.1 FIX-1 | v27.2] pickRandom بدل [0] عشان التنوع — آمنة لو فاضية
+    if(!allowedCarbs.length){
+      console.warn('[مرشدك] لا يوجد كارب متاح لهذه الوجبة — البروتين وحده.');
+    } else {
+      // [v27.2 NEW-1] استخدام pickRandom عشان تنوع الكاربوهيدرات في كل مرة
+      const carb = pickRandom(allowedCarbs, 1)[0];
+      if(carb && total+carb.kcal <= targetKcal+80){
+        chosen.push(carb); total+=carb.kcal;
+        localUsed.add(carb.name);
+      }
     }
   }
 
-  // ٣. أضف إضافات خفيفة مع التحقق من التوافق — بحد أقصى إضافة واحدة من نوع الشوربة
+  // ٣. أضف إضافات خفيفة مع منع تكرار الشوربة
   let soupAdded = false;
   for(const ex of extras){
     if(chosen.length>=4) break;
     if(localUsed.has(ex.name)) continue;
     if(!isCompatibleWithChosen(ex, chosen)) continue;
-    // منع أكثر من شوربة واحدة في الوجبة
+    // [v27] لا نخلط بروتين نباتي إضافي مع بروتين حيواني والعكس
+    if(proteinType === 'animal' && PLANT_KEYS.some(k=>ex.name.includes(k))) continue;
+    if(proteinType === 'plant'  && ANIMAL_KEYS.some(k=>ex.name.includes(k))) continue;
     const isSoup = ex.name.includes('شوربة');
     if(isSoup && soupAdded) continue;
     if(total+ex.kcal <= targetKcal+100){
@@ -3844,7 +4022,7 @@ function generateAIPlan(){
     txt+=`11:00 — سناك (${sK} سعرة):\n• تفاحة + لوز 20جم\n\n`;
     txt+=`2:00 — الغداء (${lK} سعرة):\n• عدس مسلوق 200جم + أرز 80جم\n• سلطة خضراء كبيرة\n\n`;
     txt+=`5:30 — سناك (${sK} سعرة):\n• زبادي لايت + موزة\n\n`;
-    txt+=`8:00 — العشاء (${dK} سعرة):\n• فول مدمس 150جم + 2 بيضة\n• طماطم وخيار\n`;
+    txt+=`8:00 — العشاء (${dK} سعرة):\n• حمص بطحينة 100جم + بيضتان مسلوقتان\n• طماطم وخيار\n`;
   } else {
     txt+=`5:30 — مشروب الاستيقاظ:\n• ماء دافئ + ليمون\n\n`;
     txt+=`7:30 — الفطار (${bfK} سعرة):\n• 2 بيضة مسلوقة\n• رغيف عيش أسمر + جبنة بيضاء\n• طماطم وخيار\n\n`;
@@ -4117,16 +4295,22 @@ function customConfirm(msg, onOk, title='تأكيد'){
 // تحسين: Toast بألوان حسب النوع + timer صح
 let _toastTimer=null;
 function toast(msg, type=''){
-  // [FIX] 1.4: إعادة تعيين className قبل إضافة الكلاس الجديد
+  // [v27.1 FIX-7] تقليص الرسائل الطويلة + fade-out تدريجي
+  const MAX_LEN = 60;
+  const shortMsg = msg.length > MAX_LEN ? msg.slice(0, MAX_LEN) + '…' : msg;
   const t=$('toast');
-  t.textContent=msg;
+  t.textContent=shortMsg;
   t.className='toast show';
   if(type==='success') t.classList.add('t-success');
   else if(type==='error')   t.classList.add('t-error');
   else if(type==='warning') t.classList.add('t-warning');
   else if(type==='info')    t.classList.add('t-info');
   clearTimeout(_toastTimer);
-  _toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+  // fade-out تدريجي قبل الإخفاء
+  _toastTimer=setTimeout(()=>{
+    t.classList.add('fade-out');
+    setTimeout(()=>t.classList.remove('show','fade-out'),400);
+  },2700);
 }
 
 // ════════════════════════════════════════════════════════
@@ -5613,7 +5797,7 @@ const SMART_PLANS = [
       {slot:'pre', txt:'كوب كركديه', pct:1},
       {slot:'lunch', txt:'عدس مسلوق 200جم + أرز 5 معالق + سلطة خضراء كبيرة', pct:35},
       {slot:'after', txt:'زبادي لايت + موزة', pct:8},
-      {slot:'din', txt:'عدس مسلوق 150جم + بيضتان + طماطم وخيار', pct:12},
+      {slot:'din', txt:'حمص بطحينة 100جم + بيضتان مسلوقتان + طماطم وخيار', pct:12},
     ]
   },
   {
@@ -5786,8 +5970,11 @@ function applySmartPlan(){
     // إضافة خيار للـ Modal — زر "لا، أضف فوق"
     const okBtn=$('confirmModalOk');
     okBtn.textContent='نعم، استبدل';
+    // [FIX] إزالة زر "لا، أضف فوق" القديم إن وُجد قبل إضافة جديد
+    const oldAddBtn=okBtn.parentNode.querySelector('.btn-add-over');
+    if(oldAddBtn) oldAddBtn.remove();
     const addBtn=document.createElement('button');
-    addBtn.className='btn btn-sec';
+    addBtn.className='btn btn-sec btn-add-over';
     addBtn.textContent='لا، أضف فوق';
     addBtn.style.marginRight='.4rem';
     addBtn.onclick=()=>{ closeModal('confirmModal'); doApply(false); $('smartPlanDetail').style.display='none'; $('smartPlansList').style.display=''; };
