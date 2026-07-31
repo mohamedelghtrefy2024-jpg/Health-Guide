@@ -1,0 +1,23 @@
+{
+  "name": "nutrition-platform-v2",
+  "version": "1.0.0",
+  "description": "مشروع جديد من الصفر (خلاصة عن [مرشدك الصحي](../morshidak) القديم) بمعمارية Engines لا صفحات، ومصدر حقيقة واحد لكل قرار (Decision Engine). راجع `منصة_التغذية_الجديدة_برومبت_الرؤية_الشامل.md` للرؤية الكاملة.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "node tests/core-regression.mjs",
+    "test:ui": "node tests/ui-smoke-test.mjs",
+    "test:all": "npm run test && npm run test:ui",
+    "serve": "python3 -m http.server 8080"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^30.0.0"
+  },
+  "type": "module"
+}

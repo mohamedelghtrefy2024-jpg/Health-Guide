@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة إدارة الصحة والتغذية الشخصية</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav id="main-nav" class="hidden">
+  <button data-tab="dashboard" class="nav-btn active">لوحة التحكم</button>
+  <button data-tab="meal-gen" class="nav-btn">توليد وجبة</button>
+  <button data-tab="food-library" class="nav-btn">مكتبة الطعام</button>
+  <button data-tab="exercise" class="nav-btn">التمارين</button>
+  <button data-tab="tracking" class="nav-btn">التتبع</button>
+  <button data-tab="analytics" class="nav-btn">التحليلات</button>
+  <button data-tab="challenges" class="nav-btn">التحديات</button>
+  <button data-tab="settings" class="nav-btn">الإعدادات</button>
+</nav>
+
+<main id="app">
+
+  <!-- ===================== Onboarding ===================== -->
+  <section id="tab-onboarding" class="tab-panel active">
+    <h1>بيانات شخصية</h1>
+    <p class="subtitle">خطوة سريعة ومباشرة — الحقول المتقدمة موجودة لاحقًا في الإعدادات</p>
+    <form id="onboarding-form">
+      <div class="form-row">
+        <label>الاسم <input type="text" name="name" required></label>
+        <label>الجنس
+          <select name="gender" required>
+            <option value="male">ذكر</option>
+            <option value="female">أنثى</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-row" id="pregnancy-status-row" style="display:none">
+        <label>حامل / مرضعة (إن انطبق)
+          <select name="pregnancyStatus">
+            <option value="none" selected>لا ينطبق</option>
+            <option value="pregnant">حامل</option>
+            <option value="breastfeeding">مرضعة</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>العمر <input type="number" name="age" min="12" max="100" required></label>
+        <label>الطول (سم) <input type="number" name="heightCm" min="100" max="230" required></label>
+        <label>الوزن الحالي (كجم) <input type="number" name="weightKg" min="30" max="300" step="0.1" required></label>
+        <label>الوزن المستهدف (كجم) <input type="number" name="targetWeightKg" min="30" max="300" step="0.1" required></label>
+      </div>
+      <div class="form-row">
+        <label>مستوى النشاط
+          <select name="activityLevel" required>
+            <option value="sedentary">خامل</option>
+            <option value="light">خفيف</option>
+            <option value="moderate" selected>متوسط</option>
+            <option value="active">نشيط</option>
+            <option value="very_active">شديد النشاط</option>
+          </select>
+        </label>
+        <label>الهدف
+          <select name="goal" required>
+            <option value="lose">خسارة وزن</option>
+            <option value="gain">زيادة وزن</option>
+            <option value="maintain">ثبات</option>
+            <option value="recomp">إعادة تكوين الجسم</option>
+          </select>
+        </label>
+        <label>مدة الوصول للهدف
+          <select name="timeframeDays" required>
+            <option value="30">شهر</option>
+            <option value="90" selected>3 أشهر</option>
+            <option value="180">6 أشهر</option>
+            <option value="365">سنة</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>نمط الحمية
+          <select name="dietStyle">
+            <option value="normal" selected>عادي</option>
+            <option value="mediterranean">متوسطي</option>
+            <option value="keto">كيتو</option>
+            <option value="low_carb">لو-كارب</option>
+            <option value="high_protein">عالي بروتين</option>
+            <option value="vegetarian">نباتي</option>
+            <option value="vegan">نباتي صرف</option>
+            <option value="pescatarian">بيسكيتاريان</option>
+            <option value="dash">DASH</option>
+            <option value="low_sodium">قليل الصوديوم</option>
+            <option value="low_fat">قليل الدهون</option>
+            <option value="intermittent_fasting">صيام متقطع</option>
+            <option value="carnivore">كارنيفور</option>
+          </select>
+        </label>
+        <label>مستوى الالتزام بالحمية
+          <select name="dietAdherence">
+            <option value="flexible" selected>مرن</option>
+            <option value="strict">صارم</option>
+          </select>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>الحالات المرضية (متعدد الاختيار)</legend>
+        <div id="medical-conditions-list" class="checkbox-grid"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>الحساسيات الغذائية</legend>
+        <p class="subtitle" style="margin:0 0 8px">اختار الحساسية وحدّد شدتها — كل حساسية شدتها منفصلة عن الباقي</p>
+        <div id="allergies-list" class="allergy-list"></div>
+      </fieldset>
+
+      <div id="onboarding-form-error" class="warning-box" style="display:none"></div>
+      <button type="submit" class="primary-btn">حفظ والمتابعة</button>
+    </form>
+  </section>
+
+  <!-- ===================== Dashboard ===================== -->
+  <section id="tab-dashboard" class="tab-panel">
+    <h1>لوحة التحكم</h1>
+    <div id="dashboard-content" class="cards-grid"></div>
+  </section>
+
+  <!-- ===================== Meal Generation ===================== -->
+  <section id="tab-meal-gen" class="tab-panel">
+    <h1>توليد وجبة</h1>
+    <div id="remaining-budget-content"></div>
+    <div class="form-row">
+      <label>نوع الوجبة
+        <select id="meal-type-select">
+          <option value="breakfast">فطار</option>
+          <option value="lunch" selected>غداء</option>
+          <option value="dinner">عشاء</option>
+          <option value="snack">سناك</option>
+        </select>
+      </label>
+      <button id="generate-meal-btn" class="primary-btn">توليد</button>
+    </div>
+    <div id="meal-result"></div>
+
+    <h2>معزوم برة؟</h2>
+    <p class="subtitle">اتغديت أو اتعشيت برة؟ دخّل تقدير السعرات وهنعيد توزيع باقي وجبات اليوم تلقائيًا حواليها.</p>
+    <form id="eating-out-form" class="form-row">
+      <label>نوع الوجبة
+        <select name="eatingOutMealType">
+          <option value="lunch" selected>غداء</option>
+          <option value="dinner">عشاء</option>
+        </select>
+      </label>
+      <label>السعرات التقريبية <input type="number" name="eatingOutKcal" min="50" max="5000" step="10" required></label>
+      <button type="submit" class="secondary-btn">حفظ وإعادة التوازن</button>
+    </form>
+    <div id="eating-out-message"></div>
+  </section>
+
+  <!-- ===================== Food Library ===================== -->
+  <section id="tab-food-library" class="tab-panel">
+    <h1>مكتبة الطعام</h1>
+    <p class="subtitle">استكشاف وبحث في كل أصناف مكتبة الطعام — نفس المصدر اللي بيعتمد عليه توليد الوجبة</p>
+    <div class="form-row">
+      <label>بحث بالاسم <input type="text" id="food-library-search" placeholder="مثال: فراخ، عدس، جبن..."></label>
+    </div>
+    <div id="food-library-filter-chips" class="filter-chips"></div>
+    <div id="food-library-results-count" class="subtitle"></div>
+    <div id="food-library-results" class="cards-grid"></div>
+  </section>
+
+  <!-- ===================== Exercise ===================== -->
+  <section id="tab-exercise" class="tab-panel">
+    <h1>التمارين</h1>
+    <div id="exercise-list" class="cards-grid"></div>
+  </section>
+
+  <!-- ===================== Tracking ===================== -->
+  <section id="tab-tracking" class="tab-panel">
+    <h1>التتبع اليومي</h1>
+    <div id="tracking-content"></div>
+  </section>
+
+  <!-- ===================== Analytics ===================== -->
+  <section id="tab-analytics" class="tab-panel">
+    <h1>التحليلات</h1>
+    <p class="subtitle">آخر 30 يوم — بيانات فعلية فقط من تسجيلاتك، مفيش قيم افتراضية أو تقديرية</p>
+    <div id="analytics-content"></div>
+  </section>
+
+  <!-- ===================== Challenges ===================== -->
+  <section id="tab-challenges" class="tab-panel">
+    <h1>التحديات والإنجازات</h1>
+    <div id="challenge-templates" class="cards-grid"></div>
+    <h2>تحدياتي</h2>
+    <div id="my-challenges" class="cards-grid"></div>
+  </section>
+
+  <!-- ===================== Settings ===================== -->
+  <section id="tab-settings" class="tab-panel">
+    <h1>الإعدادات</h1>
+
+    <h2>بيانات إضافية (اختياري)</h2>
+    <p class="subtitle">مش إجبارية، لكنها بتحسّن دقة الحسابات — مثلًا نسبة الدهون بتفعّل معادلة BMR أدق (Katch-McArdle) بدل المعادلة العامة.</p>
+    <form id="advanced-fields-form">
+      <div class="form-row">
+        <label>محيط الخصر (سم) <input type="number" name="waistCm" min="40" max="200" step="0.5"></label>
+        <label>محيط الرقبة (سم) <input type="number" name="neckCm" min="20" max="60" step="0.5"></label>
+        <label>محيط الأرداف (سم) — للإناث فقط <input type="number" name="hipCm" min="40" max="200" step="0.5"></label>
+        <label>نسبة الدهون (%) إن عُرفت <input type="number" name="bodyFatPercent" min="3" max="60" step="0.1"></label>
+      </div>
+      <p class="subtitle" style="margin-top:-6px">لو نسبة الدهون مش معروفة بس محيط الخصر/الرقبة (والأرداف للإناث) متوفرين، هيتم تقديرها تلقائيًا بمعادلة Navy وتُستخدم في كل الحسابات.</p>
+      <div class="form-row">
+        <label>عدد ساعات النوم <input type="number" name="sleepHours" min="0" max="16" step="0.5"></label>
+        <label>شرب الماء التقريبي الحالي (مل/يوم) <input type="number" name="currentWaterMl" min="0" max="10000" step="50"></label>
+        <label><input type="checkbox" name="smoker"> مدخّن</label>
+      </div>
+      <button type="submit" class="secondary-btn">حفظ البيانات الإضافية</button>
+    </form>
+    <div id="advanced-fields-message"></div>
+
+    <h2>النسخ الاحتياطي</h2>
+    <div class="form-row">
+      <button id="export-data-btn" class="secondary-btn">تصدير كل بياناتي (JSON)</button>
+      <label class="file-import-label">
+        استيراد بيانات
+        <input type="file" id="import-data-input" accept="application/json">
+      </label>
+    </div>
+    <div id="settings-message"></div>
+  </section>
+
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
