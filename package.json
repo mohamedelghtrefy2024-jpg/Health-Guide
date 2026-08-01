@@ -8,8 +8,10 @@
   },
   "scripts": {
     "test": "node tests/core-regression.mjs",
+    "test:s53": "node tests/s53-regression.mjs",
+    "test:s53-ui": "node tests/s53-ui-smoke-test.mjs",
     "test:ui": "node tests/ui-smoke-test.mjs",
-    "test:all": "npm run test && npm run test:ui",
+    "test:all": "npm run test && npm run test:s53 && npm run test:s53-ui && npm run test:ui",
     "serve": "python3 -m http.server 8080"
   },
   "keywords": [],

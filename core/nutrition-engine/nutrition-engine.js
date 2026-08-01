@@ -84,6 +84,121 @@ const MACRO_RATIOS_BY_DIET = {
 /** حد أدنى بروتين g/كجم وزن جسم — سقف أمان لا يُقل عنه بغض النظر عن نسبة الحمية */
 const MIN_PROTEIN_G_PER_KG = 1.2;
 
+// -----------------------------------------------------------------------
+// نطاقات الماكرو الآمنة (بار التحكم اليدوي في الماكرو)
+// -----------------------------------------------------------------------
+
+/**
+ * نطاقات AMDR عامة (Acceptable Macronutrient Distribution Range) كنسب
+ * مئوية من السعرات — الحدود الافتراضية لأي بالغ بدون حالة مرضية خاصة.
+ * بار التحكم اليدوي في الماكرو بالواجهة لازم يمنع أي قيمة خارج النطاق ده
+ * (أو النطاق الأضيق حسب الحالة المرضية أدناه) بغض النظر عن اختيار المستخدم.
+ */
+const DEFAULT_MACRO_SAFE_RANGE = {
+  protein: { min: 0.10, max: 0.35 },
+  carb: { min: 0.20, max: 0.65 },
+  fat: { min: 0.15, max: 0.35 },
+};
+
+/**
+ * تضييق نطاق البروتين الأقصى كنسبة مئوية لحالات مرضية بعينها — دفاع أول
+ * (النسبة)، مع دفاع ثانٍ أدق بالجرام/كجم مُطبَّق مباشرة في
+ * `calculateMacroTargets` (MAX_PROTEIN_G_PER_KG_BY_CONDITION) لأن حد الأمان
+ * السريري للبروتين في هذه الحالات معبَّر عنه غالبًا كـ"جرام لكل كجم وزن"
+ * وليس نسبة مئوية من السعرات.
+ */
+const PROTEIN_MAX_RATIO_BY_CONDITION = {
+  ckd: 0.20,
+  ckd_dialysis: 0.25, // غسيل الكلى يحتاج بروتين أعلى من CKD غير المتحاور نسبيًا، لكن لسه أقل من العام
+  liver_disease: 0.25,
+};
+
+/** حد أقصى بروتين g/كجم وزن جسم لحالات كلوية — أدق سريريًا من النسبة المئوية (NKF KDOQI) */
+const MAX_PROTEIN_G_PER_KG_BY_CONDITION = {
+  ckd: 0.8,
+  ckd_dialysis: 1.2,
+};
+
+/**
+ * تضييق نطاق الكارب الأقصى لحالات السكري — إرشادي عام وليس بديلاً عن خطة
+ * تغذية سريرية فردية.
+ */
+const CARB_MAX_RATIO_BY_CONDITION = {
+  diabetes_t1: 0.50,
+  diabetes_t2: 0.45,
+};
+
+/**
+ * يحسب النطاق الآمن الفعلي (بروتين/كارب/دهون كنسب مئوية) لبروفايل معيّن —
+ * الافتراضي مضيَّقًا بأي حالة مرضية ذات صلة موجودة بالبروفايل. هذا هو
+ * المصدر الوحيد الموصى به لتحديد حدود بار التحكم اليدوي في الماكرو
+ * بالواجهة (min/max كل مقبض)، وهو نفسه المستخدم لتقييد أي قيم مخصّصة تدخل
+ * `calculateMacroTargets`.
+ * @param {string[]} [medicalConditions]
+ * @returns {{ protein: {min:number,max:number}, carb: {min:number,max:number}, fat: {min:number,max:number} }}
+ */
+export function resolveSafeMacroRange(medicalConditions = []) {
+  const range = {
+    protein: { ...DEFAULT_MACRO_SAFE_RANGE.protein },
+    carb: { ...DEFAULT_MACRO_SAFE_RANGE.carb },
+    fat: { ...DEFAULT_MACRO_SAFE_RANGE.fat },
+  };
+
+  for (const condition of medicalConditions) {
+    if (PROTEIN_MAX_RATIO_BY_CONDITION[condition] !== undefined) {
+      range.protein.max = Math.min(range.protein.max, PROTEIN_MAX_RATIO_BY_CONDITION[condition]);
+    }
+    if (CARB_MAX_RATIO_BY_CONDITION[condition] !== undefined) {
+      range.carb.max = Math.min(range.carb.max, CARB_MAX_RATIO_BY_CONDITION[condition]);
+    }
+  }
+
+  if (range.protein.max < range.protein.min) range.protein.max = range.protein.min;
+  if (range.carb.max < range.carb.min) range.carb.max = range.carb.min;
+
+  return range;
+}
+
+/**
+ * يتحقق إن كانت نسب ماكرو مخصّصة (مجموعها 100% تقريبًا) داخل النطاق الآمن،
+ * ويُرجع تشخيصًا واضحًا لو لأ — تُستخدم في الواجهة قبل حفظ بار التحكم
+ * اليدوي، وكدفاع ثانٍ داخل `calculateMacroTargets` نفسها.
+ * @param {{protein:number, carb:number, fat:number}} ratios - نسب من 0 إلى 1
+ * @param {string[]} [medicalConditions]
+ * @returns {{ valid: boolean, reason_ar: string|null, clamped: {protein:number, carb:number, fat:number} }}
+ */
+export function validateCustomMacroRatios(ratios, medicalConditions = []) {
+  const range = resolveSafeMacroRange(medicalConditions);
+  const sum = (ratios.protein ?? 0) + (ratios.carb ?? 0) + (ratios.fat ?? 0);
+
+  if (Math.abs(sum - 1) > 0.02) {
+    return {
+      valid: false,
+      reason_ar: `مجموع نسب الماكرو لازم يساوي 100% (المجموع الحالي: ${Math.round(sum * 100)}%)`,
+      clamped: ratios,
+    };
+  }
+
+  const clamped = {
+    protein: Math.min(range.protein.max, Math.max(range.protein.min, ratios.protein)),
+    carb: Math.min(range.carb.max, Math.max(range.carb.min, ratios.carb)),
+    fat: Math.min(range.fat.max, Math.max(range.fat.min, ratios.fat)),
+  };
+
+  for (const key of ['protein', 'carb', 'fat']) {
+    if (ratios[key] < range[key].min || ratios[key] > range[key].max) {
+      const labelAr = { protein: 'البروتين', carb: 'الكارب', fat: 'الدهون' }[key];
+      return {
+        valid: false,
+        reason_ar: `نسبة ${labelAr} (${Math.round(ratios[key] * 100)}%) خارج الحد الآمن (${Math.round(range[key].min * 100)}%–${Math.round(range[key].max * 100)}%)${medicalConditions.length ? ' حسب حالتك الصحية المسجَّلة' : ''}`,
+        clamped,
+      };
+    }
+  }
+
+  return { valid: true, reason_ar: null, clamped };
+}
+
 /**
  * سعرات إضافية آمنة أثناء الحمل/الرضاعة (أرقام إرشادية عامة شائعة سريريًا،
  * وليست بديلاً عن استشارة طبية مباشرة) — تُضاف فوق TDEE بدل أي عجز/فائض
@@ -401,8 +516,35 @@ export function calculateCalorieTarget(params) {
  * @param {number} weightKg - لفرض حد أدنى أمان للبروتين (g/kg)
  * @returns {{ protein_g: number, carb_g: number, fat_g: number, protein_kcal: number, carb_kcal: number, fat_kcal: number }}
  */
-export function calculateMacroTargets(targetCalories, dietStyle, weightKg) {
-  const ratios = MACRO_RATIOS_BY_DIET[dietStyle] ?? MACRO_RATIOS_BY_DIET.normal;
+/**
+ * @param {number} targetCalories
+ * @param {string} dietStyle
+ * @param {number} weightKg
+ * @param {{protein:number, carb:number, fat:number}|null} [customRatios] - نسب مخصّصة من بار
+ *   التحكم اليدوي (0-1)، تحل محل جدول MACRO_RATIOS_BY_DIET لو موجودة. تُقيَّد
+ *   إلزاميًا داخل `resolveSafeMacroRange(medicalConditions)` قبل الاستخدام —
+ *   القيمة المُمرَّرة هنا لا يُفترض أنها آمنة تلقائيًا حتى لو مرّت من تحقّق
+ *   الواجهة (`validateCustomMacroRatios`)، لأن أي مسار استدعاء تاني (استيراد
+ *   بروفايل قديم مثلًا) ممكن ما يكونش عدّى بنفس التحقق.
+ * @param {string[]} [medicalConditions]
+ */
+export function calculateMacroTargets(targetCalories, dietStyle, weightKg, customRatios = null, medicalConditions = []) {
+  // ملاحظة تصميم مهمة: نطاق الأمان (resolveSafeMacroRange) بتقيّد بس النسب
+  // "المخصّصة" اللي اليوزر بيدخلها يدويًا من بار التحكم — مش جداول أنماط
+  // الحمية الجاهزة (keto/carnivore وغيرهم) لأن دي أنماط مُقصودة بتصميمها
+  // على نسب متطرّفة عمدًا (كيتو دهون 70% مثلًا) وده سلوكها الصحيح المتوقَّع
+  // والمُختبَر بالفعل. لو طبّقنا نفس النطاق العام على أنماط الحمية كان هيكسر
+  // تعريف كل نمط حمية متطرّف قصدًا.
+  const safeRange = resolveSafeMacroRange(medicalConditions);
+  const baseRatios = MACRO_RATIOS_BY_DIET[dietStyle] ?? MACRO_RATIOS_BY_DIET.normal;
+
+  const ratios = customRatios
+    ? {
+        protein: Math.min(safeRange.protein.max, Math.max(safeRange.protein.min, customRatios.protein)),
+        carb: Math.min(safeRange.carb.max, Math.max(safeRange.carb.min, customRatios.carb)),
+        fat: Math.min(safeRange.fat.max, Math.max(safeRange.fat.min, customRatios.fat)),
+      }
+    : baseRatios;
 
   let proteinKcal = targetCalories * ratios.protein;
   let proteinG = proteinKcal / 4;
@@ -412,6 +554,20 @@ export function calculateMacroTargets(targetCalories, dietStyle, weightKg) {
   const minProteinG = MIN_PROTEIN_G_PER_KG * weightKg;
   if (proteinG < minProteinG) {
     proteinG = minProteinG;
+    proteinKcal = proteinG * 4;
+  }
+
+  // سقف بروتين g/كجم لحالات كلوية/كبدية (NKF KDOQI) — أدق من نسبة السعرات
+  // المئوية، وله الأولوية فوقها لو تعارضا (يُطبَّق بعد الحد الأدنى العام،
+  // ولا يُسمح للحد الأدنى نفسه بتجاوزه — أهم قيد أمان في هذه الدالة)
+  let maxProteinGFromCondition = Infinity;
+  for (const condition of medicalConditions) {
+    if (MAX_PROTEIN_G_PER_KG_BY_CONDITION[condition] !== undefined) {
+      maxProteinGFromCondition = Math.min(maxProteinGFromCondition, MAX_PROTEIN_G_PER_KG_BY_CONDITION[condition] * weightKg);
+    }
+  }
+  if (Number.isFinite(maxProteinGFromCondition) && proteinG > maxProteinGFromCondition) {
+    proteinG = Math.max(maxProteinGFromCondition, MIN_PROTEIN_G_PER_KG * weightKg * 0.7); // لا ينزل تحت 70% من الحد الأدنى العام حتى مع سقف مرضي صارم
     proteinKcal = proteinG * 4;
   }
 
@@ -427,6 +583,7 @@ export function calculateMacroTargets(targetCalories, dietStyle, weightKg) {
     protein_kcal: Math.round(proteinKcal),
     carb_kcal: Math.round(carbKcal),
     fat_kcal: Math.round(fatKcal),
+    appliedRatios: ratios,
   };
 }
 
@@ -674,10 +831,16 @@ export function calculateFullNutritionProfile(profile) {
     pregnancyStatus,
   });
   const safeDiet = resolveSafeDietStyleForPregnancy(profile.dietStyle ?? 'normal', pregnancyStatus);
+  // بار التحكم اليدوي في الماكرو: نسب مخصّصة اختيارية من البروفايل (S53) —
+  // تتقيّد إلزاميًا داخل calculateMacroTargets بالنطاق الآمن العام أو
+  // الأضيق حسب الحالات المرضية المسجَّلة، بغض النظر عن أي تحقق سابق حصل
+  // في الواجهة وقت الحفظ
   const macroTargets = calculateMacroTargets(
     calorieTarget.targetCalories,
     safeDiet.dietStyle,
-    profile.weightKg
+    profile.weightKg,
+    profile.customMacroRatios ?? null,
+    profile.medicalConditions ?? []
   );
   const microTargets = getMicroTargets(pregnancyStatus);
 

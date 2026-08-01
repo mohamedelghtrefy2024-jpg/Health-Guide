@@ -54,6 +54,22 @@
         </label>
       </div>
       <div class="form-row">
+        <label>الديانة (لمراعاة أيام الصيام تلقائيًا في توليد الوجبات — اختياري)
+          <select name="religion" id="religion-select">
+            <option value="none" selected>تفضّل عدم التحديد</option>
+            <option value="islam">مسلم/ة</option>
+            <option value="christianity">مسيحي/ة</option>
+          </select>
+        </label>
+        <label id="voluntary-fasts-row" style="display:none">
+          <input type="checkbox" name="observeVoluntaryFasts">
+          <span id="voluntary-fasts-label">أراعي أيام الصيام المستحبة (الاتنين والخميس، عرفة، عاشوراء) مش رمضان بس</span>
+        </label>
+      </div>
+      <p class="subtitle" id="religion-disclaimer" style="display:none">
+        حساب أيام الصيام هنا تقريبي (حسابي/جدولي)، مش رصد هلال أو تقويم كنسي رسمي — ممكن يفرق يوم أو يومين عن إعلان بلدك. تقدر توقف اعتبار أي يوم كصيام يدويًا من شاشة توليد الوجبة وقت الحاجة.
+      </p>
+      <div class="form-row">
         <label>العمر <input type="number" name="age" min="12" max="100" required></label>
         <label>الطول (سم) <input type="number" name="heightCm" min="100" max="230" required></label>
         <label>الوزن الحالي (كجم) <input type="number" name="weightKg" min="30" max="300" step="0.1" required></label>
@@ -113,6 +129,29 @@
       </div>
 
       <fieldset>
+        <legend>⚖️ الماكروز (بروتين/كارب/دهون)</legend>
+        <label><input type="checkbox" id="custom-macro-toggle"> تخصيص نسب الماكرو يدويًا (اختياري — غير مفعّل يستخدم النسب الافتراضية لنمط الحمية)</label>
+        <div id="custom-macro-bar" style="display:none">
+          <p class="subtitle">الحدود الآمنة بتتغيّر تلقائيًا حسب الحالات المرضية اللي تحددها تحت (مثال: بروتين أقل لمرضى الكلى، كارب أقل لمرضى السكري)</p>
+          <div class="form-row">
+            <label>بروتين <span id="macro-protein-value">30%</span>
+              <input type="range" id="macro-protein-range" min="10" max="35" value="30" step="1">
+              <span class="unit" id="macro-protein-hint"></span>
+            </label>
+            <label>كارب <span id="macro-carb-value">40%</span>
+              <input type="range" id="macro-carb-range" min="20" max="65" value="40" step="1">
+              <span class="unit" id="macro-carb-hint"></span>
+            </label>
+            <label>دهون <span id="macro-fat-value">30%</span>
+              <input type="range" id="macro-fat-range" min="15" max="35" value="30" step="1">
+              <span class="unit" id="macro-fat-hint"></span>
+            </label>
+          </div>
+          <div id="macro-sum-message" class="unit"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
         <legend>🩺 الحالات المرضية (متعدد الاختيار)</legend>
         <div id="medical-conditions-list" class="checkbox-grid"></div>
       </fieldset>
@@ -137,6 +176,7 @@
   <!-- ===================== Meal Generation ===================== -->
   <section id="tab-meal-gen" class="tab-panel">
     <h1>🍽️ توليد وجبة</h1>
+    <div id="fasting-banner"></div>
     <div id="remaining-budget-content"></div>
     <div class="form-row">
       <label>نوع الوجبة
@@ -147,9 +187,19 @@
           <option value="snack">🍎 سناك</option>
         </select>
       </label>
-      <button id="generate-meal-btn" class="primary-btn">✨ توليد</button>
+      <button id="generate-meal-btn" class="primary-btn">✨ توليد وجبة واحدة</button>
     </div>
     <div id="meal-result"></div>
+
+    <h2>📅 توليد خطة اليوم الكامل</h2>
+    <p class="subtitle">بيوزّع سعرات وماكرو هدفك اليومي على كل وجبات النهاردة (فطار/غدا/عشا + أي سناكس/مشروبات تحددها) دفعة واحدة، مع مراعاة يوم الصيام تلقائيًا لو مفعّل من بروفايلك.</p>
+    <div class="form-row">
+      <label>عدد السناكس <input type="number" id="day-plan-snacks-count" min="0" max="5" value="0"></label>
+      <label>عدد المشروبات <input type="number" id="day-plan-drinks-count" min="0" max="4" value="0"></label>
+      <label><input type="checkbox" id="day-plan-not-fasting-override"> مش صايم النهاردة (تجاوز يدوي)</label>
+      <button id="generate-day-plan-btn" class="primary-btn">📅 توليد خطة اليوم</button>
+    </div>
+    <div id="day-plan-result"></div>
 
     <h2>🥡 معزوم برة؟</h2>
     <p class="subtitle">اتغديت أو اتعشيت برة؟ دخّل تقدير السعرات وهنعيد توزيع باقي وجبات اليوم تلقائيًا حواليها.</p>

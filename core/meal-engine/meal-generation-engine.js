@@ -32,6 +32,7 @@
 
 import { resolveAvailableFoods } from '../decision-engine/decision-engine.js';
 import { computeMealQualityScore, classifyMealQualityScore } from './meal-quality.js';
+import { DEFAULT_MEAL_SHARE } from '../nutrition-engine/nutrition-engine.js';
 
 /** أقصى مضاعف واقعي لحجم الحصة المرجعية (100 جم) لتفادي كميات غير واقعية عند تحجيم صنف كثيف السعرات لسعرات وجبة كبيرة */
 const MAX_PORTION_MULTIPLIER = 4; // أي أقصى 400 جم من الصنف الواحد
@@ -315,6 +316,7 @@ export function generateMeal(request) {
   const {
     constraintProfile, mealType, targetKcal, macroTargets = null, microTargets = null,
     minFoodQualityScore = 0, macroMarginPct = 0.25, adherenceLevel = 'flexible',
+    categoryFilter = null, // مثال: ['beverage'] — يُستخدم في توليد "خطة اليوم" لسلوت مشروب مخصّص
   } = request;
 
   // BUG-S24-03: targetKcal<=0 (أو غير رقمي) كان يمر بدون أي فحص، فيوصل
@@ -352,7 +354,7 @@ export function generateMeal(request) {
   }
 
   // المرحلة 2: فلترة الجودة الدنيا لكل صنف مفرد
-  const qualifiedFoods = decision.availableFoods.filter((f) => f.quality_score >= minFoodQualityScore);
+  let qualifiedFoods = decision.availableFoods.filter((f) => f.quality_score >= minFoodQualityScore);
   if (qualifiedFoods.length === 0) {
     return {
       success: false,
@@ -363,6 +365,24 @@ export function generateMeal(request) {
         details: null,
       },
     };
+  }
+
+  // فلترة فئة اختيارية (سلوت مشروب في خطة اليوم مثلًا) — بعد قيود
+  // البروفايل والجودة، وقبل بناء التركيبات، حتى تظهر رسالة تشخيص خاصة بيها
+  // لو صفّرت النتيجة بدل الخلط مع "لا توجد أصناف بجودة كافية"
+  if (Array.isArray(categoryFilter) && categoryFilter.length > 0) {
+    qualifiedFoods = qualifiedFoods.filter((f) => categoryFilter.includes(f.category));
+    if (qualifiedFoods.length === 0) {
+      return {
+        success: false,
+        candidates: [],
+        diagnosis: {
+          stage: 'category_filtering',
+          message_ar: `لا توجد أصناف من فئة (${categoryFilter.join('، ')}) ضمن الأصناف المسموحة دينيًا/صحيًا حاليًا`,
+          details: null,
+        },
+      };
+    }
   }
 
   // المرحلة 3+4: بناء التركيبات المرشّحة (صنف واحد دائمًا + تركيبات مدفوعة
@@ -465,4 +485,144 @@ export function replaceMealItem(currentMeal, itemIndex, constraintProfile, micro
 
   scoredAlternatives.sort((a, b) => b.qualityScore - a.qualityScore);
   return { success: true, candidate: scoredAlternatives[0], diagnosis_ar: null };
+}
+
+// -----------------------------------------------------------------------
+// توليد خطة يوم كامل — بند مطلوب صراحة: "مش بس وجبة واحدة، عايز نظام يوم
+// كامل على حسب عدد السعرات وعدد السناكس/المشروبات"
+// -----------------------------------------------------------------------
+
+/** حصة سعرات ثابتة تقريبية لكل سلوت "مشروب" — مشروبات منخفضة السعرات افتراضيًا (شاي/قهوة سادة، مياه منكّهة..) */
+const DRINK_SLOT_KCAL = 80;
+/** أقل حصة سعرات مقبولة لأي سلوت وجبة/سناك بعد التوزيع — نفس فلسفة MIN_MEAL_TARGET_KCAL في Nutrition Engine */
+const MIN_SLOT_KCAL = 80;
+
+/**
+ * يبني قائمة السلوتات (نوع + نصيب من السعرات) لليوم بالكامل، حسب حالة
+ * الصيام وعدد السناكس/المشروبات المطلوبة. هذه الدالة "توزيع" فقط — التوليد
+ * الفعلي لكل سلوت بيحصل في generateDayPlan.
+ * @param {Object} params
+ * @param {boolean} params.isFasting
+ * @param {'normal'|'suhoor_iftar'} params.mealSlotsHint
+ * @param {number} params.snacksCount
+ * @param {number} params.drinksCount
+ * @returns {Array<{ type: string, label_ar: string, share: number, isBeverage: boolean, fixedKcal: number|null }>}
+ */
+export function buildDayPlanSlots({ isFasting, mealSlotsHint, snacksCount = 0, drinksCount = 0 }) {
+  const slots = [];
+
+  if (isFasting && mealSlotsHint === 'suhoor_iftar') {
+    // يوم صيام إسلامي: وجبتان أساسيتان بس (سحور قبل الفجر، إفطار بعد المغرب)
+    // + سناكس اختيارية بين الإفطار والسحور لو المستخدم طلب عدد أكبر من صفر
+    const nonMealShare = Math.min(0.20, snacksCount * 0.05);
+    const mealShare = 1 - nonMealShare;
+    slots.push({ type: 'breakfast', label_ar: 'سحور', share: mealShare * 0.42, isBeverage: false, fixedKcal: null });
+    slots.push({ type: 'dinner', label_ar: 'إفطار', share: mealShare * 0.58, isBeverage: false, fixedKcal: null });
+    for (let i = 0; i < snacksCount; i++) {
+      slots.push({ type: 'snack', label_ar: `سناك ${i + 1} (بين الإفطار والسحور)`, share: nonMealShare / Math.max(1, snacksCount), isBeverage: false, fixedKcal: null });
+    }
+  } else {
+    // يوم عادي (بما فيه أيام الصيام المسيحي — القيد على نوع الصنف مش عدد
+    // الوجبات، فتوزيع الوجبات الطبيعي بيفضل زي ما هو)
+    const baseShares = { breakfast: DEFAULT_MEAL_SHARE.breakfast, lunch: DEFAULT_MEAL_SHARE.lunch, dinner: DEFAULT_MEAL_SHARE.dinner };
+    const snackPoolShare = snacksCount > 0 ? DEFAULT_MEAL_SHARE.snack : 0;
+    // لو مفيش سناكس، نصيب "سناك" الافتراضي يترد على الوجبات التلاتة الأساسية بنفس نسبتها النسبية
+    const baseTotal = baseShares.breakfast + baseShares.lunch + baseShares.dinner;
+    const redistribution = snacksCount > 0 ? 0 : DEFAULT_MEAL_SHARE.snack;
+
+    slots.push({ type: 'breakfast', label_ar: 'فطار', share: baseShares.breakfast + redistribution * (baseShares.breakfast / baseTotal), isBeverage: false, fixedKcal: null });
+    slots.push({ type: 'lunch', label_ar: 'غداء', share: baseShares.lunch + redistribution * (baseShares.lunch / baseTotal), isBeverage: false, fixedKcal: null });
+    slots.push({ type: 'dinner', label_ar: 'عشاء', share: baseShares.dinner + redistribution * (baseShares.dinner / baseTotal), isBeverage: false, fixedKcal: null });
+    for (let i = 0; i < snacksCount; i++) {
+      slots.push({ type: 'snack', label_ar: `سناك ${i + 1}`, share: snackPoolShare / snacksCount, isBeverage: false, fixedKcal: null });
+    }
+  }
+
+  for (let i = 0; i < drinksCount; i++) {
+    slots.push({ type: 'snack', label_ar: `مشروب ${i + 1}`, share: 0, isBeverage: true, fixedKcal: DRINK_SLOT_KCAL });
+  }
+
+  return slots;
+}
+
+/**
+ * نقطة الدخول الرئيسية لخطة اليوم الكامل: تولّد كل سلوتات اليوم (وجبات
+ * أساسية + سناكس + مشروبات)، بالترتيب، كل سلوت بيستخدم `generateMeal`
+ * الموجودة بالفعل. مشروبات الخطة بتُقيَّد بفئة "beverage" فقط عبر
+ * categoryFilter. فشل سلوت واحد ما بيوقّفش باقي السلوتات — كل سلوت له
+ * تشخيصه المستقل، وبنرجّع ملخص شامل (نجح كام من كام) بدل "فشل الكل أو نجح
+ * الكل" فقط.
+ * @param {Object} params
+ * @param {import('../decision-engine/decision-engine.js').ConstraintProfile} params.constraintProfile
+ * @param {number} params.dailyCalorieTarget
+ * @param {{protein_g:number, carb_g:number, fat_g:number}} params.dailyMacroTargets
+ * @param {Object} [params.microTargets]
+ * @param {boolean} params.isFasting
+ * @param {'normal'|'suhoor_iftar'} params.mealSlotsHint
+ * @param {number} [params.snacksCount=0]
+ * @param {number} [params.drinksCount=0]
+ * @param {string} [params.adherenceLevel='flexible']
+ * @param {number} [params.minFoodQualityScore=30]
+ * @returns {{ slots: Array<Object>, successCount: number, totalCount: number, totals: Object, dailyCalorieTarget: number }}
+ */
+export function generateDayPlan({
+  constraintProfile, dailyCalorieTarget, dailyMacroTargets, microTargets = null,
+  isFasting = false, mealSlotsHint = 'normal', snacksCount = 0, drinksCount = 0,
+  adherenceLevel = 'flexible', minFoodQualityScore = 30,
+}) {
+  const planSlots = buildDayPlanSlots({ isFasting, mealSlotsHint, snacksCount, drinksCount });
+  const drinksKcalTotal = planSlots.filter((s) => s.isBeverage).length * DRINK_SLOT_KCAL;
+  const kcalForSharedSlots = Math.max(0, dailyCalorieTarget - drinksKcalTotal);
+
+  const results = [];
+  const totals = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+  let successCount = 0;
+
+  for (const slot of planSlots) {
+    const targetKcal = slot.isBeverage
+      ? slot.fixedKcal
+      : Math.max(MIN_SLOT_KCAL, Math.round(kcalForSharedSlots * slot.share));
+
+    const macroTargets = slot.isBeverage ? null : {
+      protein_g: Math.round(dailyMacroTargets.protein_g * slot.share),
+      carb_g: Math.round(dailyMacroTargets.carb_g * slot.share),
+      fat_g: Math.round(dailyMacroTargets.fat_g * slot.share),
+    };
+
+    const result = generateMeal({
+      constraintProfile,
+      mealType: slot.type,
+      targetKcal,
+      macroTargets,
+      microTargets,
+      minFoodQualityScore,
+      adherenceLevel,
+      categoryFilter: slot.isBeverage ? ['beverage'] : null,
+    });
+
+    if (result.success) {
+      successCount++;
+      const best = result.candidates[0];
+      totals.kcal += best.totals.kcal;
+      totals.protein_g += best.totals.protein_g;
+      totals.carbs_g += best.totals.carbs_g;
+      totals.fat_g += best.totals.fat_g;
+      results.push({ slotType: slot.type, label_ar: slot.label_ar, isBeverage: slot.isBeverage, success: true, meal: best, diagnosis: null });
+    } else {
+      results.push({ slotType: slot.type, label_ar: slot.label_ar, isBeverage: slot.isBeverage, success: false, meal: null, diagnosis: result.diagnosis });
+    }
+  }
+
+  return {
+    slots: results,
+    successCount,
+    totalCount: planSlots.length,
+    totals: {
+      kcal: Math.round(totals.kcal),
+      protein_g: Math.round(totals.protein_g),
+      carbs_g: Math.round(totals.carbs_g),
+      fat_g: Math.round(totals.fat_g),
+    },
+    dailyCalorieTarget,
+  };
 }

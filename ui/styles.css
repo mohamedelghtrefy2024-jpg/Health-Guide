@@ -236,7 +236,9 @@ legend { padding: 0 8px; font-weight: 700; font-size: 14px; color: var(--fig); f
 .card .value.small { font-size: 16px; }
 .card .unit { font-size: 13px; color: var(--ink-soft); }
 
-.food-icon { font-size: 15px; margin-left: 2px; }
+.food-icon { font-size: 15px; margin-left: 2px; font-family: 'Cairo', Tahoma, Arial, "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif; }
+.nav-icon, .brand-icon { font-family: 'Cairo', Tahoma, Arial, "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif; }
+.warning-text { color: #B45309; font-weight: 700; }
 
 /* ===================== صناديق الرسائل ===================== */
 .warning-box, .error-box, .success-box, .info-box {

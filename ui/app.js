@@ -16,8 +16,10 @@ import { ALLERGEN_LABEL_AR } from '../core/decision-engine/allergy-engine.js';
 import {
   calculateFullNutritionProfile, calculateWaterTargetMl, ACTIVITY_LEVEL, GOAL,
   resolveBodyFatPercent, calculateRemainingMealBudget, DEFAULT_MEAL_SHARE,
+  resolveSafeMacroRange, validateCustomMacroRatios,
 } from '../core/nutrition-engine/nutrition-engine.js';
-import { generateMeal, updateMealItemPortion } from '../core/meal-engine/meal-generation-engine.js';
+import { generateMeal, generateDayPlan, updateMealItemPortion } from '../core/meal-engine/meal-generation-engine.js';
+import { resolveDailyFastingStatus } from '../core/decision-engine/religious-calendar.js';
 import { classifyMealQualityScore, computeMealQualityScore } from '../core/meal-engine/meal-quality.js';
 import { getAllExercises, filterExercisesForConditions, calculateCaloriesBurned } from '../core/exercise-engine/exercise-engine.js';
 import {
@@ -122,7 +124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireNavigation();
   wireOnboardingForm();
   wirePregnancyFieldToggle();
+  wireReligionFieldToggle();
+  wireMacroBar();
   wireMealGeneration();
+  wireDayPlanGeneration();
   wireSettings();
   wireInBodyDialog();
   wireResetButton();
@@ -201,6 +206,8 @@ async function toEngineProfile(profile) {
     timeframeDays: Number(profile.timeframeDays),
     dietStyle: profile.dietStyle,
     pregnancyStatus: profile.pregnancyStatus ?? PREGNANCY_STATUS.NONE,
+    medicalConditions: profile.medicalConditions ?? [],
+    customMacroRatios: profile.customMacroRatios ?? null,
     ...(bodyFat.value !== null ? { bodyFatPercent: bodyFat.value } : {}),
   };
 }
@@ -210,8 +217,23 @@ async function toEngineProfile(profile) {
  * بقت مخزَّنة كـ`{allergen, severity}` لكل حساسية على حدة (بند 11 — كانت
  * كلها "شديدة" بالإجبار قبل كده)، مع توافق رجعي لبروفايلات قديمة مُصدَّرة
  * قبل هذا التغيير (كانت مجرد مصفوفة أكواد نصية).
+ *
+ * S53: `fastingTag` بقى يُحسب تلقائيًا من `profile.religion` + تاريخ
+ * النهاردة (بدل ما يكون فاضي دايمًا زي قبل كده) — عبر التقويم الديني
+ * (`resolveDailyFastingStatus`). `manualOverrideNotFasting` بيسمح للمستخدم
+ * يتجاوز الحساب التلقائي ليوم معيّن (مرض/سفر/عذر شرعي..) من شاشة توليد
+ * الوجبة مباشرة بدل ما يغيّر بيانات بروفايله.
+ * @param {Object} profile
+ * @param {Object} [options]
+ * @param {boolean} [options.manualOverrideNotFasting=false]
  */
-function toConstraintProfile(profile) {
+function toConstraintProfile(profile, options = {}) {
+  const fasting = resolveDailyFastingStatus({
+    date: new Date(),
+    religion: profile.religion ?? 'none',
+    observeVoluntaryFasts: !!profile.observeVoluntaryFasts,
+    manualOverrideNotFasting: !!options.manualOverrideNotFasting,
+  });
   return {
     medicalConditions: profile.medicalConditions ?? [],
     allergies: (profile.allergies ?? []).map((a) =>
@@ -219,6 +241,7 @@ function toConstraintProfile(profile) {
     ),
     dietStyle: profile.dietStyle,
     pregnancyStatus: profile.pregnancyStatus ?? PREGNANCY_STATUS.NONE,
+    fastingTag: fasting.fastingTag,
   };
 }
 
@@ -235,6 +258,7 @@ function wireNavigation() {
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
 
       if (btn.dataset.tab === 'dashboard') await renderDashboard();
+      if (btn.dataset.tab === 'meal-gen') renderFastingBanner();
       if (btn.dataset.tab === 'activity') await renderActivityTab();
       if (btn.dataset.tab === 'food-library') renderFoodLibraryTab();
       if (btn.dataset.tab === 'tracking') await renderTrackingTab();
@@ -305,6 +329,112 @@ function wirePregnancyFieldToggle() {
   updatePregnancyRowVisibility();
 }
 
+/**
+ * يظهر تشيك بوكس "الصيام المستحب" وتحذير الدقة فقط لو المستخدم حدد ديانة
+ * (إسلام/مسيحية) — بند مطلوب صراحة: "مفيش خانة لمسلم أو مسيحي".
+ */
+function wireReligionFieldToggle() {
+  const religionSelect = document.getElementById('religion-select');
+  const voluntaryRow = document.getElementById('voluntary-fasts-row');
+  const voluntaryLabel = document.getElementById('voluntary-fasts-label');
+  const disclaimer = document.getElementById('religion-disclaimer');
+
+  function update() {
+    const hasReligion = religionSelect.value === 'islam' || religionSelect.value === 'christianity';
+    voluntaryRow.style.display = hasReligion ? '' : 'none';
+    disclaimer.style.display = hasReligion ? '' : 'none';
+    voluntaryLabel.textContent = religionSelect.value === 'islam'
+      ? 'أراعي أيام الصيام المستحبة (الاتنين والخميس، عرفة، عاشوراء) مش رمضان بس'
+      : 'أراعي صيام الأربعاء والجمعة الأسبوعي (مش بس مواسم الصوم الكبير/الميلاد/الرسل/العدرا)';
+  }
+
+  religionSelect.addEventListener('change', update);
+  update();
+}
+
+/**
+ * بار التحكم اليدوي في الماكرو: 3 مقابض (بروتين/كارب/دهون) بحدود آمنة
+ * تتغيّر حسب الحالات المرضية المحددة في نفس الفورم، ورسالة مجموع حية
+ * (لازم = 100%). القيم بتُقيَّد إلزاميًا بره الواجهة كمان (calculateMacroTargets)
+ * — التحقق هنا لتجربة مستخدم واضحة وقت الإدخال بس، مش الدفاع الوحيد.
+ */
+function wireMacroBar() {
+  const toggle = document.getElementById('custom-macro-toggle');
+  const bar = document.getElementById('custom-macro-bar');
+  const proteinRange = document.getElementById('macro-protein-range');
+  const carbRange = document.getElementById('macro-carb-range');
+  const fatRange = document.getElementById('macro-fat-range');
+  const proteinValue = document.getElementById('macro-protein-value');
+  const carbValue = document.getElementById('macro-carb-value');
+  const fatValue = document.getElementById('macro-fat-value');
+  const proteinHint = document.getElementById('macro-protein-hint');
+  const carbHint = document.getElementById('macro-carb-hint');
+  const fatHint = document.getElementById('macro-fat-hint');
+  const sumMessage = document.getElementById('macro-sum-message');
+
+  function selectedMedicalConditions() {
+    return Array.from(document.querySelectorAll('input[name="medicalConditions"]:checked')).map((el) => el.value);
+  }
+
+  function applySafeRangeToInputs() {
+    const range = resolveSafeMacroRange(selectedMedicalConditions());
+    for (const [input, hint, key] of [[proteinRange, proteinHint, 'protein'], [carbRange, carbHint, 'carb'], [fatRange, fatHint, 'fat']]) {
+      input.min = Math.round(range[key].min * 100);
+      input.max = Math.round(range[key].max * 100);
+      if (Number(input.value) < input.min) input.value = input.min;
+      if (Number(input.value) > input.max) input.value = input.max;
+      hint.textContent = `(${input.min}%–${input.max}%)`;
+    }
+  }
+
+  function updateDisplay() {
+    proteinValue.textContent = `${proteinRange.value}%`;
+    carbValue.textContent = `${carbRange.value}%`;
+    fatValue.textContent = `${fatRange.value}%`;
+
+    const ratios = {
+      protein: Number(proteinRange.value) / 100,
+      carb: Number(carbRange.value) / 100,
+      fat: Number(fatRange.value) / 100,
+    };
+    const validation = validateCustomMacroRatios(ratios, selectedMedicalConditions());
+    if (validation.valid) {
+      sumMessage.textContent = `✓ المجموع 100% وداخل الحد الآمن`;
+      sumMessage.classList.remove('warning-text');
+    } else {
+      sumMessage.textContent = `⚠ ${validation.reason_ar}`;
+      sumMessage.classList.add('warning-text');
+    }
+  }
+
+  toggle.addEventListener('change', () => {
+    bar.style.display = toggle.checked ? '' : 'none';
+    if (toggle.checked) { applySafeRangeToInputs(); updateDisplay(); }
+  });
+  [proteinRange, carbRange, fatRange].forEach((el) => el.addEventListener('input', updateDisplay));
+  document.querySelectorAll('input[name="medicalConditions"]').forEach((el) => {
+    el.addEventListener('change', () => { if (toggle.checked) { applySafeRangeToInputs(); updateDisplay(); } });
+  });
+}
+
+/**
+ * يقرأ نسب الماكرو المخصّصة من بار التحكم لو مفعّل وصالح، أو null لو
+ * التخصيص مش مفعّل أو مش صالح (وقتها البروفايل بيستخدم نسب نمط الحمية
+ * الافتراضية زي قبل كده تمامًا — التخصيص اختياري بحت).
+ */
+function readCustomMacroRatiosFromForm() {
+  const toggle = document.getElementById('custom-macro-toggle');
+  if (!toggle || !toggle.checked) return null;
+  const ratios = {
+    protein: Number(document.getElementById('macro-protein-range').value) / 100,
+    carb: Number(document.getElementById('macro-carb-range').value) / 100,
+    fat: Number(document.getElementById('macro-fat-range').value) / 100,
+  };
+  const medicalConditions = Array.from(document.querySelectorAll('input[name="medicalConditions"]:checked')).map((el) => el.value);
+  const validation = validateCustomMacroRatios(ratios, medicalConditions);
+  return validation.valid ? validation.clamped : null;
+}
+
 function wireOnboardingForm() {
   document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -358,6 +488,9 @@ function wireOnboardingForm() {
       dietStyle: formData.get('dietStyle'),
       dietAdherence: formData.get('dietAdherence') || 'flexible',
       pregnancyStatus: formData.get('pregnancyStatus') || PREGNANCY_STATUS.NONE,
+      religion: formData.get('religion') || 'none',
+      observeVoluntaryFasts: formData.get('observeVoluntaryFasts') === 'on',
+      customMacroRatios: readCustomMacroRatiosFromForm(),
       medicalConditions: formData.getAll('medicalConditions'),
       allergies: formData.getAll('allergies').map((allergen) => ({
         allergen,
@@ -636,6 +769,39 @@ function renderRemainingBudget() {
   `;
 }
 
+/** يقرأ تشيك بوكس "مش صايم النهاردة" (تجاوز يدوي مشترك بين التوليد المفرد وخطة اليوم) */
+function readManualFastingOverride() {
+  return !!document.getElementById('day-plan-not-fasting-override')?.checked;
+}
+
+/** يحسب حالة الصيام الفعلية للبروفايل الحالي اليوم (بيراعي التجاوز اليدوي) */
+function resolveCurrentFastingStatus() {
+  if (!currentProfile) return { isFasting: false, fastingTag: null, label_ar: null, mealSlotsHint: 'normal' };
+  return resolveDailyFastingStatus({
+    date: new Date(),
+    religion: currentProfile.religion ?? 'none',
+    observeVoluntaryFasts: !!currentProfile.observeVoluntaryFasts,
+    manualOverrideNotFasting: readManualFastingOverride(),
+  });
+}
+
+/** بانر "انت صايم النهاردة" أعلى شاشة توليد الوجبة/خطة اليوم — بند مطلوب صراحة من المستخدم */
+function renderFastingBanner() {
+  const container = document.getElementById('fasting-banner');
+  if (!container) return;
+  if (!currentProfile || (currentProfile.religion ?? 'none') === 'none') { container.innerHTML = ''; return; }
+
+  const status = resolveCurrentFastingStatus();
+  if (!status.isFasting) { container.innerHTML = ''; return; }
+
+  container.innerHTML = `
+    <div class="card" style="grid-column:1/-1">
+      <h3>🌙 انت صايم النهاردة</h3>
+      <div class="unit">${status.label_ar}${status.mealSlotsHint === 'suhoor_iftar' ? ' — توليد خطة اليوم هيقسّمها سحور/إفطار بدل الوجبات العادية' : ''}</div>
+    </div>
+  `;
+}
+
 function wireMealGeneration() {
   document.getElementById('generate-meal-btn').addEventListener('click', async () => {
     if (!currentProfile || !currentNutrition?.calorieTarget) return;
@@ -653,7 +819,7 @@ function wireMealGeneration() {
     };
 
     const result = generateMeal({
-      constraintProfile: toConstraintProfile(currentProfile),
+      constraintProfile: toConstraintProfile(currentProfile, { manualOverrideNotFasting: readManualFastingOverride() }),
       mealType,
       targetKcal,
       macroTargets,
@@ -666,6 +832,98 @@ function wireMealGeneration() {
   });
 
   wireEatingOutForm();
+}
+
+/**
+ * توليد خطة اليوم الكامل — بند مطلوب صراحة: "مش بس وجبة واحدة، عايز نظام
+ * يوم كامل على حسب عدد السعرات وعدد السناكس/المشروبات". بيستخدم الهدف
+ * اليومي *المتبقي* فعليًا (زي توليد الوجبة المفردة) لو فيه وجبات مسجَّلة
+ * بالفعل النهاردة، مش الهدف الكلي من الصفر.
+ */
+function wireDayPlanGeneration() {
+  document.getElementById('generate-day-plan-btn').addEventListener('click', async () => {
+    if (!currentProfile || !currentNutrition?.calorieTarget) return;
+
+    await refreshRemainingBudget();
+    const snacksCount = Math.max(0, Number(document.getElementById('day-plan-snacks-count').value) || 0);
+    const drinksCount = Math.max(0, Number(document.getElementById('day-plan-drinks-count').value) || 0);
+    const status = resolveCurrentFastingStatus();
+
+    const dailyCalorieTarget = todayRemainingBudget?.remainingKcal ?? currentNutrition.calorieTarget.targetCalories;
+    const dailyMacroTargets = todayRemainingBudget?.remainingMacros ?? currentNutrition.macroTargets;
+
+    const result = generateDayPlan({
+      constraintProfile: toConstraintProfile(currentProfile, { manualOverrideNotFasting: readManualFastingOverride() }),
+      dailyCalorieTarget,
+      dailyMacroTargets,
+      microTargets: currentNutrition.microTargets,
+      isFasting: status.isFasting,
+      mealSlotsHint: status.mealSlotsHint,
+      snacksCount,
+      drinksCount,
+      adherenceLevel: currentProfile.dietAdherence || 'flexible',
+      minFoodQualityScore: 30,
+    });
+
+    renderDayPlanResult(result);
+  });
+
+  document.getElementById('day-plan-not-fasting-override').addEventListener('change', renderFastingBanner);
+}
+
+function renderDayPlanResult(result) {
+  const container = document.getElementById('day-plan-result');
+  if (!container) return;
+
+  const slotsHtml = result.slots.map((slot, idx) => {
+    if (!slot.success) {
+      return `
+        <div class="card" style="grid-column:1/-1">
+          <h3>${slot.isBeverage ? '🥤' : '🍽️'} ${slot.label_ar}</h3>
+          <div class="warning-box">تعذّر توليد هذا السلوت: ${slot.diagnosis?.message_ar ?? 'سبب غير محدد'}</div>
+        </div>
+      `;
+    }
+    const itemsHtml = slot.meal.items.map((i) =>
+      `<li><span class="food-icon">${categoryIcon(i.food.category)}</span> ${i.food.name_ar} — ${i.grams} جم</li>`
+    ).join('');
+    return `
+      <div class="card" style="grid-column:1/-1">
+        <h3>${slot.isBeverage ? '🥤' : '🍽️'} ${slot.label_ar} <span class="unit">(${slot.meal.qualityLabel})</span></h3>
+        <ul>${itemsHtml}</ul>
+        <div class="unit">${Math.round(slot.meal.totals.kcal)} سعرة · بروتين ${Math.round(slot.meal.totals.protein_g)}g · كارب ${Math.round(slot.meal.totals.carbs_g)}g · دهون ${Math.round(slot.meal.totals.fat_g)}g</div>
+        <button class="secondary-btn log-day-plan-slot-btn" data-slot-index="${idx}">✅ تسجيل هذه الوجبة</button>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card" style="grid-column:1/-1">
+      <h3>📊 ملخص الخطة</h3>
+      <div class="value">${result.successCount}/${result.totalCount} سلوت اتولّد بنجاح</div>
+      <div class="unit">إجمالي الخطة: ${result.totals.kcal} سعرة · بروتين ${result.totals.protein_g}g · كارب ${result.totals.carbs_g}g · دهون ${result.totals.fat_g}g (الهدف: ${result.dailyCalorieTarget} سعرة)</div>
+    </div>
+    ${slotsHtml}
+  `;
+
+  container.querySelectorAll('.log-day-plan-slot-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.slotIndex);
+      const slot = result.slots[idx];
+      if (!slot?.success) return;
+      const today = getLocalDateStr();
+      const mealTypeForLog = slot.slotType;
+      const { ok } = await withStorageErrorFeedback(
+        () => logMeal(today, mealTypeForLog, slot.meal.items),
+        'day-plan-result'
+      );
+      if (!ok) return;
+      await refreshRemainingBudget();
+      await renderDashboard();
+      btn.disabled = true;
+      btn.textContent = '✓ اتسجّلت';
+    });
+  });
 }
 
 function wireEatingOutForm() {
