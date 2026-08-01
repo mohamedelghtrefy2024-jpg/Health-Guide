@@ -12,10 +12,9 @@
   <button data-tab="dashboard" class="nav-btn active">لوحة التحكم</button>
   <button data-tab="meal-gen" class="nav-btn">توليد وجبة</button>
   <button data-tab="food-library" class="nav-btn">مكتبة الطعام</button>
-  <button data-tab="exercise" class="nav-btn">التمارين</button>
+  <button data-tab="activity" class="nav-btn">التمارين والتحديات</button>
   <button data-tab="tracking" class="nav-btn">التتبع</button>
   <button data-tab="analytics" class="nav-btn">التحليلات</button>
-  <button data-tab="challenges" class="nav-btn">التحديات</button>
   <button data-tab="settings" class="nav-btn">الإعدادات</button>
 </nav>
 
@@ -170,9 +169,17 @@
   </section>
 
   <!-- ===================== Exercise ===================== -->
-  <section id="tab-exercise" class="tab-panel">
-    <h1>التمارين</h1>
+  <section id="tab-activity" class="tab-panel">
+    <h1>التمارين والتحديات</h1>
+    <div id="activity-burn-summary" class="cards-grid"></div>
+
+    <h2>التمارين</h2>
     <div id="exercise-list" class="cards-grid"></div>
+
+    <h2>تحديات جديدة</h2>
+    <div id="challenge-templates" class="cards-grid"></div>
+    <h2>تحدياتي</h2>
+    <div id="my-challenges" class="cards-grid"></div>
   </section>
 
   <!-- ===================== Tracking ===================== -->
@@ -188,28 +195,18 @@
     <div id="analytics-content"></div>
   </section>
 
-  <!-- ===================== Challenges ===================== -->
-  <section id="tab-challenges" class="tab-panel">
-    <h1>التحديات والإنجازات</h1>
-    <div id="challenge-templates" class="cards-grid"></div>
-    <h2>تحدياتي</h2>
-    <div id="my-challenges" class="cards-grid"></div>
-  </section>
-
   <!-- ===================== Settings ===================== -->
   <section id="tab-settings" class="tab-panel">
     <h1>الإعدادات</h1>
 
     <h2>بيانات إضافية (اختياري)</h2>
-    <p class="subtitle">مش إجبارية، لكنها بتحسّن دقة الحسابات — مثلًا نسبة الدهون بتفعّل معادلة BMR أدق (Katch-McArdle) بدل المعادلة العامة.</p>
+    <p class="subtitle">مش إجبارية، لكنها بتحسّن دقة الحسابات.</p>
     <form id="advanced-fields-form">
-      <div class="form-row">
-        <label>محيط الخصر (سم) <input type="number" name="waistCm" min="40" max="200" step="0.5"></label>
-        <label>محيط الرقبة (سم) <input type="number" name="neckCm" min="20" max="60" step="0.5"></label>
-        <label>محيط الأرداف (سم) — للإناث فقط <input type="number" name="hipCm" min="40" max="200" step="0.5"></label>
-        <label>نسبة الدهون (%) إن عُرفت <input type="number" name="bodyFatPercent" min="3" max="60" step="0.1"></label>
-      </div>
-      <p class="subtitle" style="margin-top:-6px">لو نسبة الدهون مش معروفة بس محيط الخصر/الرقبة (والأرداف للإناث) متوفرين، هيتم تقديرها تلقائيًا بمعادلة Navy وتُستخدم في كل الحسابات.</p>
+      <!-- S25 (بطلب المستخدم): محيط الخصر/الرقبة/الأرداف ونسبة الدهون اتشالوا
+           من هنا — كانوا مكرَّرين مع نفس الحقول بالظبط في نموذج "تركيب
+           الجسم" بتاب التتبع. اتفقنا يفضل التسجيل اليومي في تاب التتبع هو
+           المصدر الوحيد (ده اللي بيغذّي رسم بياني اتجاه نسبة الدهون في
+           التحليلات كمان، فمينفعش يتشال هو بدل ده). -->
       <div class="form-row">
         <label>عدد ساعات النوم <input type="number" name="sleepHours" min="0" max="16" step="0.5"></label>
         <label>شرب الماء التقريبي الحالي (مل/يوم) <input type="number" name="currentWaterMl" min="0" max="10000" step="50"></label>
@@ -231,6 +228,14 @@
   </section>
 
 </main>
+
+<!-- S25 (بطلب المستخدم): حوار "InBody تقريبي" — تقدير تركيب الجسم من
+     الوزن/الطول/العمر/الجنس المسجَّلين، وآخر محيطات مسجَّلة لو موجودة.
+     محتواه بيتبني ديناميكيًا في app.js وقت الفتح. -->
+<dialog id="inbody-dialog">
+  <div id="inbody-dialog-content"></div>
+  <button id="inbody-dialog-close" class="secondary-btn" style="margin-top:14px">إغلاق</button>
+</dialog>
 
 <script type="module" src="app.js"></script>
 </body>

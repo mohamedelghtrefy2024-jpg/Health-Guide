@@ -161,7 +161,7 @@ check('الميزانية المتبقية من هدف اليوم بتتحدَّ
 // -----------------------------------------------------------------------
 // تاب التمارين — التحقق من استبعاد التمارين الممنوعة للنقرس (لا يوجد استبعاد فعلي للنقرس في بيانات التمارين، لكن نتأكد إن التاب اتبنى بدون كسر)
 // -----------------------------------------------------------------------
-document.querySelector('.nav-btn[data-tab="exercise"]').click();
+document.querySelector('.nav-btn[data-tab="activity"]').click();
 await new Promise((r) => setTimeout(r, 30));
 check('تاب التمارين اتبنى (فيه كروت)', document.querySelectorAll('#exercise-list .card').length > 0);
 
@@ -258,9 +258,25 @@ check('رسم بياني لاتجاه نسبة دهون الجسم ظهر (بن�
 check('كارت توصية اتجاه الوزن ظاهر (بند 1.5/12) — بيانات وزن قليلة هنا فتظهر توصية تشجيع على التسجيل', analyticsHtml.includes('توصية اتجاه الوزن'));
 
 // -----------------------------------------------------------------------
+// S25 (بطلب المستخدم): حوار "InBody تقريبي" في تاب لوحة التحكم
+// -----------------------------------------------------------------------
+document.querySelector('.nav-btn[data-tab="dashboard"]').click();
+await new Promise((r) => setTimeout(r, 50));
+const inbodyBtn = document.getElementById('open-inbody-dialog-btn');
+check('زرار "تقرير InBody تقريبي" ظاهر في لوحة التحكم', !!inbodyBtn);
+inbodyBtn.click();
+await new Promise((r) => setTimeout(r, 20));
+const inbodyDialog = document.getElementById('inbody-dialog');
+check('حوار الـInBody اتفتح فعليًا (مش استثناء غير مُمسوك) — open=true', inbodyDialog.open === true);
+const inbodyContent = document.getElementById('inbody-dialog-content').innerHTML;
+check('تقرير الـInBody فيه الوزن ونسبة الدهون وBMR فعليًا (مش قالب فاضي)', inbodyContent.includes('الوزن') && inbodyContent.includes('نسبة الدهون') && inbodyContent.includes('BMR'));
+document.getElementById('inbody-dialog-close').click();
+check('حوار الـInBody اتقفل فعليًا بعد ضغط إغلاق — open=false', inbodyDialog.open === false);
+
+// -----------------------------------------------------------------------
 // تاب التحديات
 // -----------------------------------------------------------------------
-document.querySelector('.nav-btn[data-tab="challenges"]').click();
+document.querySelector('.nav-btn[data-tab="activity"]').click();
 await new Promise((r) => setTimeout(r, 30));
 check('قوالب التحديات اتبنت (3 قوالب)', document.querySelectorAll('#challenge-templates .card').length === 3);
 
@@ -276,30 +292,57 @@ check('تحدي جديد ظهر في "تحدياتي" بعد البدء', docume
 // -----------------------------------------------------------------------
 document.querySelector('.nav-btn[data-tab="dashboard"]').click();
 await new Promise((r) => setTimeout(r, 20));
-document.querySelector('.nav-btn[data-tab="challenges"]').click();
+document.querySelector('.nav-btn[data-tab="activity"]').click();
 await new Promise((r) => setTimeout(r, 30));
 const sameTemplateBtn = document.querySelector(`.start-challenge-btn[data-id="${startedTemplateId}"]`);
 check('BUG-S25-05: زرار "ابدأ" للقالب الشغّال بالفعل اختفى/اتعطّل بدل ما يسمح ببدء تاني', !sameTemplateBtn || sameTemplateBtn.disabled);
 check('BUG-S25-05: لسه "تحدي واحد بس" في "تحدياتي" (مفيش تكرار)', document.querySelectorAll('#my-challenges .card').length === 1);
 
 // -----------------------------------------------------------------------
-// نموذج البيانات الإضافية الاختيارية — نسبة الدهون تفعّل Katch-McArdle
+// S25 (طلب المستخدم): تقدّم التحدي كان بيفضل 0/الهدف للأبد حتى لو المستخدم
+// حقّق الشرط فعليًا — updateChallengeProgress/calculateStreak موجودين
+// ومُختبَرين على مستوى المحرك بس ماكانوش متوصّلين بالتتبّع الفعلي في
+// الواجهة. اتوصّلوا دلوقتي عبر refreshChallengeProgress() اللي بتتنادى قبل
+// عرض "تحدياتي". سيناريو متحكَّم فيه (مش معتمد على حالة سابقة هشّة): نبدأ
+// تحدي "7 أيام ماء مكتمل" ونسجّل ماء النهاردة فوق الهدف يدويًا.
+// -----------------------------------------------------------------------
+{
+  const waterBtn = document.querySelector('.start-challenge-btn[data-id="ch_water_7"]');
+  waterBtn.click();
+  await new Promise((r) => setTimeout(r, 50));
+  const todayForChallenge = new Date().toISOString().slice(0, 10);
+  await putRecord(STORE.DAILY_TRACKING, { id: todayForChallenge, date: todayForChallenge, weightKg: null, waterMl: 5000, bodyFatPercent: null, waistCm: null, neckCm: null, hipCm: null });
+  document.querySelector('.nav-btn[data-tab="dashboard"]').click();
+  await new Promise((r) => setTimeout(r, 20));
+  document.querySelector('.nav-btn[data-tab="activity"]').click();
+  await new Promise((r) => setTimeout(r, 80));
+  const myChallengesHtml = document.getElementById('my-challenges').innerHTML;
+  check('تقدّم تحدي الماء اتحدّث فعليًا من بيانات التتبّع الحقيقية (1/7 مش 0/7 بعد يوم ماء محقَّق)', myChallengesHtml.includes('1 / 7'));
+}
+
+// -----------------------------------------------------------------------
+// S25: محيط الخصر/الرقبة/الأرداف ونسبة الدهون بقوا بيُسجَّلوا من تاب التتبع
+// بس (اتشالوا من تاب الإعدادات المكرَّر بطلب المستخدم) — نتأكد إن تاب
+// الإعدادات فعلًا مبقاش فيه الحقول دي، وإن حفظهم من تاب التتبع لسه بيفعّل
+// Katch-McArdle في الداشبورد زي ما كان بيحصل من الإعدادات قبل كده بالظبط.
 // -----------------------------------------------------------------------
 document.querySelector('.nav-btn[data-tab="settings"]').click();
 await new Promise((r) => setTimeout(r, 20));
 check('نموذج البيانات الإضافية موجود في تاب الإعدادات', !!document.getElementById('advanced-fields-form'));
 const advForm = document.getElementById('advanced-fields-form');
-check('حقل محيط الأرداف (للإناث — معادلة Navy) موجود في نموذج البيانات الإضافية', !!advForm.querySelector('[name="hipCm"]'));
-advForm.querySelector('[name="bodyFatPercent"]').value = '15';
-advForm.querySelector('[name="waistCm"]').value = '85';
-advForm.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
-await new Promise((r) => setTimeout(r, 50));
+check('محيط الأرداف اتشال من تاب الإعدادات (بقى بس في تاب التتبع، مفيش تكرار)', !advForm.querySelector('[name="hipCm"]'));
+check('نسبة الدهون اتشالت من تاب الإعدادات (بقت بس في تاب التتبع، مفيش تكرار)', !advForm.querySelector('[name="bodyFatPercent"]'));
 
-check('حفظ نسبة الدهون يظهر رسالة تأكيد التفعيل', document.getElementById('advanced-fields-message').innerHTML.includes('Katch-McArdle'));
+document.querySelector('.nav-btn[data-tab="tracking"]').click();
+await new Promise((r) => setTimeout(r, 30));
+document.getElementById('metrics-bodyfat-input').value = '15';
+document.getElementById('metrics-waist-input').value = '85';
+document.getElementById('body-comp-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+await new Promise((r) => setTimeout(r, 50));
 
 document.querySelector('.nav-btn[data-tab="dashboard"]').click();
 await new Promise((r) => setTimeout(r, 50));
-check('الـDashboard بيعكس معادلة BMR الجديدة بعد حفظ نسبة الدهون', document.getElementById('dashboard-content').innerHTML.includes('Katch-McArdle'));
+check('الـDashboard بيعكس معادلة BMR الجديدة بعد حفظ نسبة الدهون من تاب التتبع الموحَّد', document.getElementById('dashboard-content').innerHTML.includes('Katch-McArdle'));
 
 // -----------------------------------------------------------------------
 // تصدير البيانات من تاب الإعدادات

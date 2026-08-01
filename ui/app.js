@@ -18,13 +18,13 @@ import {
   resolveBodyFatPercent, calculateRemainingMealBudget, DEFAULT_MEAL_SHARE,
 } from '../core/nutrition-engine/nutrition-engine.js';
 import { generateMeal, updateMealItemPortion } from '../core/meal-engine/meal-generation-engine.js';
-import { classifyMealQualityScore } from '../core/meal-engine/meal-quality.js';
+import { classifyMealQualityScore, computeMealQualityScore } from '../core/meal-engine/meal-quality.js';
 import { getAllExercises, filterExercisesForConditions, calculateCaloriesBurned } from '../core/exercise-engine/exercise-engine.js';
 import {
   logMeal, logExercise, computeDailyTotals, logDailyMetrics, getDailyMetrics,
   computeAdherenceScore, logEatingOutMeal,
 } from '../core/tracking-engine/tracking-engine.js';
-import { startChallenge, updateChallengeProgress, CHALLENGE_TEMPLATES } from '../core/gamification-engine/gamification-engine.js';
+import { startChallenge, updateChallengeProgress, CHALLENGE_TEMPLATES, CHALLENGE_TYPE, calculateStreak } from '../core/gamification-engine/gamification-engine.js';
 import { getInstantRecommendations, getGeneralTips, getWeightStabilityRecommendation, RECOMMENDATION_SEVERITY } from '../core/recommendation-engine/recommendation-engine.js';
 import { getWeightTrend, getWaterTrend, getCalorieTrend, compareBestWorstWeek, getBodyCompositionTrend, detectWeightTrendPattern } from '../core/analytics-engine/analytics-engine.js';
 
@@ -96,16 +96,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   wirePregnancyFieldToggle();
   wireMealGeneration();
   wireSettings();
+  wireInBodyDialog();
 
   const savedProfile = await getRecord(STORE.PROFILE, PROFILE_ID);
   if (savedProfile) {
     currentProfile = savedProfile;
-    currentNutrition = calculateFullNutritionProfile(toEngineProfile(currentProfile));
+    currentNutrition = calculateFullNutritionProfile(await toEngineProfile(currentProfile));
     showApp();
     populateAdvancedFieldsForm();
     await renderDashboard();
-    renderExerciseTab();
-    renderChallengesTab();
+    await renderActivityTab();
     await renderTrackingTab();
   }
 });
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function populateAdvancedFieldsForm() {
   const form = document.getElementById('advanced-fields-form');
   if (!form || !currentProfile) return;
-  for (const key of ['waistCm', 'neckCm', 'hipCm', 'bodyFatPercent', 'sleepHours', 'currentWaterMl']) {
+  for (const key of ['sleepHours', 'currentWaterMl']) {
     const input = form.querySelector(`[name="${key}"]`);
     if (input && typeof currentProfile[key] === 'number') input.value = currentProfile[key];
   }
@@ -130,13 +130,37 @@ function showApp() {
 }
 
 /**
+ * S25 (بطلب المستخدم): محيط الخصر/الرقبة/الأرداف ونسبة الدهون بقوا يُسجَّلوا
+ * في مكان واحد بس (نموذج "تركيب الجسم" اليومي بتاب التتبع)، مش مكرَّرين مع
+ * بروفايل الإعدادات زي قبل كده. الدالة دي بترجع أحدث سجل تتبّع يومي فيه أي
+ * قيمة من التركيب موجودة (مش شرط النهاردة بالظبط — لو المستخدم مسجّلش
+ * النهاردة لسه، بنرجع لآخر تسجيل فعلي بدل ما نضيّع البيانات).
+ */
+async function getLatestBodyCompFields() {
+  const all = await getAllRecords(STORE.DAILY_TRACKING);
+  const withBodyComp = all
+    .filter((r) => r.waistCm != null || r.neckCm != null || r.hipCm != null || r.bodyFatPercent != null)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return withBodyComp[0] ?? null;
+}
+
+/**
  * يحوّل سجل البروفايل المخزَّن (JSON بسيط) لشكل مدخلات Nutrition Engine.
  * نسبة الدهون: مُدخلة مباشرة لو موجودة، وإلا تقدير Navy تلقائي من محيط
  * الخصر/الرقبة(/الأرداف) لو متوفرين (بند 11) — مصدر واحد عبر
  * `resolveBodyFatPercent` بدل ازدواج منطق التقدير هنا وفي الداشبورد.
+ * S25: محيط الخصر/الرقبة/الأرداف ونسبة الدهون بقوا بيُقرَوا من أحدث تسجيل
+ * يومي (تاب التتبع) مش من البروفايل نفسه — عشان كده الدالة بقت async.
  */
-function toEngineProfile(profile) {
-  const bodyFat = resolveBodyFatPercent(profile);
+async function toEngineProfile(profile) {
+  const latestBodyComp = await getLatestBodyCompFields();
+  const bodyFat = resolveBodyFatPercent({
+    ...profile,
+    waistCm: latestBodyComp?.waistCm ?? undefined,
+    neckCm: latestBodyComp?.neckCm ?? undefined,
+    hipCm: latestBodyComp?.hipCm ?? undefined,
+    bodyFatPercent: latestBodyComp?.bodyFatPercent ?? undefined,
+  });
   return {
     gender: profile.gender,
     age: Number(profile.age),
@@ -182,11 +206,10 @@ function wireNavigation() {
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
 
       if (btn.dataset.tab === 'dashboard') await renderDashboard();
-      if (btn.dataset.tab === 'exercise') renderExerciseTab();
+      if (btn.dataset.tab === 'activity') await renderActivityTab();
       if (btn.dataset.tab === 'food-library') renderFoodLibraryTab();
       if (btn.dataset.tab === 'tracking') await renderTrackingTab();
       if (btn.dataset.tab === 'analytics') await renderAnalyticsTab();
-      if (btn.dataset.tab === 'challenges') renderChallengesTab();
     });
   });
 }
@@ -288,13 +311,21 @@ function wireOnboardingForm() {
       id: PROFILE_ID,
       name: formData.get('name'),
       gender: formData.get('gender'),
-      age: formData.get('age'),
-      heightCm: formData.get('heightCm'),
-      weightKg: formData.get('weightKg'),
-      targetWeightKg: formData.get('targetWeightKg'),
+      // BUG-S25-08: formData.get() بيرجّع String دايمًا. تخزين القيم كـString
+      // خام هنا كان بيكسر أي فحص `typeof x === 'number'` مستقبلي — تحديدًا
+      // `resolveBodyFatPercent`'s heightCm check، اللي كان بيرجع دايمًا
+      // null بصمت لأي بروفايل بمحيط خصر/رقبة مسجَّل (تقدير Navy مكنش بيشتغل
+      // أبدًا فعليًا رغم وجود البيانات المطلوبة كاملة). اتأكد بالتجربة
+      // الفعلية أثناء بناء حوار InBody تقريبي (S25). التحويل هنا بدل كل نقطة
+      // استهلاك لاحقة عشان يبقى `currentProfile` دايمًا أرقام حقيقية، متسق
+      // مع باقي بيانات التتبّع اليومي (وزن/ماء بالفعل Number من قبل).
+      age: Number(formData.get('age')),
+      heightCm: Number(formData.get('heightCm')),
+      weightKg: Number(formData.get('weightKg')),
+      targetWeightKg: Number(formData.get('targetWeightKg')),
       activityLevel: formData.get('activityLevel'),
       goal: formData.get('goal'),
-      timeframeDays: formData.get('timeframeDays'),
+      timeframeDays: Number(formData.get('timeframeDays')),
       dietStyle: formData.get('dietStyle'),
       dietAdherence: formData.get('dietAdherence') || 'flexible',
       pregnancyStatus: formData.get('pregnancyStatus') || PREGNANCY_STATUS.NONE,
@@ -309,13 +340,12 @@ function wireOnboardingForm() {
     const { ok } = await withStorageErrorFeedback(() => putRecord(STORE.PROFILE, profile), 'onboarding-form-error');
     if (!ok) return;
     currentProfile = profile;
-    currentNutrition = calculateFullNutritionProfile(toEngineProfile(profile));
+    currentNutrition = calculateFullNutritionProfile(await toEngineProfile(profile));
 
     showApp();
     populateAdvancedFieldsForm();
     await renderDashboard();
-    renderExerciseTab();
-    renderChallengesTab();
+    await renderActivityTab();
     await renderTrackingTab();
   });
 }
@@ -362,7 +392,14 @@ async function renderDashboard() {
   const tips = getGeneralTips(currentProfile.medicalConditions ?? []);
   await refreshRemainingBudget(); // إعادة حساب ميزانية الوجبات المتبقية دايمًا مع أي تحديث للداشبورد (ميزة "معزوم برة")
 
-  const bodyFat = resolveBodyFatPercent(currentProfile);
+  const latestBodyComp = await getLatestBodyCompFields(); // S25: مصدر واحد للتركيب — التسجيل اليومي بتاب التتبع
+  const bodyFat = resolveBodyFatPercent({
+    ...currentProfile,
+    waistCm: latestBodyComp?.waistCm ?? undefined,
+    neckCm: latestBodyComp?.neckCm ?? undefined,
+    hipCm: latestBodyComp?.hipCm ?? undefined,
+    bodyFatPercent: latestBodyComp?.bodyFatPercent ?? undefined,
+  });
   let bodyCompositionCard = '';
   if (bodyFat.value !== null) {
     const weightKg = Number(currentProfile.weightKg);
@@ -375,6 +412,17 @@ async function renderDashboard() {
         <div class="value">${bodyFat.value}%</div>
         <div class="unit">نسبة دهون (${sourceLabel})</div>
         <div class="unit" style="margin-top:6px">كتلة دهون ≈ ${fatMassKg} كجم · كتلة خالية من الدهون ≈ ${leanMassKg} كجم</div>
+        <button class="secondary-btn" id="open-inbody-dialog-btn" style="margin-top:10px">تقرير InBody تقريبي</button>
+      </div>
+    `;
+  } else {
+    // S25: الزرار موجود حتى من غير محيطات/نسبة دهون مسجَّلة — تقرير مبسَّط
+    // من الوزن/الطول/العمر بس زي ما طلب المستخدم بالظبط
+    bodyCompositionCard = `
+      <div class="card">
+        <h3>تركيب الجسم</h3>
+        <div class="unit">سجّل محيط الخصر/الرقبة (تاب التتبع) لتقدير أدق، أو شوف تقرير مبسَّط من الوزن/الطول بس</div>
+        <button class="secondary-btn" id="open-inbody-dialog-btn" style="margin-top:10px">تقرير InBody تقريبي</button>
       </div>
     `;
   }
@@ -439,11 +487,74 @@ async function renderDashboard() {
       ${tips.map((t) => `<div class="unit" style="margin-bottom:6px">${t.condition_label_ar ? `<strong>${t.condition_label_ar}:</strong> ` : ''}${t.message_ar}</div>`).join('')}
     </div>
   `;
+
+  const inbodyBtn = document.getElementById('open-inbody-dialog-btn');
+  if (inbodyBtn) inbodyBtn.addEventListener('click', () => showInBodyDialog(n, bodyFat));
 }
 
-// -----------------------------------------------------------------------
-// Meal Generation
-// -----------------------------------------------------------------------
+/**
+ * S25 (بطلب المستخدم): حوار "InBody تقريبي" — تقدير مبسَّط لتركيب الجسم
+ * من البيانات المسجَّلة فعليًا بالفعل (وزن/طول/عمر/جنس دايمًا، ونسبة
+ * الدهون/المحيطات لو موجودة). القيم كلها تقديرية بالتصميم ومُعلَّم عليها
+ * صراحة "تقريبي" — مش بديل عن جهاز InBody حقيقي، ومفيش أي ادّعاء دقة طبية.
+ * @param {object} n - currentNutrition (فيه bmi/bmr/tdeeBreakdown)
+ * @param {{value: number|null, source: string|null}} bodyFat - ناتج resolveBodyFatPercent
+ */
+function showInBodyDialog(n, bodyFat) {
+  const weightKg = Number(currentProfile.weightKg);
+  const heightM = Number(currentProfile.heightCm) / 100;
+  const dialog = document.getElementById('inbody-dialog');
+  const content = document.getElementById('inbody-dialog-content');
+
+  let rows = `
+    <div class="inbody-row"><span class="label">الوزن</span><span class="value">${weightKg} كجم</span></div>
+    <div class="inbody-row"><span class="label">مؤشر كتلة الجسم (BMI)</span><span class="value">${n.bmi ?? '—'}</span></div>
+  `;
+
+  if (bodyFat.value !== null) {
+    const fatMassKg = +(weightKg * (bodyFat.value / 100)).toFixed(1);
+    const leanMassKg = +(weightKg - fatMassKg).toFixed(1);
+    // تقديرات تقريبية شائعة الاستخدام: الكتلة الخالية من الدهون كمرجع لكتلة
+    // العضلات الهيكلية (≈50% منها تقريبًا)، ومياه الجسم كمرجع للأنسجة
+    // الخالية من الدهون (≈73% منها تقريبًا) — نفس التقديرات المستخدمة في
+    // أجهزة InBody الاستهلاكية كخط أساس، مش قياس فعلي بالممانعة الكهربية.
+    const skeletalMuscleKg = +(leanMassKg * 0.5).toFixed(1);
+    const bodyWaterKg = +(leanMassKg * 0.73).toFixed(1);
+    const bodyWaterPct = +((bodyWaterKg / weightKg) * 100).toFixed(1);
+    const sourceLabel = bodyFat.source === 'measured' ? 'مُدخلة يدويًا' : 'مُقدَّرة بمعادلة Navy';
+    rows += `
+      <div class="inbody-row"><span class="label">نسبة الدهون (${sourceLabel})</span><span class="value">${bodyFat.value}%</span></div>
+      <div class="inbody-row"><span class="label">كتلة الدهون</span><span class="value">${fatMassKg} كجم</span></div>
+      <div class="inbody-row"><span class="label">الكتلة الخالية من الدهون</span><span class="value">${leanMassKg} كجم</span></div>
+      <div class="inbody-row"><span class="label">تقدير كتلة العضلات الهيكلية</span><span class="value">${skeletalMuscleKg} كجم</span></div>
+      <div class="inbody-row"><span class="label">تقدير نسبة مياه الجسم</span><span class="value">${bodyWaterPct}%</span></div>
+    `;
+  }
+
+  rows += `<div class="inbody-row"><span class="label">معدل الحرق الأساسي (BMR)</span><span class="value">${n.bmr.value} سعرة/يوم</span></div>`;
+
+  content.innerHTML = `
+    <h2>تقرير InBody تقريبي</h2>
+    <p class="subtitle" style="margin-top:-8px">تقدير تقريبي من بيانات البروفايل والتتبّع — مش قياس فعلي بجهاز InBody، ومينفعش يتحسب عليه أي قرار طبي.</p>
+    ${rows}
+  `;
+  // بعض بيئات التشغيل (وبيئة اختبار jsdom المستخدمة في السويت هنا تحديدًا،
+  // اتأكد منها فعليًا) مش بتدعم showModal()/close() الأصليين لعنصر
+  // <dialog> رغم إنه عنصر HTML قياسي — احتياط بسيط بدل ما الزرار يطلع
+  // استثناء غير مُمسوك لو الدعم مش موجود.
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+/** يوصّل زرار إغلاق حوار الـInBody — مرة واحدة بس وقت تحميل الصفحة */
+function wireInBodyDialog() {
+  const closeBtn = document.getElementById('inbody-dialog-close');
+  const dialog = document.getElementById('inbody-dialog');
+  if (closeBtn && dialog) closeBtn.addEventListener('click', () => {
+    if (typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+  });
+}
 
 /**
  * يعيد حساب ميزانية الوجبات المتبقية في اليوم (سعرات/ماكرو) بناءً على أي
@@ -625,8 +736,33 @@ function renderMealCard(meal, mealType) {
 // Exercise
 // -----------------------------------------------------------------------
 
-function renderExerciseTab() {
+/**
+ * S25 (بطلب المستخدم): تاب "التمارين" وتاب "التحديات" اتدمجوا في تاب واحد
+ * ("التمارين والتحديات") مربوط بكارت "سعرات محروقة اليوم" في الأعلى — نفس
+ * الرقم اللي التمرين بيغذّيه (`totalCaloriesBurned` من Tracking Engine)
+ * وبعض التحديات (calorie_streak) بتعتمد عليه فعليًا.
+ */
+async function renderActivityTab() {
   if (!currentProfile) return;
+  await renderActivityBurnSummary();
+  renderExerciseList();
+  await renderChallengeTemplatesAndMyChallenges();
+}
+
+async function renderActivityBurnSummary() {
+  const today = getLocalDateStr();
+  const daily = await computeDailyTotals(today, getFoodById);
+  const container = document.getElementById('activity-burn-summary');
+  container.innerHTML = `
+    <div class="card">
+      <h3>سعرات محروقة اليوم (تمرين)</h3>
+      <div class="value">${daily.totalCaloriesBurned}</div>
+      <div class="unit">سعرة</div>
+    </div>
+  `;
+}
+
+function renderExerciseList() {
   const safeExercises = filterExercisesForConditions(currentProfile.medicalConditions ?? []);
   const container = document.getElementById('exercise-list');
 
@@ -650,6 +786,7 @@ function renderExerciseTab() {
         await logExercise(today, btn.dataset.id, 30, Number(btn.dataset.kcal));
         btn.textContent = 'تم التسجيل ✓';
         btn.disabled = true;
+        await renderActivityBurnSummary(); // يحدّث كارت الحرق اليومي فورًا — ده أساس الربط بين التمارين والتحديات
       } catch (err) {
         console.error('فشل عملية حفظ محلية (IndexedDB):', err);
         btn.insertAdjacentHTML('afterend', '<div class="warning-box" style="margin-top:6px">حصل خطأ أثناء الحفظ محليًا — من فضلك جرّب تاني.</div>');
@@ -789,7 +926,7 @@ async function renderTrackingTab() {
       ` : ''}
       <div id="daily-metrics-message"></div>
 
-      <h3 style="margin-top:18px">تركيب الجسم (اختياري — لتحديث اتجاه نسبة الدهون في التحليلات)</h3>
+      <h3 style="margin-top:18px">تركيب الجسم (اختياري — بيحدّث اتجاه نسبة الدهون في التحليلات، ومعادلة BMR في لوحة التحكم)</h3>
       <form id="body-comp-form" class="form-row">
         <label>محيط الخصر (سم) <input type="number" id="metrics-waist-input" min="40" max="200" step="0.5" value="${dailyMetrics?.waistCm ?? ''}" placeholder="اختياري"></label>
         <label>محيط الرقبة (سم) <input type="number" id="metrics-neck-input" min="20" max="60" step="0.5" value="${dailyMetrics?.neckCm ?? ''}" placeholder="اختياري"></label>
@@ -797,7 +934,7 @@ async function renderTrackingTab() {
         <label>نسبة الدهون المقاسة (%) <input type="number" id="metrics-bodyfat-input" min="3" max="60" step="0.1" value="${dailyMetrics?.bodyFatPercent ?? ''}" placeholder="اختياري"></label>
         <button type="submit" class="secondary-btn">حفظ</button>
       </form>
-      <p class="subtitle" style="margin-top:6px">لو نسبة الدهون مش مقاسة مباشرة، هتتقدَّر تلقائيًا بمعادلة Navy من المحيطات المسجَّلة (لليوم ده أو من بيانات البروفايل) في تاب التحليلات.</p>
+      <p class="subtitle" style="margin-top:6px">لو نسبة الدهون مش مقاسة مباشرة، هتتقدَّر تلقائيًا بمعادلة Navy من آخر محيطات مسجَّلة (ولو مسجّلتش النهاردة، بيتم استخدام آخر تسجيل فعلي).</p>
       <div id="body-comp-message"></div>
     </div>
   `;
@@ -863,6 +1000,12 @@ function wireBodyCompForm(today) {
 
     const { ok } = await withStorageErrorFeedback(() => logDailyMetrics(today, metrics), 'body-comp-message');
     if (!ok) return;
+    // S25: النموذج ده بقى المصدر الوحيد لمحيط الخصر/الرقبة/الأرداف ونسبة
+    // الدهون بعد ما اتشالوا من تاب الإعدادات المكرَّر — لازم نعيد حساب
+    // التغذية فورًا هنا زي ما كان بيحصل هناك بالظبط (ممكن يفعّل Katch-McArdle)
+    if (currentProfile) {
+      currentNutrition = calculateFullNutritionProfile(await toEngineProfile(currentProfile));
+    }
     await renderTrackingTab();
     document.getElementById('body-comp-message').innerHTML = `<div class="success-box">تم الحفظ ✓</div>`;
   });
@@ -1078,8 +1221,72 @@ async function renderAnalyticsTab() {
 // Challenges
 // -----------------------------------------------------------------------
 
-function renderChallengesTab() {
-  renderChallengeTemplatesAndMyChallenges();
+/**
+ * منتج/إصلاح مطلوب في جلسة S25: `updateChallengeProgress`/`calculateStreak`
+ * كانوا موجودين ومُختبَرين على مستوى المحرك من جلسات قديمة، لكن ماكانش فيه
+ * أي كود في الواجهة بيربطهم بالتتبّع الفعلي — يعني أي تحدي بيتبدأ كان يفضل
+ * 0/الهدف للأبد حتى لو المستخدم حقّق الشرط كل يوم. الدالة دي بتحسب التقدّم
+ * الحقيقي من بيانات Tracking Engine (نفس مصدر الحقيقة، من غير أي منطق حساب
+ * مختلف) وتحدّث كل تحدي نشط:
+ * - calorie_streak/water_streak: أيام متتالية محقَّقة (من الأحدث للأقدم،
+ *   بحد أقصى targetValue يوم، ومتوقفة عند تاريخ بدء التحدي).
+ * - healthy_meal_count: عدد تراكمي للوجبات (من وقت بدء التحدي) بجودة
+ *   Meal Quality Score >= 70.
+ */
+async function refreshChallengeProgress() {
+  const challenges = await getAllRecords(STORE.CHALLENGES);
+  const active = challenges.filter((c) => !c.completed);
+  if (active.length === 0) return;
+
+  const today = getLocalDateStr();
+  const startDateOf = (c) => c.startedAt.slice(0, 10);
+
+  for (const challenge of active) {
+    let newProgress = challenge.currentProgress;
+
+    if (challenge.type === CHALLENGE_TYPE.CALORIE_STREAK) {
+      if (currentNutrition?.calorieTarget?.targetCalories) {
+        const target = currentNutrition.calorieTarget.targetCalories;
+        const recentDatesDesc = buildDateRange(challenge.targetValue).reverse().filter((d) => d >= startDateOf(challenge) && d <= today);
+        const results = [];
+        for (const d of recentDatesDesc) {
+          const daily = await computeDailyTotals(d, getFoodById);
+          results.push(!!daily.nutrition && daily.nutrition.kcal <= target);
+        }
+        newProgress = calculateStreak(results);
+      }
+    } else if (challenge.type === CHALLENGE_TYPE.WATER_STREAK) {
+      const waterTarget = currentProfile ? calculateWaterTargetMl(Number(currentProfile.weightKg)) : null;
+      if (waterTarget) {
+        const recentDatesDesc = buildDateRange(challenge.targetValue).reverse().filter((d) => d >= startDateOf(challenge) && d <= today);
+        const results = [];
+        for (const d of recentDatesDesc) {
+          const metrics = await getDailyMetrics(d);
+          results.push((metrics?.waterMl ?? 0) >= waterTarget);
+        }
+        newProgress = calculateStreak(results);
+      }
+    } else if (challenge.type === CHALLENGE_TYPE.HEALTHY_MEAL_COUNT) {
+      const allMealLogs = await getAllRecords(STORE.MEAL_LOGS);
+      const sinceStart = allMealLogs.filter((log) => log.date >= startDateOf(challenge));
+      let count = 0;
+      for (const log of sinceStart) {
+        const resolvedItems = log.items
+          .map((it) => {
+            const food = getFoodById(it.foodId);
+            return food ? { food, grams: it.grams } : null;
+          })
+          .filter(Boolean);
+        if (resolvedItems.length === 0) continue; // BUG-S25-04: نفس منطق تجاهل الأصناف المحذوفة، بدون كسر
+        if (computeMealQualityScore(resolvedItems).score >= 70) count += 1;
+      }
+      newProgress = count;
+    }
+
+    if (newProgress !== challenge.currentProgress) {
+      await updateChallengeProgress(challenge.id, newProgress);
+    }
+  }
 }
 
 async function renderChallengeTemplatesAndMyChallenges() {
@@ -1118,6 +1325,7 @@ async function renderChallengeTemplatesAndMyChallenges() {
 }
 
 async function renderMyChallenges() {
+  await refreshChallengeProgress(); // يحدّث التقدّم الحقيقي من التتبّع قبل ما نعرض
   const challenges = await getAllRecords(STORE.CHALLENGES);
   const container = document.getElementById('my-challenges');
 
@@ -1146,7 +1354,7 @@ function wireSettings() {
     const formData = new FormData(e.target);
 
     const advancedFields = {};
-    for (const key of ['waistCm', 'neckCm', 'hipCm', 'bodyFatPercent', 'sleepHours', 'currentWaterMl']) {
+    for (const key of ['sleepHours', 'currentWaterMl']) {
       const raw = formData.get(key);
       if (raw !== null && raw !== '') advancedFields[key] = Number(raw);
     }
@@ -1156,15 +1364,9 @@ function wireSettings() {
     const { ok } = await withStorageErrorFeedback(() => putRecord(STORE.PROFILE, updatedProfile), 'advanced-fields-message');
     if (!ok) return;
     currentProfile = updatedProfile;
-    currentNutrition = calculateFullNutritionProfile(toEngineProfile(currentProfile)); // إعادة حساب فورية — نسبة الدهون (مُدخلة أو مُقدَّرة بـNavy) ممكن تغيّر معادلة BMR المستخدمة
+    currentNutrition = calculateFullNutritionProfile(await toEngineProfile(currentProfile));
 
-    const bodyFat = resolveBodyFatPercent(currentProfile);
-    const bodyFatMsg = bodyFat.source === 'measured'
-      ? ' — معادلة BMR بقت Katch-McArdle الأدق.'
-      : bodyFat.source === 'navy_estimate'
-        ? ` — اتقدَّرت نسبة الدهون تلقائيًا بمعادلة Navy (${bodyFat.value}%) ومعادلة BMR بقت Katch-McArdle.`
-        : '';
-    document.getElementById('advanced-fields-message').innerHTML = `<div class="success-box">تم الحفظ ✓${bodyFatMsg}</div>`;
+    document.getElementById('advanced-fields-message').innerHTML = `<div class="success-box">تم الحفظ ✓</div>`;
     await renderDashboard();
   });
 

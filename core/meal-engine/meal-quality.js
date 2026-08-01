@@ -151,6 +151,42 @@ export function computeMealQualityScore(mealItems, microTargets = null) {
   return { score, breakdown, totals, averageGi: round1(averageGi) };
 }
 
+/**
+ * S25 (بطلب المستخدم): quality_score لصنف مفرد في Food Library — بخلاف
+ * computeMealQualityScore اللي بتقيّم تركيبة وجبة كاملة (كذا صنف بكمياتهم)،
+ * الدالة دي بتقيّم صنف واحد بقيمه لكل 100 جم (مقياس النية: "الصنف ده صحي
+ * قد إيه في حد ذاته"، مش "الوجبة دي صحية قد إيه"). نفس فلسفة/عوامل تقييم
+ * الوجبة (ألياف، سكر مضاف، صوديوم، دهون مشبعة، مستوى المعالجة، GI) عشان
+ * يفضل الرقمين على نفس المقياس المفاهيمي 0-100، ناقص عاملَي "تنوع الفئات"
+ * و"تغطية المايكرو مقابل هدف يومي" اللي مالهمش معنى لصنف مفرد.
+ * الخوارزمية الأصلية اللي كانت مُستخدَمة وقت بناء بيانات المكتبة
+ * (المُشار لها في تعليق schema.js باسم computeQualityScore()) مش موجودة في
+ * الكود الحالي، فده تصميم جديد بديل — مش استعادة للقديم.
+ * @param {import('../food-library/schema.js').FoodItem} food
+ * @returns {number} 0-100
+ */
+export function computeFoodItemQualityScore(food) {
+  const { macros, micros, gi, processing_level } = food;
+  let score = 100;
+
+  const fiberPer200kcal = macros.kcal > 0 ? (macros.fiber_g / macros.kcal) * 200 : 0;
+  score -= fiberPer200kcal < 3 ? (3 - fiberPer200kcal) * 4 : 0;
+
+  const addedSugarKcalPct = macros.kcal > 0 ? ((macros.added_sugar_g * 4) / macros.kcal) * 100 : 0;
+  score -= Math.max(0, addedSugarKcalPct - 5) * 2;
+
+  score -= micros.sodium_mg > 800 ? Math.min(25, (micros.sodium_mg - 800) / 40) : 0;
+
+  const satFatKcalPct = macros.kcal > 0 ? ((macros.saturated_fat_g * 9) / macros.kcal) * 100 : 0;
+  score -= Math.max(0, satFatKcalPct - 10) * 1.5;
+
+  score -= PROCESSING_PENALTY[processing_level] ?? 10;
+
+  if (gi >= 0) score -= gi > 55 ? (gi - 55) * 0.4 : 0;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 function round1(n) {
   return Math.round(n * 10) / 10;
 }

@@ -159,3 +159,20 @@ legend { padding: 0 6px; font-weight: bold; font-size: 14px; }
 .food-card .food-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
 .food-card .food-macro { font-size: 13px; margin-bottom: 4px; }
 .food-card .food-warning { font-size: 12px; color: #b45309; margin-top: 4px; }
+
+/* حوار "InBody تقريبي" (S25) */
+#inbody-dialog {
+  border: none;
+  border-radius: var(--radius);
+  padding: 20px;
+  max-width: 420px;
+  width: 90%;
+  background: var(--card-bg);
+  color: var(--text);
+}
+#inbody-dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
+#inbody-dialog h2 { margin-top: 0; }
+.inbody-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.inbody-row:last-child { border-bottom: none; }
+.inbody-row .label { color: var(--text-muted); font-size: 14px; }
+.inbody-row .value { font-weight: bold; }
