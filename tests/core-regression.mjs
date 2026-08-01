@@ -15,7 +15,7 @@ import { resolveAvailableFoods, evaluateFoodAgainstConstraint, collectConstraint
 import { buildMedicalConstraints } from '../core/decision-engine/medical-engine.js';
 import { createConstraint, CONSTRAINT_KIND, CONSTRAINT_SOURCE } from '../core/decision-engine/constraint-schema.js';
 import { resolveEffectiveDietStyle } from '../core/decision-engine/diet-engine.js';
-import { calculateFullNutritionProfile, calculateWaterTargetMl, calculateBMR, ACTIVITY_LEVEL, GOAL, calculateBMI, classifyBMI, calculateIdealWeightRange } from '../core/nutrition-engine/nutrition-engine.js';
+import { calculateFullNutritionProfile, calculateWaterTargetMl, calculateBMR, calculateTDEEBreakdown, ACTIVITY_LEVEL, GOAL, calculateBMI, classifyBMI, calculateIdealWeightRange } from '../core/nutrition-engine/nutrition-engine.js';
 import { generateMeal, replaceMealItem, updateMealItemPortion } from '../core/meal-engine/meal-generation-engine.js';
 import { computeMealQualityScore } from '../core/meal-engine/meal-quality.js';
 import { MEDICAL_CONDITION, ALLERGEN, ALLERGY_SEVERITY, DIET_STYLE, createEmptyMacros, createEmptyMicros } from '../core/food-library/schema.js';
@@ -937,6 +937,97 @@ console.log('\n=== S25: BUG-S25-06 — وسم "الصيام المسيحي (مس
   const fishAllowedMeal = generateMeal({ constraintProfile: { allergies: [], medicalConditions: [], dietStyle: 'normal', fastingTag: 'christian_fast_fish_allowed' }, mealType: 'lunch', targetKcal: 600, minFoodQualityScore: 0 });
   const strictMeal = generateMeal({ constraintProfile: { allergies: [], medicalConditions: [], dietStyle: 'normal', fastingTag: 'christian_fast_strict' }, mealType: 'lunch', targetKcal: 600, minFoodQualityScore: 0 });
   check('توليد وجبة وقت "مسموح فيه السمك" يرجّع مرشحين >= وقت "الصارم" (كان معكوسًا: 154 مقابل 1013)', fishAllowedMeal.candidates.length >= strictMeal.candidates.length);
+}
+
+console.log('\n=== S25 (بطلب المستخدم): سيناريوهات مُستخرَجة من سويت اختبارات "مرشدك الصحي" القديم — مش الملفات نفسها (بنية مختلفة تمامًا)، لكن القيم/السيناريوهات السريرية الحقيقية اتنقلت وأُعيد كتابتها ضد محرك المشروع الحالي ===');
+{
+  // -----------------------------------------------------------------------
+  // Golden BMR/TDEE — 8 حالة Mifflin-St Jeor مُتحقَّق منها فعليًا ضد قيم
+  // مرشدك المرجعية (GBR01-08) قبل الإضافة هنا؛ القيم الـ8 طابقت 100% لأن
+  // Mifflin-St Jeor معادلة سريرية ثابتة مش تفصيلة تنفيذ خاصة بمرشدك.
+  // TDEE: قيم مرشدك المرجعية (tdee = bmr × معامل النشاط فقط) اتفحصت وطلعت
+  // *مش* قابلة للنقل المباشر — محركنا بيضيف TEF (الأثر الحراري للطعام)
+  // كمكوّن منفصل فوق bmr×معامل (فرق تصميم متعمَّد وموثَّق في نفس الملف،
+  // مش باج). فالقيم التحتية دي مُقفَّلة من ناتج محركنا نفسه (Golden Case
+  // بالمعنى الصحيح: نقطة مرجعية تحمي من Regression مستقبلي)، مش من مرشدك.
+  // -----------------------------------------------------------------------
+  const GOLDEN_BMR_TDEE = [
+    { id: 'GBR01', gender: 'male', age: 30, heightCm: 175, weightKg: 75, activityLevel: 'light', bmr: 1699, tdee: 2571 },
+    { id: 'GBR02', gender: 'female', age: 35, heightCm: 163, weightKg: 70, activityLevel: 'sedentary', bmr: 1383, tdee: 1826 },
+    { id: 'GBR03', gender: 'male', age: 28, heightCm: 178, weightKg: 80, activityLevel: 'moderate', bmr: 1778, tdee: 3032 },
+    { id: 'GBR04', gender: 'male', age: 55, heightCm: 170, weightKg: 90, activityLevel: 'sedentary', bmr: 1693, tdee: 2235 },
+    { id: 'GBR05', gender: 'female', age: 50, heightCm: 173, weightKg: 85, activityLevel: 'light', bmr: 1520, tdee: 2300 },
+    { id: 'GBR06', gender: 'male', age: 60, heightCm: 168, weightKg: 75, activityLevel: 'sedentary', bmr: 1505, tdee: 1987 },
+    { id: 'GBR07', gender: 'male', age: 58, heightCm: 172, weightKg: 95, activityLevel: 'sedentary', bmr: 1740, tdee: 2297 },
+    { id: 'GBR08', gender: 'female', age: 25, heightCm: 162, weightKg: 60, activityLevel: 'moderate', bmr: 1327, tdee: 2262 },
+  ];
+  for (const c of GOLDEN_BMR_TDEE) {
+    const bmr = calculateBMR({ gender: c.gender, age: c.age, heightCm: c.heightCm, weightKg: c.weightKg });
+    check(`${c.id}: BMR = ${c.bmr} (طابق مرجع مرشدك 100% — Mifflin-St Jeor معادلة ثابتة)`, bmr.value === c.bmr);
+    const tdee = calculateTDEEBreakdown(bmr.value, c.activityLevel);
+    check(`${c.id}: TDEE = ${c.tdee} (مُقفَّل من ناتج محركنا، بعد TEF — مش رقم مرشدك المباشر)`, tdee.tdee === c.tdee);
+  }
+
+  // -----------------------------------------------------------------------
+  // بيانات أكل حقيقية (صوديوم/بوتاسيوم/فوسفور/دهون مشبعة لكل 100 جم) من
+  // سويت مرشدك — مُختبَرة هنا ضد حدود محرك المشروع *الحالي* فعليًا
+  // (EXTRA_NUTRIENT_RULES في medical-engine.js)، مش ضد استنتاجات مرشدك
+  // (تختلف الحدود الدقيقة بين المشروعين — هنا الأساس هو حدودنا احنا).
+  // -----------------------------------------------------------------------
+  function foodWithMicros(micros) {
+    return { macros: createEmptyMacros(), micros: { ...createEmptyMicros(), ...micros } };
+  }
+  const REAL_FOODS = {
+    rice: { sodium_mg: 1, potassium_mg: 35, phosphorus_mg: 30 },
+    banana_ripe: { sodium_mg: 1, potassium_mg: 422, phosphorus_mg: 22 },
+    chicken_grilled: { sodium_mg: 85, potassium_mg: 290, phosphorus_mg: 220 },
+    egg: { sodium_mg: 124, potassium_mg: 126, phosphorus_mg: 172 },
+    luncheon: { sodium_mg: 800, potassium_mg: 200, phosphorus_mg: 100 },
+    mortadella: { sodium_mg: 900, potassium_mg: 220, phosphorus_mg: 120 },
+    canned_tuna: { sodium_mg: 421, potassium_mg: 300, phosphorus_mg: 200 },
+    cheddar: { sodium_mg: 620, potassium_mg: 98, phosphorus_mg: 512 },
+    anchovy: { sodium_mg: 3667, potassium_mg: 392, phosphorus_mg: 252 },
+  };
+  const REAL_FATS = { butter: 52, margarine_hydrogenated: 15, cheddar: 9, mortadella: 3, chicken_liver: 3, rice: 0.1, banana: 0.1 };
+
+  const ckdConstraints = buildMedicalConstraints([MEDICAL_CONDITION.CKD]);
+  const ckdDialysisConstraints = buildMedicalConstraints([MEDICAL_CONDITION.CKD_DIALYSIS]);
+  const hypertensionConstraints = buildMedicalConstraints([MEDICAL_CONDITION.HYPERTENSION]);
+  const dyslipidemiaConstraints = buildMedicalConstraints([MEDICAL_CONDITION.DYSLIPIDEMIA]);
+
+  const sodiumMaxCkd = ckdConstraints.find((c) => c.nutrient_path === 'micros.sodium_mg');
+  const potassiumMaxCkd = ckdConstraints.find((c) => c.nutrient_path === 'micros.potassium_mg');
+  const phosphorusMaxCkd = ckdConstraints.find((c) => c.nutrient_path === 'micros.phosphorus_mg');
+  const potassiumMaxDialysis = ckdDialysisConstraints.find((c) => c.nutrient_path === 'micros.potassium_mg');
+  const sodiumMaxHtn = hypertensionConstraints.find((c) => c.nutrient_path === 'micros.sodium_mg');
+  const satFatMaxDyslipid = dyslipidemiaConstraints.find((c) => c.nutrient_path === 'macros.saturated_fat_g');
+
+  // بوتاسيوم: موز ناضج (422) أعلى من حد الكلى عندنا (300) — لازم يُرفَض
+  check('CKD: موز ناضج (بوتاسيوم 422mg) يُرفَض — أعلى من حدنا (300mg)', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.banana_ripe), potassiumMaxCkd));
+  check('CKD: أرز أبيض (بوتاسيوم 35mg) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.rice), potassiumMaxCkd));
+  // صوديوم: مرتديلا (900) وأنشوجة (3667) أعلى بكتير من حدنا (400) — لازم يُرفَضوا
+  check('CKD: مرتديلا (صوديوم 900mg) تُرفَض — أعلى من حدنا (400mg)', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.mortadella), sodiumMaxCkd));
+  check('CKD: أنشوجة (صوديوم 3667mg) تُرفَض بوضوح', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.anchovy), sodiumMaxCkd));
+  // فوسفور: جبنة شيدر (512) أعلى من حدنا (180) — لازم تُرفَض
+  check('CKD: جبنة شيدر (فوسفور 512mg) تُرفَض — أعلى من حدنا (180mg)', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.cheddar), phosphorusMaxCkd));
+  check('CKD: دجاج مشوي (فوسفور 220mg) يُرفَض — أعلى من حدنا (180mg) رغم إنه أكل "صحي" عمومًا', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.chicken_grilled), phosphorusMaxCkd));
+
+  // غسيل كلوي: حده أشد من الكلى العادي — موز عادي (358 مذكور بمصدر تاني)
+  // برضه هيترفض، وبيضة (بوتاسيوم 126) تتقبل
+  check('غسيل كلوي: بيضة (بوتاسيوم 126mg) تُقبَل — أقل من حد الغسيل (250mg)', evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.egg), potassiumMaxDialysis));
+  check('غسيل كلوي: تونة معلبة (بوتاسيوم 300mg) تُرفَض — أعلى من حد الغسيل الأشد (250mg)', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.canned_tuna), potassiumMaxDialysis));
+
+  // ضغط الدم: حد الصوديوم عندنا 500mg/حصة — لانشون (800) يترفض، دجاج مشوي (85) يتقبل
+  check('ضغط الدم: لانشون دجاج (صوديوم 800mg) يُرفَض — أعلى من حدنا (500mg)', !evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.luncheon), sodiumMaxHtn));
+  check('ضغط الدم: دجاج مشوي (صوديوم 85mg) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWithMicros(REAL_FOODS.chicken_grilled), sodiumMaxHtn));
+
+  // ارتفاع الدهون: زبدة (دهون مشبعة 52g) ومرجرين مهدرج (15g) أعلى بكتير من حدنا (5g)
+  function foodWithSatFat(satFatG) {
+    return { macros: { ...createEmptyMacros(), saturated_fat_g: satFatG }, micros: createEmptyMicros() };
+  }
+  check('ارتفاع الدهون: زبدة (دهون مشبعة 52g) تُرفَض بوضوح — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWithSatFat(REAL_FATS.butter), satFatMaxDyslipid));
+  check('ارتفاع الدهون: مرجرين مهدرج (دهون مشبعة 15g) يُرفَض — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWithSatFat(REAL_FATS.margarine_hydrogenated), satFatMaxDyslipid));
+  check('ارتفاع الدهون: أرز أبيض (دهون مشبعة 0.1g) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWithSatFat(REAL_FATS.rice), satFatMaxDyslipid));
 }
 
 process.exit(fail > 0 ? 1 : 0);
