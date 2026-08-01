@@ -19,7 +19,7 @@ import { calculateFullNutritionProfile, calculateWaterTargetMl, calculateBMR, ca
 import { generateMeal, replaceMealItem, updateMealItemPortion } from '../core/meal-engine/meal-generation-engine.js';
 import { computeMealQualityScore } from '../core/meal-engine/meal-quality.js';
 import { MEDICAL_CONDITION, ALLERGEN, ALLERGY_SEVERITY, DIET_STYLE, createEmptyMacros, createEmptyMicros } from '../core/food-library/schema.js';
-import { STORE, putRecord, getRecord, exportAllData, importAllData } from '../core/storage/storage-engine.js';
+import { STORE, putRecord, getRecord, exportAllData, importAllData, clearAllData, getAllRecords as getAllRecordsRaw } from '../core/storage/storage-engine.js';
 import { getAllExercises, filterExercisesForConditions, calculateCaloriesBurned } from '../core/exercise-engine/exercise-engine.js';
 import { logMeal, logExercise, computeDailyTotals, logDailyMetrics, getDailyMetrics, logEatingOutMeal } from '../core/tracking-engine/tracking-engine.js';
 import { startChallenge, updateChallengeProgress, calculateStreak } from '../core/gamification-engine/gamification-engine.js';
@@ -187,6 +187,40 @@ console.log('\n=== Storage Engine ===');
   const exported = await exportAllData();
   const imported = await importAllData(exported);
   check('تصدير واستيراد كامل البيانات', imported.success === true);
+}
+
+console.log('\n=== S26: clearAllData — زرار "إعادة تعيين كل البيانات" بالإعدادات ===');
+{
+  // نملأ أكتر من Store بسجلات فعلية أولًا (مش بس PROFILE) عشان نتأكد إن
+  // المسح شامل كل الـStores مش واحد بس.
+  await putRecord(STORE.PROFILE, { id: 'current', name: 'مستخدم قبل المسح' });
+  await putRecord(STORE.MEAL_LOGS, { id: 'meal-1', date: '2026-08-01', mealType: 'lunch' });
+  await putRecord(STORE.DAILY_TRACKING, { id: '2026-08-01', weightKg: 80 });
+  await putRecord(STORE.EXERCISE_LOGS, { id: 'ex-1', exerciseId: 'e1' });
+  await putRecord(STORE.CHALLENGES, { id: 'ch-1', type: 'water_streak' });
+
+  const beforeProfile = await getRecord(STORE.PROFILE, 'current');
+  check('قبل المسح: البروفايل موجود فعليًا', beforeProfile?.name === 'مستخدم قبل المسح');
+
+  await clearAllData();
+
+  const afterProfile = await getRecord(STORE.PROFILE, 'current');
+  const afterMeals = await getAllRecordsRaw(STORE.MEAL_LOGS);
+  const afterTracking = await getAllRecordsRaw(STORE.DAILY_TRACKING);
+  const afterExercise = await getAllRecordsRaw(STORE.EXERCISE_LOGS);
+  const afterChallenges = await getAllRecordsRaw(STORE.CHALLENGES);
+
+  check('بعد المسح: البروفايل اختفى', afterProfile === undefined);
+  check('بعد المسح: سجلات الوجبات كلها اتمسحت', afterMeals.length === 0);
+  check('بعد المسح: التتبع اليومي اتمسح', afterTracking.length === 0);
+  check('بعد المسح: سجلات التمارين اتمسحت', afterExercise.length === 0);
+  check('بعد المسح: التحديات اتمسحت', afterChallenges.length === 0);
+
+  // التأكد إن قاعدة البيانات لسه شغّالة وقابلة للكتابة بعد المسح (مش
+  // اتقفلت أو اتلفت الاتصال بيها)
+  await putRecord(STORE.PROFILE, { id: 'current', name: 'مستخدم بعد المسح' });
+  const rewritten = await getRecord(STORE.PROFILE, 'current');
+  check('قاعدة البيانات لسه قابلة للكتابة فعليًا بعد المسح', rewritten?.name === 'مستخدم بعد المسح');
 }
 
 console.log('\n=== Exercise Engine ===');

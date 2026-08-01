@@ -439,8 +439,8 @@ await new Promise((r) => setTimeout(r, 100));
 const pregnantDashboardHtml = document.getElementById('dashboard-content').innerHTML;
 check('الداشبورد يعرض تحذير الحمل الدائم بعد بروفايل حامل', pregnantDashboardHtml.includes('استشارة طبية') || pregnantDashboardHtml.includes('الحمل'));
 check('السعرات المستهدفة في الداشبورد أعلى من TDEE (لا عجز رغم هدف "خسارة وزن")', (() => {
-  const kcalMatch = pregnantDashboardHtml.match(/<h3>السعرات المستهدفة<\/h3>[\s\S]*?<div class="value">(\d+)<\/div>/);
-  const tdeeMatch = pregnantDashboardHtml.match(/<h3>إجمالي الحرق اليومي \(TDEE\)<\/h3>[\s\S]*?<div class="value">(\d+)<\/div>/);
+  const kcalMatch = pregnantDashboardHtml.match(/<h3>[^<]*السعرات المستهدفة<\/h3>[\s\S]*?<div class="value">(\d+)<\/div>/);
+  const tdeeMatch = pregnantDashboardHtml.match(/<h3>[^<]*إجمالي الحرق اليومي \(TDEE\)<\/h3>[\s\S]*?<div class="value">(\d+)<\/div>/);
   return !!kcalMatch && !!tdeeMatch && Number(kcalMatch[1]) > Number(tdeeMatch[1]);
 })());
 
@@ -469,6 +469,33 @@ const invalidAnalyticsHtml = document.getElementById('analytics-content').innerH
 check('طول = صفر: تاب التحليلات اتبنى من غير كسر (مفيش استثناء وقف السكريبت)', invalidAnalyticsHtml.length > 10);
 check('طول = صفر: تاب التحليلات يعرض نفس تحذير البيانات غير الصالحة', invalidAnalyticsHtml.includes('غير صالح'));
 check('طول = صفر: كارت الالتزام يعرض "—" بدل "0%" مضلِّل (BUG-S23-04)', invalidAnalyticsHtml.includes('>—<'));
+
+// -----------------------------------------------------------------------
+// S26: زرار "إعادة تعيين كل البيانات" بتاب الإعدادات — لازم يتفحص قبل
+// سيناريو إغلاق اتصال الـDB اللي جاي بعده (آخر اختبار في الملف عمدًا).
+// أولًا سيناريو الإلغاء (المستخدم يضغط "إلغاء" في نافذة التأكيد) — مفيش
+// حاجة المفروض تتمسح. بعدين سيناريو التأكيد الفعلي.
+// -----------------------------------------------------------------------
+document.querySelector('.nav-btn[data-tab="settings"]').click();
+await new Promise((r) => setTimeout(r, 20));
+
+dom.window.confirm = () => false;
+document.getElementById('reset-all-data-btn').click();
+await new Promise((r) => setTimeout(r, 50));
+check(
+  'إلغاء التأكيد: البروفايل لسه موجود ومفيش أي مسح حصل',
+  !document.getElementById('main-nav').classList.contains('hidden') && (await getRecord(STORE.PROFILE, 'current'))?.heightCm === 0
+);
+
+dom.window.confirm = () => true;
+document.getElementById('reset-all-data-btn').click();
+await new Promise((r) => setTimeout(r, 80));
+
+check('التأكيد الفعلي: البروفايل اتمسح من IndexedDB فعليًا', (await getRecord(STORE.PROFILE, 'current')) === undefined);
+check('التأكيد الفعلي: nav رجع مخفي (زي أول مرة قبل أي بروفايل)', document.getElementById('main-nav').classList.contains('hidden'));
+check('التأكيد الفعلي: تاب Onboarding رجع هو الظاهر', document.getElementById('tab-onboarding').classList.contains('active'));
+check('التأكيد الفعلي: رسالة تأكيد الحذف ظهرت للمستخدم', document.getElementById('onboarding-reset-message').innerHTML.includes('تم حذف'));
+check('التأكيد الفعلي: محتوى الداشبورد القديم اتفضّى (مفيش بيانات بروفايل قديم فاضل ظاهر)', document.getElementById('dashboard-content').innerHTML === '');
 
 // -----------------------------------------------------------------------
 // S25: BUG-S25-03 — فشل كتابة IndexedDB فعلي (Quota Exceeded/اتصال مقطوع)

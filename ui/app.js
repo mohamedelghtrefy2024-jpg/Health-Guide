@@ -8,7 +8,7 @@
  * ============================================================================
  */
 
-import { STORE, putRecord, getRecord, getAllRecords, exportAllData, importAllData } from '../core/storage/storage-engine.js';
+import { STORE, putRecord, getRecord, getAllRecords, exportAllData, importAllData, clearAllData } from '../core/storage/storage-engine.js';
 import { getFoodById, filterFoods, searchFoodsByName } from '../core/food-library/food-library.js';
 import { MEDICAL_CONDITION, ALLERGEN, ALLERGY_SEVERITY, PREGNANCY_STATUS } from '../core/food-library/schema.js';
 import { CONDITION_LABEL_AR } from '../core/decision-engine/medical-engine.js';
@@ -31,6 +31,34 @@ import { getWeightTrend, getWaterTrend, getCalorieTrend, compareBestWorstWeek, g
 const ALL_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 const PROFILE_ID = 'current';
+
+// -----------------------------------------------------------------------
+// أيقونات — طبقة عرض بحتة فقط (مفيش أي أثر على منطق أي محرك)، عشان الواجهة
+// تبقى أوضح بصريًا وأسهل مسح (scan) بالعين بدل الاعتماد على النص فقط.
+// -----------------------------------------------------------------------
+const CATEGORY_ICON = {
+  protein: '🍗',
+  carb: '🍞',
+  vegetable: '🥦',
+  fruit: '🍎',
+  dairy: '🥛',
+  fat_oil: '🫒',
+  legume: '🫘',
+  nut_seed: '🥜',
+  beverage: '🥤',
+  composite_meal: '🍲',
+  condiment: '🌿',
+  sweet_dessert: '🍯',
+};
+function categoryIcon(category) {
+  return CATEGORY_ICON[category] ?? '🍽️';
+}
+
+const CHALLENGE_ICON = {
+  calorie_streak: '🔥',
+  water_streak: '💧',
+  healthy_meal_count: '🥗',
+};
 
 /** الحالة الحيّة في الذاكرة أثناء الجلسة — دائمًا مصدرها IndexedDB عند التحميل */
 let currentProfile = null;
@@ -97,6 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireMealGeneration();
   wireSettings();
   wireInBodyDialog();
+  wireResetButton();
 
   const savedProfile = await getRecord(STORE.PROFILE, PROFILE_ID);
   if (savedProfile) {
@@ -408,7 +437,7 @@ async function renderDashboard() {
     const sourceLabel = bodyFat.source === 'measured' ? 'مُدخلة يدويًا' : 'تقدير تلقائي بمعادلة Navy';
     bodyCompositionCard = `
       <div class="card">
-        <h3>تركيب الجسم</h3>
+        <h3>🧬 تركيب الجسم</h3>
         <div class="value">${bodyFat.value}%</div>
         <div class="unit">نسبة دهون (${sourceLabel})</div>
         <div class="unit" style="margin-top:6px">كتلة دهون ≈ ${fatMassKg} كجم · كتلة خالية من الدهون ≈ ${leanMassKg} كجم</div>
@@ -420,7 +449,7 @@ async function renderDashboard() {
     // من الوزن/الطول/العمر بس زي ما طلب المستخدم بالظبط
     bodyCompositionCard = `
       <div class="card">
-        <h3>تركيب الجسم</h3>
+        <h3>🧬 تركيب الجسم</h3>
         <div class="unit">سجّل محيط الخصر/الرقبة (تاب التتبع) لتقدير أدق، أو شوف تقرير مبسَّط من الوزن/الطول بس</div>
         <button class="secondary-btn" id="open-inbody-dialog-btn" style="margin-top:10px">تقرير InBody تقريبي</button>
       </div>
@@ -438,20 +467,20 @@ async function renderDashboard() {
 
   container.innerHTML = `
     ${pregnancyCard}
-    <div class="card" style="grid-column:1/-1">
-      <h3>التوصيات الفورية</h3>
+    <div class="card highlight-card" style="grid-column:1/-1">
+      <h3>💡 التوصيات الفورية</h3>
       ${recommendations.map((r) => `<div class="${severityClass[r.severity] ?? 'info-box'}">${r.message_ar}</div>`).join('')}
     </div>
 
     <div class="card">
-      <h3>مؤشر كتلة الجسم (BMI)</h3>
+      <h3>⚖️ مؤشر كتلة الجسم (BMI)</h3>
       <div class="value" style="color:${n.bmiClass.color}">${n.bmi ?? '—'}</div>
       <div class="unit">${n.bmiClass.label_ar}</div>
       ${n.bmi !== null ? `<div class="bmi-bar"><div class="bmi-marker" style="right:${Math.min(95, Math.max(2, (n.bmi / 45) * 100))}%"></div></div>` : ''}
     </div>
 
     <div class="card">
-      <h3>نطاق الوزن المثالي</h3>
+      <h3>🎯 نطاق الوزن المثالي</h3>
       <div class="value small">${n.idealWeightRange ? `${n.idealWeightRange.min_kg} – ${n.idealWeightRange.max_kg}` : '—'}</div>
       <div class="unit">كجم</div>
     </div>
@@ -459,31 +488,31 @@ async function renderDashboard() {
     ${bodyCompositionCard}
 
     <div class="card">
-      <h3>معدل الحرق الأساسي (BMR)</h3>
+      <h3>🔥 معدل الحرق الأساسي (BMR)</h3>
       <div class="value">${n.bmr.value}</div>
       <div class="unit">سعرة/يوم (${n.bmr.formula_used === 'katch_mcardle' ? 'Katch-McArdle' : 'Mifflin-St Jeor'})</div>
     </div>
 
     <div class="card">
-      <h3>إجمالي الحرق اليومي (TDEE)</h3>
+      <h3>⚡ إجمالي الحرق اليومي (TDEE)</h3>
       <div class="value">${n.tdeeBreakdown.tdee}</div>
       <div class="unit">BMR:${n.tdeeBreakdown.bmr} + NEAT:${n.tdeeBreakdown.neat} + EAT:${n.tdeeBreakdown.eat} + TEF:${n.tdeeBreakdown.tef}</div>
     </div>
 
     <div class="card">
-      <h3>السعرات المستهدفة</h3>
+      <h3>🎯 السعرات المستهدفة</h3>
       <div class="value">${n.calorieTarget.targetCalories}</div>
       <div class="unit">${n.calorieTarget.dailyAdjustment > 0 ? '+' : ''}${n.calorieTarget.dailyAdjustment} عن TDEE${n.calorieTarget.estimatedWeeks ? ` — تقريبًا ${n.calorieTarget.estimatedWeeks} أسبوع للهدف` : ''}</div>
       ${n.calorieTarget.warning ? `<div class="warning-box">${n.calorieTarget.warning}</div>` : ''}
     </div>
 
     <div class="card">
-      <h3>أهداف الماكرو اليومية</h3>
+      <h3>🍽️ أهداف الماكرو اليومية</h3>
       <div class="value small">بروتين ${n.macroTargets.protein_g}g · كارب ${n.macroTargets.carb_g}g · دهون ${n.macroTargets.fat_g}g</div>
     </div>
 
     <div class="card" style="grid-column:1/-1">
-      <h3>نصائح</h3>
+      <h3>📌 نصائح</h3>
       ${tips.map((t) => `<div class="unit" style="margin-bottom:6px">${t.condition_label_ar ? `<strong>${t.condition_label_ar}:</strong> ` : ''}${t.message_ar}</div>`).join('')}
     </div>
   `;
@@ -534,7 +563,7 @@ function showInBodyDialog(n, bodyFat) {
   rows += `<div class="inbody-row"><span class="label">معدل الحرق الأساسي (BMR)</span><span class="value">${n.bmr.value} سعرة/يوم</span></div>`;
 
   content.innerHTML = `
-    <h2>تقرير InBody تقريبي</h2>
+    <h2>🧬 تقرير InBody تقريبي</h2>
     <p class="subtitle" style="margin-top:-8px">تقدير تقريبي من بيانات البروفايل والتتبّع — مش قياس فعلي بجهاز InBody، ومينفعش يتحسب عليه أي قرار طبي.</p>
     ${rows}
   `;
@@ -597,7 +626,7 @@ function renderRemainingBudget() {
   const remainingTypesCount = Object.keys(b.perMeal).length;
   container.innerHTML = `
     <div class="card" style="grid-column:1/-1">
-      <h3>الباقي من هدف اليوم</h3>
+      <h3>🧮 الباقي من هدف اليوم</h3>
       <div class="value">${b.remainingKcal} سعرة</div>
       <div class="unit">بروتين ${b.remainingMacros.protein_g}g · كارب ${b.remainingMacros.carb_g}g · دهون ${b.remainingMacros.fat_g}g</div>
       ${remainingTypesCount > 0
@@ -694,7 +723,7 @@ function renderMealCard(meal, mealType) {
       <h3>أفضل تركيبة مقترحة <span class="quality-badge ${qualityClass}">${meal.qualityScore} — ${meal.qualityLabel}</span></h3>
       ${meal.items.map((i, idx) => `
         <div class="meal-item-row">
-          <span>${i.food.name_ar}</span>
+          <span><span class="food-icon">${categoryIcon(i.food.category)}</span> ${i.food.name_ar}</span>
           <span class="portion-edit">
             <input type="number" class="portion-input" data-item-index="${idx}" value="${i.grams}" min="1" max="2000" step="1"> جم
           </span>
@@ -755,7 +784,7 @@ async function renderActivityBurnSummary() {
   const container = document.getElementById('activity-burn-summary');
   container.innerHTML = `
     <div class="card">
-      <h3>سعرات محروقة اليوم (تمرين)</h3>
+      <h3>🔥 سعرات محروقة اليوم (تمرين)</h3>
       <div class="value">${daily.totalCaloriesBurned}</div>
       <div class="unit">سعرة</div>
     </div>
@@ -770,7 +799,7 @@ function renderExerciseList() {
     const kcal = calculateCaloriesBurned(ex, Number(currentProfile.weightKg), 30);
     return `
       <div class="card">
-        <h3>${ex.name_ar}</h3>
+        <h3><span class="food-icon">🏃</span> ${ex.name_ar}</h3>
         <div class="value small">${kcal} سعرة / 30 دقيقة</div>
         <div class="unit">صعوبة: ${ex.difficulty}</div>
         ${ex.warning_ar ? `<div class="warning-box">${ex.warning_ar}</div>` : ''}
@@ -888,7 +917,7 @@ function renderFoodLibraryResults() {
     const qClass = f.quality_score >= 85 ? 'quality-excellent' : f.quality_score >= 70 ? 'quality-good' : f.quality_score >= 55 ? 'quality-ok' : 'quality-poor';
     return `
     <div class="food-card">
-      <h4>${f.name_ar}</h4>
+      <h4><span class="food-icon">${categoryIcon(f.category)}</span> ${f.name_ar}</h4>
       <div class="food-meta">${f.name_en} — لكل 100 جم</div>
       <div class="food-macro">${f.calories} سعرة | بروتين ${f.macros.protein_g}g | كارب ${f.macros.carbs_g}g | دهون ${f.macros.fat_g}g</div>
       <div class="food-meta">صوديوم ${f.micros.sodium_mg}mg | كالسيوم ${f.micros.calcium_mg}mg</div>
@@ -914,7 +943,7 @@ async function renderTrackingTab() {
 
   const metricsCard = `
     <div class="card" style="grid-column:1/-1">
-      <h3>تسجيل اليوم — الوزن والماء</h3>
+      <h3>⚖️ تسجيل اليوم — الوزن والماء</h3>
       <form id="daily-metrics-form" class="form-row">
         <label>الوزن اليوم (كجم) <input type="number" id="metrics-weight-input" min="30" max="300" step="0.1" value="${dailyMetrics?.weightKg ?? ''}" placeholder="اختياري"></label>
         <label>الماء اليوم (مل) <input type="number" id="metrics-water-input" min="0" max="10000" step="50" value="${dailyMetrics?.waterMl ?? ''}" placeholder="اختياري"></label>
@@ -926,7 +955,7 @@ async function renderTrackingTab() {
       ` : ''}
       <div id="daily-metrics-message"></div>
 
-      <h3 style="margin-top:18px">تركيب الجسم (اختياري — بيحدّث اتجاه نسبة الدهون في التحليلات، ومعادلة BMR في لوحة التحكم)</h3>
+      <h3 style="margin-top:18px">🧬 تركيب الجسم (اختياري — بيحدّث اتجاه نسبة الدهون في التحليلات، ومعادلة BMR في لوحة التحكم)</h3>
       <form id="body-comp-form" class="form-row">
         <label>محيط الخصر (سم) <input type="number" id="metrics-waist-input" min="40" max="200" step="0.5" value="${dailyMetrics?.waistCm ?? ''}" placeholder="اختياري"></label>
         <label>محيط الرقبة (سم) <input type="number" id="metrics-neck-input" min="20" max="60" step="0.5" value="${dailyMetrics?.neckCm ?? ''}" placeholder="اختياري"></label>
@@ -1302,7 +1331,7 @@ async function renderChallengeTemplatesAndMyChallenges() {
 
   templatesContainer.innerHTML = CHALLENGE_TEMPLATES.map((t) => `
     <div class="card">
-      <h3>${t.title_ar}</h3>
+      <h3><span class="food-icon">${CHALLENGE_ICON[t.type] ?? '🏆'}</span> ${t.title_ar}</h3>
       ${activeTypes.has(t.type)
         ? `<button class="secondary-btn" disabled>التحدي شغّال بالفعل</button>`
         : `<button class="secondary-btn start-challenge-btn" data-id="${t.id}">ابدأ التحدي</button>`}
@@ -1336,7 +1365,7 @@ async function renderMyChallenges() {
 
   container.innerHTML = challenges.map((c) => `
     <div class="card">
-      <h3>${c.title_ar}</h3>
+      <h3><span class="food-icon">${CHALLENGE_ICON[c.type] ?? '🏆'}</span> ${c.title_ar}</h3>
       <div class="value small">${c.currentProgress} / ${c.targetValue}</div>
       ${c.completed ? '<div class="success-box">مكتمل ✓</div>' : ''}
     </div>
@@ -1405,4 +1434,81 @@ function wireSettings() {
       messageBox.innerHTML = `<div class="error-box">ملف غير صالح: ${err.message}</div>`;
     }
   });
+}
+
+// -----------------------------------------------------------------------
+// إعادة تعيين كل البيانات (زرار "ابدأ من جديد" بالإعدادات)
+// -----------------------------------------------------------------------
+
+/**
+ * بيسأل تأكيد صريح (لأن الفعل نهائي ومفيش تراجع)، وبعدين يمسح كل الـStores
+ * ويرجّع الواجهة لشاشة Onboarding فاضية — من غير إعادة تحميل الصفحة كلها،
+ * عشان لو المسح فشل (خطأ IndexedDB فعلي) نقدر نعرض رسالة واضحة بدل ما
+ * نفقد فرصة إظهارها بسبب reload فوري.
+ */
+function wireResetButton() {
+  const btn = document.getElementById('reset-all-data-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const confirmed = window.confirm(
+      'هيتم حذف كل بياناتك المحلية نهائيًا: البروفايل، التتبع اليومي، الوجبات المسجَّلة، التمارين، والتحديات. مفيش أي رجوع في الخطوة دي. متأكد إنك عايز تبدأ من الأول؟'
+    );
+    if (!confirmed) return;
+    await performFullReset();
+  });
+}
+
+async function performFullReset() {
+  const { ok } = await withStorageErrorFeedback(() => clearAllData(), 'settings-message');
+  if (!ok) return;
+
+  currentProfile = null;
+  currentNutrition = null;
+  lastGeneratedMeal = null;
+  lastGeneratedMealTypeShare = null;
+  todayRemainingBudget = null;
+  activeFoodLibraryFilterIds.clear();
+  foodLibrarySearchQuery = '';
+
+  const onboardingForm = document.getElementById('onboarding-form');
+  const advancedForm = document.getElementById('advanced-fields-form');
+  if (onboardingForm) onboardingForm.reset();
+  if (advancedForm) advancedForm.reset();
+
+  const pregnancyRow = document.getElementById('pregnancy-status-row');
+  if (pregnancyRow) pregnancyRow.style.display = 'none';
+
+  [
+    'dashboard-content', 'remaining-budget-content', 'meal-result', 'food-library-results',
+    'food-library-results-count', 'activity-burn-summary', 'exercise-list', 'challenge-templates',
+    'my-challenges', 'tracking-content', 'analytics-content',
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+
+  const foodLibraryChips = document.getElementById('food-library-filter-chips');
+  if (foodLibraryChips) {
+    foodLibraryChips.innerHTML = '';
+    delete foodLibraryChips.dataset.built;
+  }
+  const foodLibrarySearchInput = document.getElementById('food-library-search');
+  if (foodLibrarySearchInput) foodLibrarySearchInput.value = '';
+
+  ['eating-out-message', 'settings-message', 'advanced-fields-message', 'onboarding-form-error'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+  });
+
+  document.getElementById('main-nav').classList.add('hidden');
+  document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+  document.querySelector('.nav-btn[data-tab="dashboard"]').classList.add('active');
+  document.getElementById('tab-onboarding').classList.add('active');
+
+  const resetMsg = document.getElementById('onboarding-reset-message');
+  if (resetMsg) {
+    resetMsg.innerHTML = '<div class="success-box">تم حذف كل بياناتك القديمة ✓ — سجّل بياناتك من جديد للمتابعة.</div>';
+    resetMsg.style.display = '';
+  }
 }

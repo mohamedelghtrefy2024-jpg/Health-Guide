@@ -113,6 +113,23 @@ export function deleteRecord(storeName, id) {
   return withStore(storeName, 'readwrite', (store) => store.delete(id));
 }
 
+/**
+ * يمسح كل البيانات المحلية من كل الـStores بالكامل (بدون حذف قاعدة البيانات
+ * نفسها ولا الاتصال المفتوح) — للاستخدام في زرار "إعادة تعيين كل البيانات"
+ * بالواجهة، عشان المستخدم يقدر يبدأ يسجّل بياناته من الأول.
+ */
+export async function clearAllData() {
+  const db = await openDatabase();
+  for (const storeName of Object.values(STORE)) {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+}
+
 // -----------------------------------------------------------------------
 // تصدير/استيراد كامل البروفايل (JSON) — النقل اليدوي بين الأجهزة حسب المستند
 // -----------------------------------------------------------------------
