@@ -33,9 +33,54 @@
 import { resolveAvailableFoods } from '../decision-engine/decision-engine.js';
 import { computeMealQualityScore, classifyMealQualityScore } from './meal-quality.js';
 import { DEFAULT_MEAL_SHARE } from '../nutrition-engine/nutrition-engine.js';
+import { getFoodById } from '../food-library/food-library.js';
+import { MEAL_PLAN_TEMPLATES } from './meal-plan-templates.js';
 
 /** أقصى مضاعف واقعي لحجم الحصة المرجعية (100 جم) لتفادي كميات غير واقعية عند تحجيم صنف كثيف السعرات لسعرات وجبة كبيرة */
 const MAX_PORTION_MULTIPLIER = 4; // أي أقصى 400 جم من الصنف الواحد
+
+/**
+ * S53-d (بطلب المستخدم بعد مراجعة فعلية لخطة يوم كامل): "305 جم تيمبه
+ * العدس"، "154 جم شبت" كسناك كامل 3 مرات متتالية، و"دبس خروب" (شراب مكثّف
+ * 300 سعرة/100جم) كـ"مشروب" — كل دي نتايج واقعية غير مقبولة رغم إنها مرّت
+ * كل القيود الصحية/الدينية/هامش الماكرو تقنيًا. السبب الجذري: أي صنف مفرد
+ * (`buildSingleItemCandidates`) كان مسموح يمثّل "وجبة كاملة" بمفرده بغض
+ * النظر عن فئته، ومحجَّم لحد 400 جم بلا سقف مختلف حسب طبيعة الصنف.
+ *
+ * الفئات المسموح تبقى "وجبة/سناك قائم بذاته" (صنف واحد يمثّل الوجبة كلها):
+ * وجبة مصرية مركّبة جاهزة (كشري/ملوخية..)، بروتين، بقوليات (فول مدمس/عدس
+ * وجبة كاملة واقعيًا)، ألبان، فاكهة، مكسرات/بذور، مشروبات. أي فئة تانية
+ * (خضار، بهارات/توابل، كارب مجرد، دهون/زيوت) لازم تظهر بس **جوّه تركيبة**
+ * (`buildMacroDrivenCandidates`) مع بروتين/كارب أساسي — مش بديل عنهم.
+ */
+const STANDALONE_SINGLE_ITEM_CATEGORIES = new Set([
+  'composite_meal', 'protein', 'legume', 'dairy', 'fruit', 'nut_seed', 'beverage',
+]);
+
+/**
+ * سقف جرامات واقعي لكل فئة لما الصنف يبقى "الوجبة كاملة" بمفرده — بديل عن
+ * سقف 400 جم الموحَّد اللي كان بيسمح مثلًا بـ400 جم مكسرات (~2400 سعرة من
+ * المكسرات لوحدها) أو 400 جم فاكهة سكرية دفعة واحدة. الفئات غير المذكورة
+ * هنا بتستخدم السقف العام (400 جم).
+ */
+const SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY = Object.freeze({
+  nut_seed: 60,     // كثافة سعرات عالية جدًا — حفنة مكسرات واقعية، مش كوب
+  fruit: 300,
+  dairy: 300,
+  protein: 300,
+  legume: 350,
+  composite_meal: 500,
+  beverage: 400,
+});
+
+/**
+ * حد كثافة سعرات واقعي لصنف "مشروب" فعلي (~≤90 سعرة/100جم يغطي اللبن
+ * والعصائر والسموذي المعتدل) — يستبعد أصنافًا موسومة `beverage` بالغلط
+ * وهي فعليًا شراب مكثّف/دبس (زي دبس الخروب 300 سعرة/100جم) لا يُشرب كوب
+ * كامل منه عمليًا. مشكلة توسيم بيانات حقيقية (راجع ملاحظة الدقة في
+ * `cuisine-engine.js`) — الفلترة هنا دفاع هندسي مؤقت، مش تصحيح توسيم شامل.
+ */
+const MAX_BEVERAGE_KCAL_PER_100G = 90;
 
 /**
  * أحجام مجمّعات الترشيح (Candidate Pools) لكل دور في التركيبة — إلزامية
@@ -65,7 +110,8 @@ function selectTopCandidates(foods, scoreFn, limit) {
 
 /**
  * يحجّم صنفًا (لكل 100 جم) لكمية جرامات تحقق سعرات مستهدفة معيّنة، بحد
- * أقصى واقعي، ويُرجع الجرامات الفعلية + هل تم قصّها عن الحد الواقعي.
+ * أقصى واقعي (عام أو مخصَّص حسب الفئة عبر SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY)،
+ * ويُرجع الجرامات الفعلية + هل تم قصّها عن الحد الواقعي.
  */
 function scaleFoodToCalories(food, targetKcal) {
   // BUG-S24-03 (دفاع بطبقة ثانية): targetKcal<=0/غير منطقي يُصحَّح أصلًا عند
@@ -74,7 +120,7 @@ function scaleFoodToCalories(food, targetKcal) {
   if (!Number.isFinite(targetKcal) || targetKcal <= 0) return { grams: 100, capped: false };
   if (food.macros.kcal <= 0) return { grams: 100, capped: false }; // صنف بلا سعرات (نادر) — حصة مرجعية ثابتة
   const rawGrams = (targetKcal / food.macros.kcal) * 100;
-  const maxGrams = 100 * MAX_PORTION_MULTIPLIER;
+  const maxGrams = SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY[food.category] ?? (100 * MAX_PORTION_MULTIPLIER);
   const grams = Math.min(rawGrams, maxGrams);
   return { grams: Math.round(grams), capped: rawGrams > maxGrams };
 }
@@ -109,11 +155,16 @@ function isWithinMacroMargin(totals, macroTargets, marginPct) {
 }
 
 /**
- * يبني كل تركيبات صنف واحد الممكنة من قائمة أصناف متاحة لنوع وجبة معيّن.
+ * يبني كل تركيبات صنف واحد الممكنة من قائمة أصناف متاحة لنوع وجبة معيّن —
+ * مقصور على الفئات اللي منطقيًا ممكن تمثّل وجبة/سناك قائم بذاته
+ * (STANDALONE_SINGLE_ITEM_CATEGORIES)، مع استبعاد أي "مشروب" مكثّف
+ * السعرات مش شراب فعليًا (دبس/شراب مركّز يمر بالغلط بفئة beverage).
  */
 function buildSingleItemCandidates(foods, mealType, targetKcal) {
   return foods
     .filter((f) => f.suitable_meal_types.includes(mealType) || f.suitable_meal_types.includes('any'))
+    .filter((f) => STANDALONE_SINGLE_ITEM_CATEGORIES.has(f.category))
+    .filter((f) => f.category !== 'beverage' || f.macros.kcal <= MAX_BEVERAGE_KCAL_PER_100G)
     .map((food) => {
       const { grams, capped } = scaleFoodToCalories(food, targetKcal);
       return { items: [{ food, grams }], capped };
@@ -197,7 +248,10 @@ function buildMacroDrivenCandidates(foods, mealType, macroTargets, adherenceLeve
       const remainingCarb = Math.max(0, (macroTargets.carb_g ?? 0) - carbFromProtein);
       const rawCarbGrams = remainingCarb > 0 ? (remainingCarb * 100) / carbFood.macros.carbs_g : 0;
       const carbGrams = Math.round(Math.min(rawCarbGrams, maxGrams));
-      if (carbGrams <= 0) continue;
+      // S53-d: كارب أقل من 15 جم (زي "3 جم برغل") مش حصة واقعية تُعرَض
+      // كصنف مستقل في الوجبة — أهون نستبعد المتغيّر ده بدل ما نظهره كأنه
+      // "طبق برغل" بحصة تافهة عمليًا
+      if (carbGrams < 15) continue;
 
       const baseItems = [{ food: proteinFood, grams: proteinGrams }, { food: carbFood, grams: carbGrams }];
       const cappedPair = cappedProtein || rawCarbGrams > maxGrams;
@@ -317,6 +371,7 @@ export function generateMeal(request) {
     constraintProfile, mealType, targetKcal, macroTargets = null, microTargets = null,
     minFoodQualityScore = 0, macroMarginPct = 0.25, adherenceLevel = 'flexible',
     categoryFilter = null, // مثال: ['beverage'] — يُستخدم في توليد "خطة اليوم" لسلوت مشروب مخصّص
+    excludeFoodIds = null, // S53-d: أصناف مُستخدَمة بالفعل في سلوتات سابقة من نفس خطة اليوم — تفاديًا لتكرار نفس الصنف بالظبط في أكتر من وجبة/سناك
   } = request;
 
   // BUG-S24-03: targetKcal<=0 (أو غير رقمي) كان يمر بدون أي فحص، فيوصل
@@ -383,6 +438,15 @@ export function generateMeal(request) {
         },
       };
     }
+  }
+
+  // استبعاد أصناف مُستخدَمة في سلوتات سابقة من نفس خطة اليوم (S53-d) — لو
+  // الاستبعاد هيصفّر النتيجة (مكتبة ضيقة بعد كل القيود)، نتجاهله بدل ما
+  // نفشّل السلوت بالكامل: تكرار صنف أهون من سلوت فاشل تمامًا
+  if (Array.isArray(excludeFoodIds) && excludeFoodIds.length > 0) {
+    const excludeSet = new Set(excludeFoodIds);
+    const withoutExcluded = qualifiedFoods.filter((f) => !excludeSet.has(f.id));
+    if (withoutExcluded.length > 0) qualifiedFoods = withoutExcluded;
   }
 
   // المرحلة 3+4: بناء التركيبات المرشّحة (صنف واحد دائمًا + تركيبات مدفوعة
@@ -577,6 +641,7 @@ export function generateDayPlan({
   const results = [];
   const totals = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
   let successCount = 0;
+  const usedFoodIds = []; // S53-d: تفاديًا لتكرار نفس الصنف بالظبط في أكتر من سلوت في نفس اليوم (كان بيحصل: نفس الصنف في 3 سناكس متتالية)
 
   for (const slot of planSlots) {
     const targetKcal = slot.isBeverage
@@ -598,6 +663,7 @@ export function generateDayPlan({
       minFoodQualityScore,
       adherenceLevel,
       categoryFilter: slot.isBeverage ? ['beverage'] : null,
+      excludeFoodIds: usedFoodIds,
     });
 
     if (result.success) {
@@ -607,6 +673,7 @@ export function generateDayPlan({
       totals.protein_g += best.totals.protein_g;
       totals.carbs_g += best.totals.carbs_g;
       totals.fat_g += best.totals.fat_g;
+      usedFoodIds.push(...best.items.map((i) => i.food.id));
       results.push({ slotType: slot.type, label_ar: slot.label_ar, isBeverage: slot.isBeverage, success: true, meal: best, diagnosis: null });
     } else {
       results.push({ slotType: slot.type, label_ar: slot.label_ar, isBeverage: slot.isBeverage, success: false, meal: null, diagnosis: result.diagnosis });
@@ -624,5 +691,55 @@ export function generateDayPlan({
       fat_g: Math.round(totals.fat_g),
     },
     dailyCalorieTarget,
+  };
+}
+
+// -----------------------------------------------------------------------
+// قوالب البرنامج الغذائي الجاهز (S53-e) — خطة أسبوعية جاهزة من 1200 لـ2500
+// سعرة، مرفوعة من المستخدم، مربوطة بمكتبة الطعام الفعلية. راجع تحذير
+// meal-plan-templates.js: دي قوالب ثابتة جاهزة، مش توليد ديناميكي يراعي
+// قيود البروفايل الحالية — لازم تُعرَض للمستخدم كمرجع/قالب واضح.
+// -----------------------------------------------------------------------
+
+const MEAL_LABEL_AR = { 'فطار': 'فطار', 'غداء': 'غداء', 'سناك': 'سناك', 'عشاء': 'عشاء' };
+
+/**
+ * يحوّل يوم كامل من قالب جاهز (food_id + جرامات ثابتة) لنفس شكل نتيجة
+ * `generateDayPlan` (slots بها meal بشكل candidate كامل) — عشان الواجهة
+ * تقدر تستخدم نفس منطق العرض/التسجيل للاتنين بدون ازدواجية كود.
+ * @param {number} calorieLevel - أحد قيم MEAL_PLAN_CALORIE_LEVELS
+ * @param {string} day - أحد أيام MEAL_PLAN_DAYS
+ * @returns {{ slots: Array<Object>, totals: Object, calorieLevel: number, day: string } | null} null لو المستوى/اليوم غير موجودين
+ */
+export function resolveMealPlanTemplateDay(calorieLevel, day) {
+  const levelData = MEAL_PLAN_TEMPLATES[calorieLevel];
+  if (!levelData || !levelData[day]) return null;
+
+  const totals = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+  const slots = [];
+
+  for (const [mealKey, entries] of Object.entries(levelData[day])) {
+    const items = entries
+      .map((e) => ({ food: getFoodById(e.food_id), grams: e.grams }))
+      .filter((i) => i.food); // صنف اتشال من المكتبة بعدين (نادر) — يتجاهل بدل ما يكسر الشاشة كلها
+
+    if (items.length === 0) continue;
+
+    const result = computeMealQualityScore(items, null);
+    const candidate = { items, qualityScore: result.score, qualityLabel: classifyMealQualityScore(result.score), totals: result.totals };
+
+    totals.kcal += result.totals.kcal;
+    totals.protein_g += result.totals.protein_g;
+    totals.carbs_g += result.totals.carbs_g;
+    totals.fat_g += result.totals.fat_g;
+
+    slots.push({ slotType: mealKey, label_ar: MEAL_LABEL_AR[mealKey] ?? mealKey, isBeverage: false, success: true, meal: candidate, diagnosis: null });
+  }
+
+  return {
+    slots,
+    totals: { kcal: Math.round(totals.kcal), protein_g: Math.round(totals.protein_g), carbs_g: Math.round(totals.carbs_g), fat_g: Math.round(totals.fat_g) },
+    calorieLevel,
+    day,
   };
 }

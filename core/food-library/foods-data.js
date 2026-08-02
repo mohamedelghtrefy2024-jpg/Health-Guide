@@ -68063,12 +68063,16 @@ export const FOODS_DATA = [
   {
     id: "food_5364",
     name_ar: "شريحة خبز أسمر",
-    name_en: "30 جم",
+    name_en: "Whole Wheat Bread (per 100g)",
     category: "carb",
     ingredients: [],
     reference_amount_g: REFERENCE_UNIT_G,
-    macros: { kcal: 74, protein_g: 3.9, carbs_g: 12.3, fat_g: 1.2, fiber_g: 1.8, sugar_g: 0.37, added_sugar_g: 0, saturated_fat_g: 0.28, monounsaturated_fat_g: 0.35, polyunsaturated_fat_g: 0.56, cholesterol_mg: 0, omega3_mg: 40 },
-    micros: { sodium_mg: 5, potassium_mg: 150, calcium_mg: 25, magnesium_mg: 45, iron_mg: 1.8, zinc_mg: 1.2, selenium_mcg: 15, vitamin_a_mcg: 0, vitamin_b12_mcg: 0, vitamin_c_mg: 0, vitamin_d_mcg: 0, vitamin_e_mg: 0.3, vitamin_k_mcg: 1, phosphorus_mg: 140 },
+    // BUG-S53-e: الماكروز كانت متسجَّلة لكل شريحة (30 جم) فعليًا مش لكل 100جم
+    // زي ما reference_amount_g بيفترض — 74kcal/100g مستحيل لخبز حقيقي (اكتُشف
+    // أثناء مطابقة برنامج غذائي مرفوع من المستخدم). صُحِّحت بضرب ×(100/30)
+    // ومطابقة الناتج مع مرجع USDA FDC لخبز القمح الكامل (~247kcal/100g) — تطابق قريب جدًا.
+    macros: { kcal: 247, protein_g: 13, carbs_g: 41, fat_g: 4, fiber_g: 6, sugar_g: 1.23, added_sugar_g: 0, saturated_fat_g: 0.93, monounsaturated_fat_g: 1.17, polyunsaturated_fat_g: 1.87, cholesterol_mg: 0, omega3_mg: 133 },
+    micros: { sodium_mg: 17, potassium_mg: 500, calcium_mg: 83, magnesium_mg: 150, iron_mg: 6, zinc_mg: 4, selenium_mcg: 50, vitamin_a_mcg: 0, vitamin_b12_mcg: 0, vitamin_c_mg: 0, vitamin_d_mcg: 0, vitamin_e_mg: 1, vitamin_k_mcg: 3.33, phosphorus_mg: 467 },
     gi: -1, gl: -1,
     quality_score: 60.8,
     processing_level: "minimally_processed",
@@ -68081,17 +68085,19 @@ export const FOODS_DATA = [
     suitable_for_diets: ["vegan", "vegetarian"],
     religious_tags: ["ramadan_iftar", "ramadan_suhoor"],
     warnings: ["كلى: بحذر"],
-    typical_portion_desc_ar: "حصة ~100 جم مطبوخ",
+    typical_portion_desc_ar: "شريحة واحدة تقريبًا 30 جم",
   },
   {
     id: "food_5365",
     name_ar: "شريحة خبز أبيض",
-    name_en: "30 جم",
+    name_en: "White Bread (per 100g)",
     category: "carb",
     ingredients: [],
     reference_amount_g: REFERENCE_UNIT_G,
-    macros: { kcal: 80, protein_g: 2.7, carbs_g: 14.7, fat_g: 1, fiber_g: 0.8, sugar_g: 0.44, added_sugar_g: 0, saturated_fat_g: 0.24, monounsaturated_fat_g: 0.29, polyunsaturated_fat_g: 0.47, cholesterol_mg: 0, omega3_mg: 30 },
-    micros: { sodium_mg: 5, potassium_mg: 150, calcium_mg: 25, magnesium_mg: 45, iron_mg: 1.8, zinc_mg: 1.2, selenium_mcg: 15, vitamin_a_mcg: 0, vitamin_b12_mcg: 0, vitamin_c_mg: 0, vitamin_d_mcg: 0, vitamin_e_mg: 0.3, vitamin_k_mcg: 1, phosphorus_mg: 140 },
+    // BUG-S53-e: نفس مشكلة "شريحة خبز أسمر" فوق — ماكروز مسجَّلة لكل شريحة
+    // (30 جم) بالغلط. صُحِّحت بنفس المعامل ×(100/30).
+    macros: { kcal: 267, protein_g: 9, carbs_g: 49, fat_g: 3.33, fiber_g: 2.67, sugar_g: 1.47, added_sugar_g: 0, saturated_fat_g: 0.8, monounsaturated_fat_g: 0.97, polyunsaturated_fat_g: 1.57, cholesterol_mg: 0, omega3_mg: 100 },
+    micros: { sodium_mg: 17, potassium_mg: 500, calcium_mg: 83, magnesium_mg: 150, iron_mg: 6, zinc_mg: 4, selenium_mcg: 50, vitamin_a_mcg: 0, vitamin_b12_mcg: 0, vitamin_c_mg: 0, vitamin_d_mcg: 0, vitamin_e_mg: 1, vitamin_k_mcg: 3.33, phosphorus_mg: 467 },
     gi: -1, gl: -1,
     quality_score: 57.1,
     processing_level: "minimally_processed",
@@ -68104,7 +68110,7 @@ export const FOODS_DATA = [
     suitable_for_diets: ["vegan", "vegetarian"],
     religious_tags: ["ramadan_iftar", "ramadan_suhoor"],
     warnings: ["كلى: بحذر"],
-    typical_portion_desc_ar: "حصة ~100 جم مطبوخ",
+    typical_portion_desc_ar: "شريحة واحدة تقريبًا 30 جم",
   },
   {
     id: "food_5366",

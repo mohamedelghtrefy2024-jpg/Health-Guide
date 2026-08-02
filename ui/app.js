@@ -18,7 +18,8 @@ import {
   resolveBodyFatPercent, calculateRemainingMealBudget, DEFAULT_MEAL_SHARE,
   resolveSafeMacroRange, validateCustomMacroRatios,
 } from '../core/nutrition-engine/nutrition-engine.js';
-import { generateMeal, generateDayPlan, updateMealItemPortion } from '../core/meal-engine/meal-generation-engine.js';
+import { generateMeal, generateDayPlan, updateMealItemPortion, resolveMealPlanTemplateDay } from '../core/meal-engine/meal-generation-engine.js';
+import { MEAL_PLAN_CALORIE_LEVELS, MEAL_PLAN_DAYS, nearestCalorieLevel } from '../core/meal-engine/meal-plan-templates.js';
 import { resolveDailyFastingStatus } from '../core/decision-engine/religious-calendar.js';
 import { classifyMealQualityScore, computeMealQualityScore } from '../core/meal-engine/meal-quality.js';
 import { getAllExercises, filterExercisesForConditions, calculateCaloriesBurned } from '../core/exercise-engine/exercise-engine.js';
@@ -130,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireMacroBar();
   wireMealGeneration();
   wireDayPlanGeneration();
+  wireMealPlanTemplates();
   wireSettings();
   wireInBodyDialog();
   wireResetButton();
@@ -261,7 +263,7 @@ function wireNavigation() {
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
 
       if (btn.dataset.tab === 'dashboard') await renderDashboard();
-      if (btn.dataset.tab === 'meal-gen') renderFastingBanner();
+      if (btn.dataset.tab === 'meal-gen') { renderFastingBanner(); autoSelectNearestTemplateLevel(); }
       if (btn.dataset.tab === 'activity') await renderActivityTab();
       if (btn.dataset.tab === 'food-library') renderFoodLibraryTab();
       if (btn.dataset.tab === 'tracking') await renderTrackingTab();
@@ -873,6 +875,81 @@ function wireDayPlanGeneration() {
   });
 
   document.getElementById('day-plan-not-fasting-override').addEventListener('change', renderFastingBanner);
+}
+
+let templateLevelUserChanged = false; // يمنع الكشف التلقائي لأقرب مستوى سعرات من الكتابة فوق اختيار اليوزر اليدوي
+
+/** يبني القائمتين المنسدلتين (المستوى/اليوم) لقسم "خطط جاهزة بالسعرات" — مرة واحدة عند التحميل */
+function wireMealPlanTemplates() {
+  const levelSelect = document.getElementById('meal-plan-template-level');
+  const daySelect = document.getElementById('meal-plan-template-day');
+
+  levelSelect.innerHTML = MEAL_PLAN_CALORIE_LEVELS.map((lvl) => `<option value="${lvl}">${lvl} سعرة</option>`).join('');
+  daySelect.innerHTML = MEAL_PLAN_DAYS.map((d) => `<option value="${d}">${d}</option>`).join('');
+  levelSelect.addEventListener('change', () => { templateLevelUserChanged = true; });
+
+  document.getElementById('show-meal-plan-template-btn').addEventListener('click', () => {
+    const level = Number(levelSelect.value);
+    const day = daySelect.value;
+    const result = resolveMealPlanTemplateDay(level, day);
+    renderMealPlanTemplateResult(result);
+  });
+}
+
+/** لو اليوزر لسه ما لمسش القائمة يدويًا، يختار أقرب مستوى سعرات جاهز لهدفه الحالي — راحة استخدام بسيطة، مش إلزام */
+function autoSelectNearestTemplateLevel() {
+  if (templateLevelUserChanged || !currentNutrition?.calorieTarget) return;
+  const levelSelect = document.getElementById('meal-plan-template-level');
+  if (!levelSelect) return;
+  levelSelect.value = String(nearestCalorieLevel(currentNutrition.calorieTarget.targetCalories));
+}
+
+const TEMPLATE_MEAL_KEY_TO_ENGLISH = { 'فطار': 'breakfast', 'غداء': 'lunch', 'سناك': 'snack', 'عشاء': 'dinner' };
+
+function renderMealPlanTemplateResult(result) {
+  const container = document.getElementById('meal-plan-template-result');
+  if (!container) return;
+  if (!result) { container.innerHTML = '<div class="warning-box">مفيش قالب لليوم/المستوى ده.</div>'; return; }
+
+  const slotsHtml = result.slots.map((slot, idx) => {
+    const itemsHtml = slot.meal.items.map((i) =>
+      `<li><span class="food-icon">${categoryIcon(i.food.category)}</span> ${i.food.name_ar} — ${i.grams} جم</li>`
+    ).join('');
+    return `
+      <div class="card" style="grid-column:1/-1">
+        <h3>${MEAL_TYPE_LABEL_AR[TEMPLATE_MEAL_KEY_TO_ENGLISH[slot.slotType]] ?? slot.label_ar} <span class="unit">(${slot.meal.qualityLabel})</span></h3>
+        <ul>${itemsHtml}</ul>
+        <div class="unit">${Math.round(slot.meal.totals.kcal)} سعرة · بروتين ${Math.round(slot.meal.totals.protein_g)}g · كارب ${Math.round(slot.meal.totals.carbs_g)}g · دهون ${Math.round(slot.meal.totals.fat_g)}g</div>
+        <button class="secondary-btn log-template-slot-btn" data-slot-index="${idx}">✅ تسجيل هذه الوجبة</button>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card" style="grid-column:1/-1">
+      <h3>📊 إجمالي اليوم — ${result.calorieLevel} سعرة</h3>
+      <div class="value">${result.totals.kcal} سعرة الفعلية</div>
+      <div class="unit">بروتين ${result.totals.protein_g}g · كارب ${result.totals.carbs_g}g · دهون ${result.totals.fat_g}g</div>
+    </div>
+    ${slotsHtml}
+  `;
+
+  container.querySelectorAll('.log-template-slot-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.slotIndex);
+      const slot = result.slots[idx];
+      const today = getLocalDateStr();
+      const { ok } = await withStorageErrorFeedback(
+        () => logMeal(today, TEMPLATE_MEAL_KEY_TO_ENGLISH[slot.slotType] ?? 'snack', slot.meal.items),
+        'meal-plan-template-result'
+      );
+      if (!ok) return;
+      await refreshRemainingBudget();
+      await renderDashboard();
+      btn.disabled = true;
+      btn.textContent = '✓ اتسجّلت';
+    });
+  });
 }
 
 function renderDayPlanResult(result) {

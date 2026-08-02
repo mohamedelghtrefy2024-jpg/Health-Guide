@@ -18,7 +18,8 @@ import {
 import {
   calculateMacroTargets, resolveSafeMacroRange, validateCustomMacroRatios,
 } from '../core/nutrition-engine/nutrition-engine.js';
-import { generateMeal, generateDayPlan, buildDayPlanSlots } from '../core/meal-engine/meal-generation-engine.js';
+import { generateMeal, generateDayPlan, buildDayPlanSlots, resolveMealPlanTemplateDay } from '../core/meal-engine/meal-generation-engine.js';
+import { MEAL_PLAN_CALORIE_LEVELS, MEAL_PLAN_DAYS, nearestCalorieLevel } from '../core/meal-engine/meal-plan-templates.js';
 import { MEDICAL_CONDITION } from '../core/food-library/schema.js';
 import { resolveAvailableFoods } from '../core/decision-engine/decision-engine.js';
 import { getAllFoods } from '../core/food-library/food-library.js';
@@ -183,6 +184,62 @@ check('generateMeal مع cuisinePreference=egyptian_only: كل أصناف أفض
   const r = generateMeal({ constraintProfile: egyptianOnlyProfile, mealType: 'lunch', targetKcal: 600, minFoodQualityScore: 0 });
   return r.success && r.candidates[0].items.every((i) => i.food.cuisine === 'egyptian');
 })());
+
+console.log('=== S53-d: واقعية التوليد — بند "دي وجبات الواحد ياكلها؟" ===');
+const realismConstraintProfile = { medicalConditions: [], allergies: [], dietStyle: 'normal', pregnancyStatus: 'none', cuisinePreference: 'egyptian_only' };
+const realismDayPlan = generateDayPlan({
+  constraintProfile: realismConstraintProfile,
+  dailyCalorieTarget: 2292,
+  dailyMacroTargets: { protein_g: 172, carb_g: 258, fat_g: 76 },
+  isFasting: false,
+  mealSlotsHint: 'normal',
+  snacksCount: 3,
+  drinksCount: 2,
+  minFoodQualityScore: 30,
+});
+const successfulSlots = realismDayPlan.slots.filter((s) => s.success);
+check('خطة اليوم كلها نجحت (8 سلوتات) رغم القيود الواقعية الجديدة', realismDayPlan.successCount === 8);
+
+const allUsedIds = successfulSlots.flatMap((s) => s.meal.items.map((i) => i.food.id));
+check('مفيش أي صنف اتكرر بالظبط في أكتر من سلوت في نفس اليوم', new Set(allUsedIds).size === allUsedIds.length);
+
+check('مفيش سلوت (سناك/وجبة) صنفه الوحيد من فئة خضار/توابل (زي "شبت" كوجبة كاملة)', successfulSlots.every((s) =>
+  s.meal.items.length > 1 || !['vegetable', 'condiment'].includes(s.meal.items[0].food.category)
+));
+
+const drinkSlots = successfulSlots.filter((s) => s.isBeverage);
+check('كل سلوتات المشروبات كثافتها السعرية معقولة فعليًا (≤90 سعرة/100جم، مش دبس/شراب مكثّف)', drinkSlots.every((s) =>
+  s.meal.items.every((i) => i.food.macros.kcal <= 90)
+));
+
+check('مفيش صنف كارب بحصة تافهة (أقل من 15 جم) داخل أي تركيبة', successfulSlots.every((s) =>
+  s.meal.items.every((i) => i.food.category !== 'carb' || i.grams >= 15)
+));
+
+check('مفيش سلوت صنفه الوحيد مكسرات/بذور بحصة أكبر من 60 جم (كثافة سعرات عالية)', successfulSlots.every((s) =>
+  s.meal.items.length > 1 || s.meal.items[0].food.category !== 'nut_seed' || s.meal.items[0].grams <= 60
+));
+
+console.log('=== S53-e: قوالب البرنامج الغذائي الجاهز (1200-2500 سعرة) ===');
+check('7 مستويات سعرات متاحة (1200 إلى 2500)', MEAL_PLAN_CALORIE_LEVELS.length === 7 && MEAL_PLAN_CALORIE_LEVELS[0] === 1200 && MEAL_PLAN_CALORIE_LEVELS.at(-1) === 2500);
+check('nearestCalorieLevel(1750) يرجّع 1800 (أقرب مستوى)', nearestCalorieLevel(1750) === 1800);
+check('nearestCalorieLevel(1250) يرجّع 1200 (أقرب مستوى)', nearestCalorieLevel(1250) === 1200);
+
+for (const level of MEAL_PLAN_CALORIE_LEVELS) {
+  for (const day of MEAL_PLAN_DAYS) {
+    const r = resolveMealPlanTemplateDay(level, day);
+    if (!r || r.slots.length === 0 || r.slots.some((s) => s.meal.items.length === 0)) {
+      check(`قالب ${level}/${day} سليم (4 وجبات، كل وجبة فيها أصناف فعلية)`, false);
+    }
+  }
+}
+check('كل الـ49 يوم/مستوى (7×7) اتحلّوا بنجاح لأصناف فعلية من المكتبة', true); // لو أي مستوى فشل، الحلقة فوق كانت سجّلت ❌ بالفعل
+
+const sampleDay = resolveMealPlanTemplateDay(1200, 'الأحد');
+check('كل صنف في القالب اتربط بصنف حقيقي (food كائن كامل، مش مجرد id)', sampleDay.slots.every((s) => s.meal.items.every((i) => typeof i.food === 'object' && i.food.name_ar)));
+check('إجمالي سعرات اليوم قريب من المستوى المُسمّى (هامش معقول ±20%)', Math.abs(sampleDay.totals.kcal - 1200) / 1200 < 0.20);
+
+check('مستوى/يوم غير موجودين يرجّعوا null بدل ما يكسروا', resolveMealPlanTemplateDay(9999, 'الأحد') === null);
 
 console.log(`\n=== ${pass} نجح / ${fail} فشل ===`);
 process.exit(fail > 0 ? 1 : 0);

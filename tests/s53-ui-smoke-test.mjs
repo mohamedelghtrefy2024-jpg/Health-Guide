@@ -174,5 +174,28 @@ if (firstAddBtn) {
   check('الصنف المُضاف من المكتبة ظهر فعليًا في كارت الوجبة', document.getElementById('meal-type-select').value === 'snack' && document.querySelectorAll('#meal-result .meal-item-row').length > 0);
 }
 
+console.log('=== S53-e: خطط جاهزة بالسعرات (البرنامج الغذائي المرفوع) ===');
+const levelSelect = document.getElementById('meal-plan-template-level');
+const daySelect = document.getElementById('meal-plan-template-day');
+check('قائمة مستويات السعرات اتعبّت (7 مستويات)', levelSelect.options.length === 7);
+check('قائمة الأيام اتعبّت (7 أيام)', daySelect.options.length === 7);
+
+levelSelect.value = '1200';
+daySelect.value = 'الأحد';
+document.getElementById('show-meal-plan-template-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 30));
+
+const templateResultHtml = document.getElementById('meal-plan-template-result').innerHTML;
+check('القالب اتعرض فعليًا (إجمالي اليوم ظاهر)', templateResultHtml.includes('إجمالي اليوم'));
+check('كل الوجبات الأربعة ظهرت (فطار/غداء/سناك/عشاء)', ['فطار', 'غداء', 'سناك', 'عشاء'].every((m) => templateResultHtml.includes(m)));
+
+const templateLogBtn = document.querySelector('.log-template-slot-btn');
+check('زرار تسجيل وجبة من القالب موجود', !!templateLogBtn);
+if (templateLogBtn) {
+  templateLogBtn.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 60));
+  check('تسجيل وجبة من القالب الجاهز نجح فعليًا', templateLogBtn.disabled === true);
+}
+
 console.log(`\n=== ${pass} نجح / ${fail} فشل ===`);
 process.exit(fail > 0 ? 1 : 0);
