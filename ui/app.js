@@ -16,7 +16,7 @@ import { ALLERGEN_LABEL_AR } from '../core/decision-engine/allergy-engine.js';
 import {
   calculateFullNutritionProfile, calculateWaterTargetMl, ACTIVITY_LEVEL, GOAL,
   resolveBodyFatPercent, calculateRemainingMealBudget, DEFAULT_MEAL_SHARE,
-  resolveSafeMacroRange, validateCustomMacroRatios,
+  resolveSafeMacroRange, validateCustomMacroRatios, calculateMacroTargets,
 } from '../core/nutrition-engine/nutrition-engine.js';
 import { generateMeal, generateDayPlan, updateMealItemPortion, resolveMealPlanTemplateDay } from '../core/meal-engine/meal-generation-engine.js';
 import { MEAL_PLAN_CALORIE_LEVELS, MEAL_PLAN_DAYS, nearestCalorieLevel } from '../core/meal-engine/meal-plan-templates.js';
@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireMealGeneration();
   wireDayPlanGeneration();
   wireMealPlanTemplates();
+  wireCalorieOverrideInput();
   wireSettings();
   wireInBodyDialog();
   wireResetButton();
@@ -263,7 +264,7 @@ function wireNavigation() {
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
 
       if (btn.dataset.tab === 'dashboard') await renderDashboard();
-      if (btn.dataset.tab === 'meal-gen') { renderFastingBanner(); autoSelectNearestTemplateLevel(); }
+      if (btn.dataset.tab === 'meal-gen') { renderFastingBanner(); autoSelectNearestTemplateLevel(); resetCalorieOverrideInput(); await refreshRemainingBudget(); }
       if (btn.dataset.tab === 'activity') await renderActivityTab();
       if (btn.dataset.tab === 'food-library') renderFoodLibraryTab();
       if (btn.dataset.tab === 'tracking') await renderTrackingTab();
@@ -725,11 +726,52 @@ function wireInBodyDialog() {
 }
 
 /**
+ * حقل "غيّر رقم السعرات لهذا التوليد" — بيتصفّر على الرقم المحسوب تلقائيًا
+ * (calorieTarget.targetCalories) في كل مرة تُفتح فيها تابة التوليد، ومش
+ * بيتحفظ في البروفايل (طلب المستخدم صراحة: "اسألني في كل مرة" مش حفظ ثابت).
+ * لو المستخدم غيّر الرقم يدويًا قبل الضغط على توليد، القيمة دي هي اللي
+ * بتتستخدم فعليًا بدل رقم النظام — فوريًا في نفس الجلسة، من غير أي تخزين دائم.
+ */
+function resetCalorieOverrideInput() {
+  const input = document.getElementById('calorie-override-input');
+  if (!input || !currentNutrition?.calorieTarget) return;
+  input.value = String(currentNutrition.calorieTarget.targetCalories);
+  input.dataset.systemDefault = String(currentNutrition.calorieTarget.targetCalories);
+}
+
+/**
+ * الهدف اليومي الفعلي اللي هيُستخدم في التوليد (وجبة مفردة أو خطة يوم):
+ * لو حقل التخصيص فيه رقم مختلف عن رقم النظام المحسوب، بيتم إعادة حساب
+ * الماكرو بالكامل على أساسه (مش بس تناسب بسيط) عشان تفضل نسب البروتين/الكارب/
+ * الدهون سليمة ومتقيّدة بنفس الحدود الآمنة والقيود الطبية. لو الحقل فاضي/غير
+ * صالح، بيرجع لرقم النظام الأصلي زي ما هو.
+ */
+function getEffectiveDailyTarget() {
+  const fallback = { targetCalories: currentNutrition.calorieTarget.targetCalories, macroTargets: currentNutrition.macroTargets };
+  const input = document.getElementById('calorie-override-input');
+  if (!input) return fallback;
+  const overrideValue = Number(input.value);
+  if (!Number.isFinite(overrideValue) || overrideValue <= 0) return fallback;
+
+  const macroTargets = calculateMacroTargets(
+    overrideValue,
+    currentProfile.dietStyle ?? 'normal',
+    Number(currentProfile.weightKg),
+    currentProfile.customMacroRatios ?? null,
+    currentProfile.medicalConditions ?? []
+  );
+  return { targetCalories: Math.round(overrideValue), macroTargets };
+}
+
+/**
  * يعيد حساب ميزانية الوجبات المتبقية في اليوم (سعرات/ماكرو) بناءً على أي
  * استهلاك فعلي حتى الآن (وجبات مسجَّلة + تقدير "معزوم برة") — ده اللي
  * يُفعِّل "إعادة توازن تلقائي لباقي وجبات اليوم" المطلوبة صراحة لميزة
  * "معزوم برة". يُستدعى بعد أي تسجيل (وجبة عادية أو معزوم برة) وعند أي
  * إعادة رسم للداشبورد، فيبقى `todayRemainingBudget` دايمًا محدَّث.
+ * بيستخدم الهدف *الفعلي* (رقم النظام أو رقم المستخدم المخصص لو غيّره) —
+ * مش رقم النظام مباشرة — عشان توليد الوجبة المفردة وخطة اليوم الاتنين
+ * يشتغلوا على نفس الرقم اللي اختاره المستخدم.
  */
 async function refreshRemainingBudget() {
   // BUG-S23-02: currentNutrition ممكن يكون موجود لكن calorieTarget/macroTargets
@@ -743,9 +785,11 @@ async function refreshRemainingBudget() {
   const loggedMealTypesToday = new Set(allLogs.filter((l) => l.date === today).map((l) => l.mealType));
   const remainingMealTypes = ALL_MEAL_TYPES.filter((mt) => !loggedMealTypesToday.has(mt));
 
+  const effectiveTarget = getEffectiveDailyTarget();
+
   todayRemainingBudget = calculateRemainingMealBudget({
-    dailyCalorieTarget: currentNutrition.calorieTarget.targetCalories,
-    dailyMacroTargets: currentNutrition.macroTargets,
+    dailyCalorieTarget: effectiveTarget.targetCalories,
+    dailyMacroTargets: effectiveTarget.macroTargets,
     consumedKcal: daily.nutrition?.kcal ?? 0,
     consumedMacros: daily.nutrition
       ? { protein_g: daily.nutrition.protein_g, carb_g: daily.nutrition.carbs_g, fat_g: daily.nutrition.fat_g }
@@ -808,6 +852,13 @@ function renderFastingBanner() {
   `;
 }
 
+/** أي تعديل يدوي في رقم السعرات المخصص يحدّث فورًا عرض "الباقي من هدف اليوم" بنفس الرقم الجديد */
+function wireCalorieOverrideInput() {
+  const input = document.getElementById('calorie-override-input');
+  if (!input) return;
+  input.addEventListener('input', () => { refreshRemainingBudget(); });
+}
+
 function wireMealGeneration() {
   document.getElementById('generate-meal-btn').addEventListener('click', async () => {
     if (!currentProfile || !currentNutrition?.calorieTarget) return;
@@ -816,12 +867,13 @@ function wireMealGeneration() {
     await refreshRemainingBudget();
     const budget = todayRemainingBudget?.perMeal?.[mealType];
     const mealShare = DEFAULT_MEAL_SHARE[mealType] ?? 0.25;
+    const effectiveTarget = getEffectiveDailyTarget();
 
-    const targetKcal = budget ? budget.targetKcal : currentNutrition.calorieTarget.targetCalories * mealShare;
+    const targetKcal = budget ? budget.targetKcal : effectiveTarget.targetCalories * mealShare;
     const macroTargets = budget ? budget.macroTargets : {
-      protein_g: currentNutrition.macroTargets.protein_g * mealShare,
-      carb_g: currentNutrition.macroTargets.carb_g * mealShare,
-      fat_g: currentNutrition.macroTargets.fat_g * mealShare,
+      protein_g: effectiveTarget.macroTargets.protein_g * mealShare,
+      carb_g: effectiveTarget.macroTargets.carb_g * mealShare,
+      fat_g: effectiveTarget.macroTargets.fat_g * mealShare,
     };
 
     const result = generateMeal({
@@ -855,8 +907,9 @@ function wireDayPlanGeneration() {
     const drinksCount = Math.max(0, Number(document.getElementById('day-plan-drinks-count').value) || 0);
     const status = resolveCurrentFastingStatus();
 
-    const dailyCalorieTarget = todayRemainingBudget?.remainingKcal ?? currentNutrition.calorieTarget.targetCalories;
-    const dailyMacroTargets = todayRemainingBudget?.remainingMacros ?? currentNutrition.macroTargets;
+    const effectiveTarget = getEffectiveDailyTarget();
+    const dailyCalorieTarget = todayRemainingBudget?.remainingKcal ?? effectiveTarget.targetCalories;
+    const dailyMacroTargets = todayRemainingBudget?.remainingMacros ?? effectiveTarget.macroTargets;
 
     const result = generateDayPlan({
       constraintProfile: toConstraintProfile(currentProfile, { manualOverrideNotFasting: readManualFastingOverride() }),

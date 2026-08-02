@@ -110,6 +110,37 @@ if (firstLogBtn) {
   check('تسجيل وجبة من خطة اليوم نجح (الزرار اتعطّل وبقى "اتسجّلت")', firstLogBtn.disabled === true && firstLogBtn.textContent.includes('اتسجّلت'));
 }
 
+console.log('=== حقل "عايز تولّد على كام سعرة؟" (تخصيص السعرات لتوليد اليوم/الوجبة) ===');
+const calorieOverrideInput = document.getElementById('calorie-override-input');
+const systemDefaultCalories = Number(calorieOverrideInput.value);
+check('الحقل اتصفّر تلقائيًا على رقم النظام المحسوب (مش فاضي أو صفر)', systemDefaultCalories > 0);
+
+// نغيّر الرقم لقيمة مختلفة بوضوح عن رقم النظام ونولّد خطة يوم تانية
+const customCalories = Math.max(1200, systemDefaultCalories - 400);
+calorieOverrideInput.value = String(customCalories);
+calorieOverrideInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 30));
+
+document.getElementById('day-plan-snacks-count').value = '0';
+document.getElementById('day-plan-drinks-count').value = '0';
+document.getElementById('generate-day-plan-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 100));
+
+const overriddenPlanHtml = document.getElementById('day-plan-result').innerHTML;
+const totalKcalMatch = overriddenPlanHtml.match(/إجمالي الخطة:\s*(\d+)\s*سعرة/);
+const generatedTotalKcal = totalKcalMatch ? Number(totalKcalMatch[1]) : null;
+check(
+  'توليد خطة اليوم اعتمد فعليًا على الرقم المخصَّص (قريب من customCalories مش من رقم النظام الأصلي)',
+  generatedTotalKcal !== null && Math.abs(generatedTotalKcal - customCalories) < Math.abs(generatedTotalKcal - systemDefaultCalories)
+);
+
+// الخروج من التاب ورجوع تاني — لازم يرجع الحقل لرقم النظام الافتراضي (مش الرقم المخصَّص اللي مسحناه)
+document.querySelector('.nav-btn[data-tab="dashboard"]').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 20));
+document.querySelector('.nav-btn[data-tab="meal-gen"]').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 20));
+check('الحقل رجع لرقم النظام الافتراضي بعد الخروج من التاب والرجوع (التخصيص مؤقت للجلسة مش محفوظ دائمًا)', Number(document.getElementById('calorie-override-input').value) === systemDefaultCalories);
+
 console.log('=== S53-c: تعديل الوجبة الحر (حذف/إضافة أصناف مش بس تعديل جرامات) ===');
 document.getElementById('meal-type-select').value = 'lunch';
 document.getElementById('generate-meal-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
