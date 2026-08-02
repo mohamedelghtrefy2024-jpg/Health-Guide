@@ -110,5 +110,69 @@ if (firstLogBtn) {
   check('تسجيل وجبة من خطة اليوم نجح (الزرار اتعطّل وبقى "اتسجّلت")', firstLogBtn.disabled === true && firstLogBtn.textContent.includes('اتسجّلت'));
 }
 
+console.log('=== S53-c: تعديل الوجبة الحر (حذف/إضافة أصناف مش بس تعديل جرامات) ===');
+document.getElementById('meal-type-select').value = 'lunch';
+document.getElementById('generate-meal-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 60));
+
+const itemRowsBefore = document.querySelectorAll('#meal-result .remove-meal-item-btn').length;
+check('وجبة اتولّدت وفيها أصناف نقدر نحذف منها', itemRowsBefore > 0);
+
+const removeBtn = document.querySelector('.remove-meal-item-btn[data-item-index="0"]');
+if (removeBtn) {
+  removeBtn.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 30));
+  const itemRowsAfter = document.querySelectorAll('#meal-result .remove-meal-item-btn').length;
+  check('حذف صنف من الوجبة قلّل عدد الأصناف فعليًا', itemRowsAfter === itemRowsBefore - 1);
+}
+
+const quickAddInput = document.getElementById('meal-quick-add-search');
+quickAddInput.value = 'أرز';
+quickAddInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 30));
+const quickAddChip = document.querySelector('.quick-add-result-chip');
+check('البحث السريع جوّه كارت الوجبة بيرجّع نتائج فعلية', !!quickAddChip);
+if (quickAddChip) {
+  const itemRowsBeforeAdd = document.querySelectorAll('#meal-result .remove-meal-item-btn').length;
+  quickAddChip.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 30));
+  const itemRowsAfterAdd = document.querySelectorAll('#meal-result .remove-meal-item-btn').length;
+  check('إضافة صنف من البحث السريع زوّدت عدد الأصناف فعليًا', itemRowsAfterAdd === itemRowsBeforeAdd + 1);
+}
+
+console.log('=== S53-c: مكتبة الطعام — عرض كل الأصناف (تحميل المزيد) + إضافة صنف لوجبة من الكارت مباشرة ===');
+document.querySelector('.nav-btn[data-tab="food-library"]').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 30));
+
+const countTextBefore = document.getElementById('food-library-results-count').textContent;
+const totalMatch = Number(countTextBefore.match(/\d+/)?.[0] ?? 0);
+check('عدّاد النتائج بيوضّح الإجمالي الحقيقي (مش بس أول 60)', totalMatch > 60);
+check('زرار "تحميل المزيد" موجود لما فيه أصناف أكتر من صفحة العرض', !!document.getElementById('food-library-load-more-btn'));
+
+const cardsBeforeLoadMore = document.querySelectorAll('#food-library-results .food-card').length;
+document.getElementById('food-library-load-more-btn')?.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 30));
+const cardsAfterLoadMore = document.querySelectorAll('#food-library-results .food-card').length;
+check('"تحميل المزيد" بيعرض أصناف زيادة فعليًا', cardsAfterLoadMore > cardsBeforeLoadMore);
+
+const firstAddBtn = document.querySelector('.add-to-meal-btn');
+check('زرار "أضف لوجبة" موجود على كل كارت صنف في المكتبة', !!firstAddBtn);
+if (firstAddBtn) {
+  const foodId = firstAddBtn.dataset.foodId;
+  firstAddBtn.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 20));
+  const picker = document.querySelector(`.add-to-meal-picker[data-food-id="${foodId}"]`);
+  check('اختيار نوع الوجبة يظهر بعد الضغط على "أضف لوجبة"', picker.style.display !== 'none');
+
+  picker.querySelector('.add-to-meal-type-select').value = 'snack';
+  document.querySelector(`.confirm-add-to-meal-btn[data-food-id="${foodId}"]`).dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 20));
+  check('تأكيد الإضافة يظهر رسالة تأكيد على الكارت', document.querySelector(`.add-to-meal-confirm[data-food-id="${foodId}"]`).innerHTML.includes('✓'));
+
+  document.querySelector('.nav-btn[data-tab="meal-gen"]').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 20));
+  check('الصنف المُضاف من المكتبة ظهر فعليًا في كارت الوجبة', document.getElementById('meal-type-select').value === 'snack' && document.querySelectorAll('#meal-result .meal-item-row').length > 0);
+}
+
 console.log(`\n=== ${pass} نجح / ${fail} فشل ===`);
 process.exit(fail > 0 ? 1 : 0);

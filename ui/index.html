@@ -126,6 +126,13 @@
             <option value="strict">صارم</option>
           </select>
         </label>
+        <label>نطاق المطبخ
+          <select name="cuisinePreference">
+            <option value="egyptian_only" selected>المطبخ المصري فقط</option>
+            <option value="egyptian_and_levantine">المصري + الشامي (حمص/زعتر/طرشي..)</option>
+            <option value="all">بدون تقييد (كل المطابخ)</option>
+          </select>
+        </label>
       </div>
 
       <fieldset>
@@ -226,6 +233,7 @@
     <div id="food-library-filter-chips" class="filter-chips"></div>
     <div id="food-library-results-count" class="subtitle"></div>
     <div id="food-library-results" class="cards-grid"></div>
+    <div id="food-library-load-more-container" style="text-align:center;margin-top:14px"></div>
   </section>
 
   <!-- ===================== Exercise ===================== -->

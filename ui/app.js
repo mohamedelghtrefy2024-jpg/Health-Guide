@@ -56,6 +56,8 @@ function categoryIcon(category) {
   return CATEGORY_ICON[category] ?? '🍽️';
 }
 
+const MEAL_TYPE_LABEL_AR = { breakfast: '🌅 فطار', lunch: '🍛 غداء', dinner: '🌙 عشاء', snack: '🍎 سناك' };
+
 const CHALLENGE_ICON = {
   calorie_streak: '🔥',
   water_streak: '💧',
@@ -65,7 +67,7 @@ const CHALLENGE_ICON = {
 /** الحالة الحيّة في الذاكرة أثناء الجلسة — دائمًا مصدرها IndexedDB عند التحميل */
 let currentProfile = null;
 let currentNutrition = null; // ناتج calculateFullNutritionProfile — يُعاد حسابه كل ما البروفايل يتغيّر
-let lastGeneratedMeal = null; // آخر تركيبة وجبة اتولّدت (لتفعيل زر "تسجيل هذه الوجبة")
+let lastGeneratedMeal = null; // آخر تركيبة وجبة اتولّدت أو "الوجبة قيد التحرير" يدويًا حاليًا (S53-c: بقت قابلة للتعديل الحر — إضافة/حذف أصناف مش بس تعديل الجرامات)
 let lastGeneratedMealTypeShare = null; // نوع الوجبة + الميزانية المستخدمة فعليًا في آخر توليد (لعرض/تعديل الحصة)
 let todayRemainingBudget = null; // ناتج calculateRemainingMealBudget — يُعاد حسابه بعد أي تسجيل وجبة/معزوم برة (ميزة "معزوم برة")
 
@@ -241,6 +243,7 @@ function toConstraintProfile(profile, options = {}) {
     ),
     dietStyle: profile.dietStyle,
     pregnancyStatus: profile.pregnancyStatus ?? PREGNANCY_STATUS.NONE,
+    cuisinePreference: profile.cuisinePreference ?? 'egyptian_only',
     fastingTag: fasting.fastingTag,
   };
 }
@@ -490,6 +493,7 @@ function wireOnboardingForm() {
       pregnancyStatus: formData.get('pregnancyStatus') || PREGNANCY_STATUS.NONE,
       religion: formData.get('religion') || 'none',
       observeVoluntaryFasts: formData.get('observeVoluntaryFasts') === 'on',
+      cuisinePreference: formData.get('cuisinePreference') || 'egyptian_only',
       customMacroRatios: readCustomMacroRatiosFromForm(),
       medicalConditions: formData.getAll('medicalConditions'),
       allergies: formData.getAll('allergies').map((allergen) => ({
@@ -971,26 +975,38 @@ function renderMealResult(result, mealType) {
   renderMealCard(best, mealType);
 }
 
-/** يبني كارت تركيبة الوجبة — بما فيه تعديل يدوي لحجم كل حصة (LIMIT-05) */
+/** يبني كارت تركيبة الوجبة — تعديل حجم كل حصة، وبقى قابل للتعديل الحر بالكامل (S53-c): حذف صنف، وإضافة أي صنف من المكتبة بحث سريع جوّه الكارت نفسه */
 function renderMealCard(meal, mealType) {
   const container = document.getElementById('meal-result');
   const qualityClass = meal.qualityScore >= 85 ? 'quality-excellent' : meal.qualityScore >= 70 ? 'quality-good' : meal.qualityScore >= 55 ? 'quality-ok' : 'quality-poor';
+  const hasItems = meal.items.length > 0;
 
   container.innerHTML = `
     <div class="card">
-      <h3>أفضل تركيبة مقترحة <span class="quality-badge ${qualityClass}">${meal.qualityScore} — ${meal.qualityLabel}</span></h3>
-      ${meal.items.map((i, idx) => `
+      <h3>${MEAL_TYPE_LABEL_AR[mealType] ?? mealType} — تركيبة قابلة للتعديل الحر ${hasItems ? `<span class="quality-badge ${qualityClass}">${meal.qualityScore} — ${meal.qualityLabel}</span>` : ''}</h3>
+      ${hasItems ? meal.items.map((i, idx) => `
         <div class="meal-item-row">
           <span><span class="food-icon">${categoryIcon(i.food.category)}</span> ${i.food.name_ar}</span>
           <span class="portion-edit">
             <input type="number" class="portion-input" data-item-index="${idx}" value="${i.grams}" min="1" max="2000" step="1"> جم
+            <button type="button" class="remove-meal-item-btn" data-item-index="${idx}" title="حذف الصنف من الوجبة">✕</button>
           </span>
         </div>
-      `).join('')}
-      <div class="meal-item-row"><strong>الإجمالي</strong><strong>${Math.round(meal.totals.kcal)} سعرة</strong></div>
-      <div class="unit">بروتين ${Math.round(meal.totals.protein_g)}g · كارب ${Math.round(meal.totals.carbs_g)}g · دهون ${Math.round(meal.totals.fat_g)}g</div>
+      `).join('') : '<p class="subtitle">الوجبة فاضية دلوقتي — ضيف أصناف من البحث تحت أو من تاب مكتبة الطعام.</p>'}
+      ${hasItems ? `
+        <div class="meal-item-row"><strong>الإجمالي</strong><strong>${Math.round(meal.totals.kcal)} سعرة</strong></div>
+        <div class="unit">بروتين ${Math.round(meal.totals.protein_g)}g · كارب ${Math.round(meal.totals.carbs_g)}g · دهون ${Math.round(meal.totals.fat_g)}g</div>
+      ` : ''}
       <div id="portion-edit-message"></div>
-      <button id="log-meal-btn" class="primary-btn" style="margin-top:12px">تسجيل هذه الوجبة</button>
+
+      <div class="form-row" style="margin-top:10px">
+        <label style="flex:1">ضيف صنف تاني (بحث سريع)
+          <input type="text" id="meal-quick-add-search" placeholder="مثال: عدس، جبن قريش...">
+        </label>
+      </div>
+      <div id="meal-quick-add-results" class="quick-add-results"></div>
+
+      <button id="log-meal-btn" class="primary-btn" style="margin-top:12px" ${hasItems ? '' : 'disabled'}>تسجيل هذه الوجبة</button>
     </div>
   `;
 
@@ -998,7 +1014,7 @@ function renderMealCard(meal, mealType) {
     input.addEventListener('change', () => {
       const itemIndex = Number(input.dataset.itemIndex);
       const newGrams = Number(input.value);
-      const updated = updateMealItemPortion(lastGeneratedMeal, itemIndex, newGrams, currentNutrition.microTargets);
+      const updated = updateMealItemPortion(lastGeneratedMeal, itemIndex, newGrams, currentNutrition?.microTargets ?? null);
 
       if (!updated.success) {
         document.getElementById('portion-edit-message').innerHTML = `<div class="warning-box">${updated.diagnosis_ar}</div>`;
@@ -1010,11 +1026,44 @@ function renderMealCard(meal, mealType) {
     });
   });
 
+  container.querySelectorAll('.remove-meal-item-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const itemIndex = Number(btn.dataset.itemIndex);
+      const items = meal.items.filter((_, idx) => idx !== itemIndex);
+      lastGeneratedMeal = { items, mealType };
+      renderMealCard(buildMealCandidateFromItems(items), mealType);
+    });
+  });
+
+  const quickAddInput = document.getElementById('meal-quick-add-search');
+  const quickAddResults = document.getElementById('meal-quick-add-results');
+  quickAddInput.addEventListener('input', () => {
+    const query = quickAddInput.value.trim();
+    if (query.length < 2) { quickAddResults.innerHTML = ''; return; }
+    const matches = searchFoodsByName(query).slice(0, 8);
+    quickAddResults.innerHTML = matches.map((f) =>
+      `<button type="button" class="quick-add-result-chip" data-food-id="${f.id}"><span class="food-icon">${categoryIcon(f.category)}</span> ${f.name_ar}</button>`
+    ).join('') || '<span class="unit">مفيش نتائج</span>';
+
+    quickAddResults.querySelectorAll('.quick-add-result-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const food = matches.find((f) => f.id === chip.dataset.foodId);
+        if (!food) return;
+        const items = [...meal.items, { food, grams: 100 }];
+        lastGeneratedMeal = { items, mealType };
+        renderMealCard(buildMealCandidateFromItems(items), mealType);
+      });
+    });
+  });
+
+  if (!hasItems) return;
+
   document.getElementById('log-meal-btn').addEventListener('click', async () => {
     const today = getLocalDateStr();
     const { ok } = await withStorageErrorFeedback(() => logMeal(today, mealType, lastGeneratedMeal.items), 'portion-edit-message');
     if (!ok) return;
     document.getElementById('meal-result').insertAdjacentHTML('beforeend', '<div class="success-box">تم تسجيل الوجبة ✓</div>');
+    await refreshRemainingBudget();
     await renderDashboard(); // تحديث التوصيات الفورية + الميزانية المتبقية فورًا بعد تسجيل وجبة جديدة
   });
 }
@@ -1102,6 +1151,7 @@ const FOOD_LIBRARY_FILTERS = [
 
 const activeFoodLibraryFilterIds = new Set();
 let foodLibrarySearchQuery = '';
+let foodLibraryDisplayLimit = 60; // S53-c: كان .slice(0,60) بدون أي طريقة لعرض الباقي — بقى قابل للتوسيع بزرار "تحميل المزيد"
 
 function renderFoodLibraryTab() {
   const chipsContainer = document.getElementById('food-library-filter-chips');
@@ -1123,6 +1173,7 @@ function renderFoodLibraryTab() {
           activeFoodLibraryFilterIds.add(id);
           chip.classList.add('active');
         }
+        foodLibraryDisplayLimit = 60;
         renderFoodLibraryResults();
       });
     });
@@ -1130,6 +1181,7 @@ function renderFoodLibraryTab() {
     const searchInput = document.getElementById('food-library-search');
     searchInput.addEventListener('input', () => {
       foodLibrarySearchQuery = searchInput.value;
+      foodLibraryDisplayLimit = 60;
       renderFoodLibraryResults();
     });
   }
@@ -1158,6 +1210,7 @@ function buildActiveFoodLibraryCriteria() {
 function renderFoodLibraryResults() {
   const resultsContainer = document.getElementById('food-library-results');
   const countContainer = document.getElementById('food-library-results-count');
+  const loadMoreContainer = document.getElementById('food-library-load-more-container');
 
   let results = foodLibrarySearchQuery.trim()
     ? searchFoodsByName(foodLibrarySearchQuery)
@@ -1169,9 +1222,12 @@ function renderFoodLibraryResults() {
     results = results.filter((f) => matchingIds.has(f.id));
   }
 
-  countContainer.textContent = `${results.length} صنف`;
+  const pageResults = results.slice(0, foodLibraryDisplayLimit);
+  countContainer.textContent = `إجمالي ${results.length} صنف مطابق — بيتعرض ${pageResults.length} منهم`;
 
-  resultsContainer.innerHTML = results.slice(0, 60).map((f) => {
+  const byId = new Map(pageResults.map((f) => [f.id, f]));
+
+  resultsContainer.innerHTML = pageResults.map((f) => {
     const qClass = f.quality_score >= 85 ? 'quality-excellent' : f.quality_score >= 70 ? 'quality-good' : f.quality_score >= 55 ? 'quality-ok' : 'quality-poor';
     return `
     <div class="food-card">
@@ -1181,9 +1237,75 @@ function renderFoodLibraryResults() {
       <div class="food-meta">صوديوم ${f.micros.sodium_mg}mg | كالسيوم ${f.micros.calcium_mg}mg</div>
       <span class="quality-badge ${qClass}">${f.quality_score} — ${classifyMealQualityScore(f.quality_score)}</span>
       ${f.warnings?.length ? `<div class="food-warning">${f.warnings.join('، ')}</div>` : ''}
+      <div class="add-to-meal-row" data-food-id="${f.id}">
+        <button type="button" class="secondary-btn add-to-meal-btn" data-food-id="${f.id}">➕ أضف لوجبة</button>
+        <div class="add-to-meal-picker" data-food-id="${f.id}" style="display:none">
+          <select class="add-to-meal-type-select">
+            ${Object.entries(MEAL_TYPE_LABEL_AR).map(([v, label]) => `<option value="${v}">${label}</option>`).join('')}
+          </select>
+          <input type="number" class="add-to-meal-grams-input" value="100" min="1" max="2000" step="1"> جم
+          <button type="button" class="primary-btn confirm-add-to-meal-btn" data-food-id="${f.id}">تأكيد</button>
+        </div>
+        <div class="add-to-meal-confirm" data-food-id="${f.id}"></div>
+      </div>
     </div>
   `;
   }).join('') || '<p class="subtitle">مفيش نتائج مطابقة</p>';
+
+  loadMoreContainer.innerHTML = results.length > pageResults.length
+    ? `<button type="button" id="food-library-load-more-btn" class="secondary-btn">تحميل المزيد (${results.length - pageResults.length} صنف متبقي)</button>`
+    : '';
+  document.getElementById('food-library-load-more-btn')?.addEventListener('click', () => {
+    foodLibraryDisplayLimit += 60;
+    renderFoodLibraryResults();
+  });
+
+  resultsContainer.querySelectorAll('.add-to-meal-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const picker = resultsContainer.querySelector(`.add-to-meal-picker[data-food-id="${btn.dataset.foodId}"]`);
+      picker.style.display = picker.style.display === 'none' ? '' : 'none';
+    });
+  });
+
+  resultsContainer.querySelectorAll('.confirm-add-to-meal-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const foodId = btn.dataset.foodId;
+      const food = byId.get(foodId);
+      if (!food) return;
+      const row = resultsContainer.querySelector(`.add-to-meal-row[data-food-id="${foodId}"]`);
+      const mealType = row.querySelector('.add-to-meal-type-select').value;
+      const grams = Math.max(1, Number(row.querySelector('.add-to-meal-grams-input').value) || 100);
+      addFoodToCurrentMeal(food, grams, mealType);
+      row.querySelector('.add-to-meal-picker').style.display = 'none';
+      row.querySelector('.add-to-meal-confirm').innerHTML = `<div class="unit">✓ اتضاف لـ${MEAL_TYPE_LABEL_AR[mealType]} — راجعها في تاب "توليد وجبة"</div>`;
+    });
+  });
+}
+
+/**
+ * يضيف صنف لـ"الوجبة قيد التحرير" الحالية (`lastGeneratedMeal`) — من مكتبة
+ * الطعام مباشرة أو من صندوق البحث السريع جوّه كارت الوجبة نفسه. لو مفيش
+ * وجبة قيد التحرير أصلًا، بينشئ واحدة جديدة فاضية بنوع الوجبة المطلوب.
+ * بند مطلوب صراحة: "أدوس على أي صنف في المكتبة يطلب مني يروح في وجبة إيه".
+ * @param {import('../core/food-library/schema.js').FoodItem} food
+ * @param {number} grams
+ * @param {string} mealType
+ */
+function addFoodToCurrentMeal(food, grams, mealType) {
+  const items = [...(lastGeneratedMeal?.items ?? []), { food, grams }];
+  lastGeneratedMeal = { items, mealType };
+  const mealTypeSelect = document.getElementById('meal-type-select');
+  if (mealTypeSelect) mealTypeSelect.value = mealType;
+  renderMealCard(buildMealCandidateFromItems(items), mealType);
+}
+
+/** يحوّل مصفوفة أصناف حرة (يدوية) لنفس شكل "تركيبة الوجبة" اللي بيرجّعها generateMeal — عشان renderMealCard تشتغل بلا فرق بين الاتنين */
+function buildMealCandidateFromItems(items) {
+  if (!items.length) {
+    return { items: [], qualityScore: 0, qualityLabel: classifyMealQualityScore(0), totals: { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 } };
+  }
+  const result = computeMealQualityScore(items, currentNutrition?.microTargets ?? null);
+  return { items, qualityScore: result.score, qualityLabel: classifyMealQualityScore(result.score), totals: result.totals };
 }
 
 // -----------------------------------------------------------------------

@@ -20,6 +20,9 @@ import {
 } from '../core/nutrition-engine/nutrition-engine.js';
 import { generateMeal, generateDayPlan, buildDayPlanSlots } from '../core/meal-engine/meal-generation-engine.js';
 import { MEDICAL_CONDITION } from '../core/food-library/schema.js';
+import { resolveAvailableFoods } from '../core/decision-engine/decision-engine.js';
+import { getAllFoods } from '../core/food-library/food-library.js';
+import { CUISINE_PREFERENCE } from '../core/decision-engine/cuisine-engine.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -160,6 +163,26 @@ const impossibleCategoryResult = generateMeal({
   minFoodQualityScore: 0,
 });
 check('generateMeal مع فئة غير موجودة: فشل بتشخيص stage=category_filtering واضح (مش خلط مع مشاكل تانية)', !impossibleCategoryResult.success && impossibleCategoryResult.diagnosis.stage === 'category_filtering');
+
+console.log('=== قيد المطبخ (cuisine) — بند "الأصناف الغريبة عن الأكل المصري" ===');
+const allFoodsCount = getAllFoods().length;
+const internationalOrLevantineCount = getAllFoods().filter((f) => f.cuisine !== 'egyptian').length;
+
+check('بدون تحديد cuisinePreference: القيد القديم يفضل زي ما هو (كل المكتبة متاحة — توافق رجعي)', resolveAvailableFoods(basicConstraintProfile).availableFoods.length === allFoodsCount);
+
+const egyptianOnlyProfile = { ...basicConstraintProfile, cuisinePreference: CUISINE_PREFERENCE.EGYPTIAN_ONLY };
+const egyptianOnlyResult = resolveAvailableFoods(egyptianOnlyProfile);
+check('cuisinePreference=egyptian_only: الأصناف الدولية/الشامية اتستبعدت فعليًا', egyptianOnlyResult.availableFoods.length === allFoodsCount - internationalOrLevantineCount);
+check('cuisinePreference=egyptian_only: كل الأصناف الناجية cuisine=egyptian فعليًا', egyptianOnlyResult.availableFoods.every((f) => f.cuisine === 'egyptian'));
+
+const egyptianAndLevantineResult = resolveAvailableFoods({ ...basicConstraintProfile, cuisinePreference: CUISINE_PREFERENCE.EGYPTIAN_AND_LEVANTINE });
+check('cuisinePreference=egyptian_and_levantine: أكبر من egyptian_only بس (فيه أصناف شامية زيادة)', egyptianAndLevantineResult.availableFoods.length > egyptianOnlyResult.availableFoods.length);
+check('cuisinePreference=egyptian_and_levantine: مفيش صنف دولي (international) متسرّب', egyptianAndLevantineResult.availableFoods.every((f) => f.cuisine !== 'international'));
+
+check('generateMeal مع cuisinePreference=egyptian_only: كل أصناف أفضل تركيبة مصرية فعليًا', (() => {
+  const r = generateMeal({ constraintProfile: egyptianOnlyProfile, mealType: 'lunch', targetKcal: 600, minFoodQualityScore: 0 });
+  return r.success && r.candidates[0].items.every((i) => i.food.cuisine === 'egyptian');
+})());
 
 console.log(`\n=== ${pass} نجح / ${fail} فشل ===`);
 process.exit(fail > 0 ? 1 : 0);

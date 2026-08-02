@@ -19,6 +19,7 @@ export const CONSTRAINT_KIND = Object.freeze({
   EXCLUDE_ALLERGEN: 'exclude_allergen',                   // food.allergens يحتوي القيمة
   REQUIRE_DIET_COMPATIBLE: 'require_diet_compatible',     // food.unsuitable_for_diets يجب ألا يحتوي القيمة
   REQUIRE_RELIGIOUS_TAG: 'require_religious_tag',         // food.religious_tags يجب أن يحتوي القيمة
+  REQUIRE_CUISINE: 'require_cuisine',                     // food.cuisine يجب أن يكون ضمن allowed_values
   NUTRIENT_MAX: 'nutrient_max',                           // قيمة العنصر الغذائي <= limit_value
   NUTRIENT_MIN: 'nutrient_min',                           // قيمة العنصر الغذائي >= limit_value
 });
@@ -29,6 +30,7 @@ export const CONSTRAINT_SOURCE = Object.freeze({
   ALLERGY: 'allergy',
   RELIGIOUS: 'religious',
   DIET: 'diet',
+  CUISINE: 'cuisine',
 });
 
 /**
@@ -66,6 +68,9 @@ export function createConstraint(fields) {
   if (needsNutrient && (!fields.nutrient_path || typeof fields.limit_value !== 'number')) {
     throw new Error(`createConstraint: القيد من نوع ${fields.kind} يتطلب nutrient_path و limit_value`);
   }
+  if (fields.kind === CONSTRAINT_KIND.REQUIRE_CUISINE && (!Array.isArray(fields.allowed_values) || fields.allowed_values.length === 0)) {
+    throw new Error('createConstraint: REQUIRE_CUISINE يتطلب allowed_values (مصفوفة غير فاضية)');
+  }
   // BUG-S24-02: كل القيم الغذائية الحقيقية في Food Library >= 0 (لا يوجد
   // "سالب جرام/ملجم" فعليًا). limit_value سالب لقيد NUTRIENT_MAX/MIN غير
   // منطقي بالتعريف — كان يمر بصمت (ولـNUTRIENT_MAX تحديدًا يستبعد كل
@@ -84,6 +89,7 @@ export function createConstraint(fields) {
     kind: fields.kind,
     nutrient_path: fields.nutrient_path ?? null,
     limit_value: fields.limit_value ?? null,
+    allowed_values: fields.allowed_values ?? null,
     severity: fields.severity ?? null,
     message_ar: fields.message_ar,
   };

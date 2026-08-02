@@ -333,6 +333,34 @@ legend { padding: 0 8px; font-weight: 700; font-size: 14px; color: var(--fig); f
 .food-card .food-macro { font-size: 13px; margin-bottom: 6px; }
 .food-card .food-warning { font-size: 12px; color: var(--paprika-dark); margin-top: 6px; }
 
+/* ===================== تعديل الوجبة الحر (S53-c) ===================== */
+.remove-meal-item-btn {
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--paprika-dark);
+  border-radius: 999px;
+  width: 24px; height: 24px;
+  line-height: 1;
+  cursor: pointer;
+  font-size: 13px;
+}
+.remove-meal-item-btn:hover { background: var(--paprika-dark); color: white; border-color: var(--paprika-dark); }
+.quick-add-results { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.quick-add-result-chip {
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.quick-add-result-chip:hover { border-color: var(--fig-light); }
+.add-to-meal-row { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.add-to-meal-picker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.add-to-meal-picker select, .add-to-meal-picker input { font-family: var(--font-body); font-size: 13px; }
+.add-to-meal-grams-input { width: 60px; }
+
 /* ===================== حوار "InBody تقريبي" ===================== */
 #inbody-dialog {
   border: none;

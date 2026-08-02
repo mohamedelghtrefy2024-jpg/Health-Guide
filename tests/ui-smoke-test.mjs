@@ -120,7 +120,7 @@ await new Promise((r) => setTimeout(r, 50));
 
 const mealResultHtml = document.getElementById('meal-result').innerHTML;
 check('نتيجة توليد الوجبة ظهرت (نجاح أو تشخيص فشل)', mealResultHtml.length > 20);
-const mealSucceeded = mealResultHtml.includes('أفضل تركيبة مقترحة');
+const mealSucceeded = document.getElementById('log-meal-btn') && !document.getElementById('log-meal-btn').disabled;
 console.log(`   (توليد الوجبة: ${mealSucceeded ? 'نجح' : 'فشل مع تشخيص'})`);
 
 if (mealSucceeded) {

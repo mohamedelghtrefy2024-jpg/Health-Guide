@@ -22,6 +22,7 @@ import { buildMedicalConstraints } from './medical-engine.js';
 import { buildAllergyConstraints } from './allergy-engine.js';
 import { buildReligiousConstraints } from './religious-engine.js';
 import { buildDietConstraints, resolveEffectiveDietStyle } from './diet-engine.js';
+import { buildCuisineConstraints } from './cuisine-engine.js';
 
 // -----------------------------------------------------------------------
 // تجميع القيود من كل Engine فرعي
@@ -34,6 +35,7 @@ import { buildDietConstraints, resolveEffectiveDietStyle } from './diet-engine.j
  * @property {string|null} [fastingTag]
  * @property {string} [dietStyle]
  * @property {string} [pregnancyStatus] - 'none'|'pregnant'|'breastfeeding'
+ * @property {string|null} [cuisinePreference] - أحد قيم CUISINE_PREFERENCE (افتراضي: مصري فقط)
  */
 
 /**
@@ -55,6 +57,7 @@ export function collectConstraints(profile = {}) {
     ...buildAllergyConstraints(profile.allergies ?? []),
     ...buildReligiousConstraints(profile.fastingTag ?? null),
     ...buildDietConstraints(effectiveDiet.dietStyle),
+    ...buildCuisineConstraints(profile.cuisinePreference ?? null),
   ];
 }
 
@@ -80,6 +83,9 @@ export function evaluateFoodAgainstConstraint(food, constraint) {
 
     case CONSTRAINT_KIND.REQUIRE_RELIGIOUS_TAG:
       return food.religious_tags.includes(constraint.source_detail);
+
+    case CONSTRAINT_KIND.REQUIRE_CUISINE:
+      return constraint.allowed_values.includes(food.cuisine);
 
     case CONSTRAINT_KIND.NUTRIENT_MAX: {
       // ملاحظة تدقيق S24: فُحص احتمال اعتبار nutrient_path=undefined "خطأ
