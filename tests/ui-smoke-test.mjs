@@ -181,6 +181,7 @@ await new Promise((r) => setTimeout(r, 30));
 const foodLibraryChips = document.querySelectorAll('#food-library-filter-chips .filter-chip');
 check('تاب مكتبة الطعام: الفلاتر الخمسة اتبنت', foodLibraryChips.length === 5);
 check('تاب مكتبة الطعام: فيه نتائج معروضة افتراضيًا بدون أي فلتر', document.querySelectorAll('#food-library-results .food-card').length > 0);
+check('كارت مكتبة الطعام بيعرض رقم سعرات حقيقي مش undefined', !document.querySelector('.food-card .food-macro').textContent.includes('undefined'));
 
 function foodLibraryResultsCount() {
   return Number(document.getElementById('food-library-results-count').textContent.match(/\d+/)?.[0] ?? 0);

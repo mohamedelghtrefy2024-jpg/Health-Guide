@@ -136,9 +136,12 @@ export async function getDailyMetrics(date) {
  * يحوّل foodId المخزَّن لكائن الصنف الكامل قبل التجميع.
  * @param {string} date
  * @param {(id: string) => Object|null} resolveFoodById
+ * @param {Array|null} [preloadedMealLogs=null] - لو الاستدعاء بيحصل جوّه حلقة على
+ *   عدة تواريخ (أسبوع، شهر، تحدي 30 يوم)، ممكن تتقرأ كل سجلات MEAL_LOGS مرة واحدة
+ *   في الخارج وتتمرَّر هنا بدل ما كل نداء يعيد قراءة الـstore كامل من جديد.
  */
-export async function computeDailyTotals(date, resolveFoodById) {
-  const allMealLogs = await getAllRecords(STORE.MEAL_LOGS);
+export async function computeDailyTotals(date, resolveFoodById, preloadedMealLogs = null) {
+  const allMealLogs = preloadedMealLogs ?? await getAllRecords(STORE.MEAL_LOGS);
   const dayLogs = allMealLogs.filter((l) => l.date === date);
 
   const mealItems = [];
@@ -196,9 +199,10 @@ export async function computeDailyTotals(date, resolveFoodById) {
 export async function computeAdherenceScore(resolveFoodById, dailyCalorieTarget, dateRange, marginPct = 0.15) {
   let compliantDays = 0;
   let trackedDays = 0;
+  const allMealLogs = await getAllRecords(STORE.MEAL_LOGS);
 
   for (const date of dateRange) {
-    const daily = await computeDailyTotals(date, resolveFoodById);
+    const daily = await computeDailyTotals(date, resolveFoodById, allMealLogs);
     if (!daily.nutrition) continue; // يوم مفيش فيه أي تسجيل — لا يُحتسب في المقام (مش فشل، مجرد غياب بيانات)
     trackedDays += 1;
     const actual = daily.nutrition.kcal;

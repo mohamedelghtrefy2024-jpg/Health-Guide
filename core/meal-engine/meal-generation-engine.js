@@ -58,6 +58,33 @@ const STANDALONE_SINGLE_ITEM_CATEGORIES = new Set([
 ]);
 
 /**
+ * BUG-S54-03 (بطلب المستخدم بعد مراجعة فعلية لوجبة "220 جم ترمس مصري = 814
+ * سعرة" كغداء كامل): أصناف البقوليات الجافة/النيّة اللي محتاجة نقع/سلق قبل
+ * الأكل (عدس/حمص/فول/فاصوليا/لوبيا/فول صويا بحالتها الجافة، + بوادئ تخمّر
+ * زي "بادئ التيمبه/الناتو/الميسو" مش أكل أصلًا) قيمها الغذائية مأخوذة صح
+ * بالوزن الجاف (370 سعرة/100جم للترمس مثلًا — مطابق لمرجع USDA الحقيقي)،
+ * لكن فئة "legume" مسموحة تبقى "وجبة كاملة قائمة بذاتها" (سقف 350 جم) —
+ * فمحدش بياكل 220 جم بقوليات جافة نيّة كوجبة، ودي غير الحالة الواقعية
+ * لبقوليات مطبوخة جاهزة (فول مدمس/عدس مسلوق موجودين كأصناف منفصلة صح).
+ * الحل: استبعاد الأصناف دي تحديدًا من `buildSingleItemCandidates` بس (تفضل
+ * متاحة كمكوّن داخل تركيبة `buildMacroDrivenCandidates` بكمية أصغر، زي أي
+ * صنف كارب/بروتين تاني) — نفس نمط `passesStandaloneFatOilRule` بالظبط.
+ * صنف واحد استُثني منها: الفول السوداني (كان مصنَّف "legume" بالغلط رغم إنه
+ * بيتاكل زي المكسرات مباشرة بدون طبخ) — اتنقل لفئة `nut_seed` بدل كده، عشان
+ * ياخد سقف المكسرات الواقعي (60 جم) مش سقف البقوليات (350 جم).
+ */
+const RAW_UNCOOKED_LEGUME_IDS = new Set([
+  'food_4199', 'food_4200', 'food_4201', 'food_4203', 'food_4204', 'food_4205', 'food_4206',
+  'food_4207', 'food_4208', 'food_4209', 'food_4210', 'food_4211', 'food_4213', 'food_4214',
+  'food_4215', 'food_4217', 'food_4218', 'food_4219', 'food_4220', 'food_4221', 'food_4222',
+  'food_4223', 'food_4224', 'food_4225', 'food_4226', 'food_4227', 'food_4231', 'food_4232',
+  'food_4233', 'food_4237', 'food_4238', 'food_4239', 'food_4240', 'food_4461', 'food_4462',
+  'food_4463', 'food_4513', 'food_4636', 'food_4637', 'food_4867', 'food_4997', 'food_5000',
+  'food_5001', 'food_5002', 'food_5003', 'food_5005', 'food_5006', 'food_5020', 'food_5021',
+  'food_5030', 'food_5031', 'food_5032',
+]);
+
+/**
  * سقف جرامات واقعي لكل فئة لما الصنف يبقى "الوجبة كاملة" بمفرده — بديل عن
  * سقف 400 جم الموحَّد اللي كان بيسمح مثلًا بـ400 جم مكسرات (~2400 سعرة من
  * المكسرات لوحدها) أو 400 جم فاكهة سكرية دفعة واحدة. الفئات غير المذكورة
@@ -164,6 +191,7 @@ function buildSingleItemCandidates(foods, mealType, targetKcal) {
   return foods
     .filter((f) => f.suitable_meal_types.includes(mealType) || f.suitable_meal_types.includes('any'))
     .filter((f) => STANDALONE_SINGLE_ITEM_CATEGORIES.has(f.category))
+    .filter((f) => !RAW_UNCOOKED_LEGUME_IDS.has(f.id)) // BUG-S54-03: بقوليات جافة/نيّة مش وجبة قائمة بذاتها
     .filter((f) => f.category !== 'beverage' || f.macros.kcal <= MAX_BEVERAGE_KCAL_PER_100G)
     .map((food) => {
       const { grams, capped } = scaleFoodToCalories(food, targetKcal);

@@ -37,8 +37,9 @@ export async function getWaterTrend(dateRange) {
 /** يبني سلسلة زمنية للسعرات الفعلية يوميًا (من الوجبات المسجَّلة فعليًا) */
 export async function getCalorieTrend(dateRange, resolveFoodById) {
   const points = [];
+  const allMealLogs = await getAllRecords(STORE.MEAL_LOGS);
   for (const date of dateRange) {
-    const daily = await computeDailyTotals(date, resolveFoodById);
+    const daily = await computeDailyTotals(date, resolveFoodById, allMealLogs);
     points.push({ date, kcal: daily.nutrition?.kcal ?? null });
   }
   return points;
@@ -158,12 +159,13 @@ export async function compareBestWorstWeek(dateRangeAscending, resolveFoodById, 
   }
 
   const weekSummaries = [];
+  const allMealLogs = await getAllRecords(STORE.MEAL_LOGS);
   for (const week of weeks) {
     if (week.length === 0) continue;
     let totalDeviation = 0;
     let trackedDays = 0;
     for (const date of week) {
-      const daily = await computeDailyTotals(date, resolveFoodById);
+      const daily = await computeDailyTotals(date, resolveFoodById, allMealLogs);
       if (!daily.nutrition) continue;
       trackedDays += 1;
       totalDeviation += Math.abs(daily.nutrition.kcal - dailyCalorieTarget);

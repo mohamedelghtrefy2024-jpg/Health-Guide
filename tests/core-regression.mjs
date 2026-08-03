@@ -240,6 +240,15 @@ console.log('\n=== Tracking Engine ===');
     await logMeal('2026-08-01', 'lunch', [{ food: proteinFood, grams: 150 }]);
     const daily = await computeDailyTotals('2026-08-01', getFoodById);
     check('تسجيل وتجميع وجبة يعمل', daily.nutrition !== null && daily.mealCount === 1);
+
+    // Fix (تحسين أداء): preloadedMealLogs اختياري — لازم يرجّع نفس النتيجة بالظبط
+    // سواء اتنادت الدالة بيه أو من غيره (تحسين قراءة الـstore، مش تغيير سلوك)
+    const preloaded = await getAllRecordsRaw(STORE.MEAL_LOGS);
+    const dailyPreloaded = await computeDailyTotals('2026-08-01', getFoodById, preloaded);
+    check(
+      'computeDailyTotals مع preloadedMealLogs بترجع نفس نتيجة القراءة العادية بالظبط',
+      JSON.stringify(dailyPreloaded) === JSON.stringify(daily),
+    );
   } else {
     check('يوجد أصناف بروتين في المكتبة لاختبار التسجيل', false);
   }

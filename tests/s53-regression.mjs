@@ -220,6 +220,39 @@ check('مفيش سلوت صنفه الوحيد مكسرات/بذور بحصة أ
   s.meal.items.length > 1 || s.meal.items[0].food.category !== 'nut_seed' || s.meal.items[0].grams <= 60
 ));
 
+console.log('=== BUG-S54-03: بقوليات جافة/نيّة (زي الترمس) لا تظهر كوجبة قائمة بذاتها ===');
+const RAW_UNCOOKED_LEGUME_IDS_TEST = new Set([
+  'food_4199', 'food_4200', 'food_4201', 'food_4203', 'food_4204', 'food_4205', 'food_4206',
+  'food_4207', 'food_4208', 'food_4209', 'food_4210', 'food_4211', 'food_4213', 'food_4214',
+  'food_4215', 'food_4217', 'food_4218', 'food_4219', 'food_4220', 'food_4221', 'food_4222',
+  'food_4223', 'food_4224', 'food_4225', 'food_4226', 'food_4227', 'food_4231', 'food_4232',
+  'food_4233', 'food_4237', 'food_4238', 'food_4239', 'food_4240', 'food_4461', 'food_4462',
+  'food_4463', 'food_4513', 'food_4636', 'food_4637', 'food_4867', 'food_4997', 'food_5000',
+  'food_5001', 'food_5002', 'food_5003', 'food_5005', 'food_5006', 'food_5020', 'food_5021',
+  'food_5030', 'food_5031', 'food_5032',
+]);
+check('مفيش سلوت (في نفس خطة اليوم الواقعية فوق) صنفه الوحيد بقولي جاف/نيء من القايمة دي', successfulSlots.every((s) =>
+  s.meal.items.length > 1 || !RAW_UNCOOKED_LEGUME_IDS_TEST.has(s.meal.items[0].food.id)
+));
+
+// توليد وجبة غداء مباشرة بسعرات تكفي فقط ترمس مصري (814 سعرة تقريبًا) للتأكد
+// إنه مش بيظهر كصنف وحيد حتى لو هو أنسب صنف حسابيًا للسعرات المطلوبة
+const turmusOnlyAttempt = generateMeal({
+  constraintProfile: realismConstraintProfile,
+  mealType: 'lunch',
+  targetKcal: 814,
+  minFoodQualityScore: 30,
+});
+check('توليد وجبة بسعرات قريبة من "220 جم ترمس مصري" مبيرجّعش ترمس مصري كصنف وحيد', !(
+  turmusOnlyAttempt.success &&
+  turmusOnlyAttempt.candidates[0].items.length === 1 &&
+  turmusOnlyAttempt.candidates[0].items[0].food.id === 'food_4231'
+));
+
+const allFoodsForPeanutCheck = getAllFoods();
+const peanutFoods = allFoodsForPeanutCheck.filter((f) => ['food_4071', 'food_4073', 'food_4074', 'food_4075', 'food_5029', 'food_5118'].includes(f.id));
+check('الفول السوداني (6 أصناف) بقى مصنَّف nut_seed مش legume (BUG-S54-03)', peanutFoods.length === 6 && peanutFoods.every((f) => f.category === 'nut_seed'));
+
 console.log('=== S53-e: قوالب البرنامج الغذائي الجاهز (1200-2500 سعرة) ===');
 check('7 مستويات سعرات متاحة (1200 إلى 2500)', MEAL_PLAN_CALORIE_LEVELS.length === 7 && MEAL_PLAN_CALORIE_LEVELS[0] === 1200 && MEAL_PLAN_CALORIE_LEVELS.at(-1) === 2500);
 check('nearestCalorieLevel(1750) يرجّع 1800 (أقرب مستوى)', nearestCalorieLevel(1750) === 1800);

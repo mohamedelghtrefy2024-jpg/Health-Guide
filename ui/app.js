@@ -1363,7 +1363,7 @@ function renderFoodLibraryResults() {
     <div class="food-card">
       <h4><span class="food-icon">${categoryIcon(f.category)}</span> ${f.name_ar}</h4>
       <div class="food-meta">${f.name_en} — لكل 100 جم</div>
-      <div class="food-macro">${f.calories} سعرة | بروتين ${f.macros.protein_g}g | كارب ${f.macros.carbs_g}g | دهون ${f.macros.fat_g}g</div>
+      <div class="food-macro">${f.macros.kcal} سعرة | بروتين ${f.macros.protein_g}g | كارب ${f.macros.carbs_g}g | دهون ${f.macros.fat_g}g</div>
       <div class="food-meta">صوديوم ${f.micros.sodium_mg}mg | كالسيوم ${f.micros.calcium_mg}mg</div>
       <span class="quality-badge ${qClass}">${f.quality_score} — ${classifyMealQualityScore(f.quality_score)}</span>
       ${f.warnings?.length ? `<div class="food-warning">${f.warnings.join('، ')}</div>` : ''}
@@ -1788,8 +1788,9 @@ async function refreshChallengeProgress() {
         const target = currentNutrition.calorieTarget.targetCalories;
         const recentDatesDesc = buildDateRange(challenge.targetValue).reverse().filter((d) => d >= startDateOf(challenge) && d <= today);
         const results = [];
+        const allMealLogsForStreak = await getAllRecords(STORE.MEAL_LOGS);
         for (const d of recentDatesDesc) {
-          const daily = await computeDailyTotals(d, getFoodById);
+          const daily = await computeDailyTotals(d, getFoodById, allMealLogsForStreak);
           results.push(!!daily.nutrition && daily.nutrition.kcal <= target);
         }
         newProgress = calculateStreak(results);
