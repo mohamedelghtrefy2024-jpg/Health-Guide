@@ -40,6 +40,21 @@ import { MEAL_PLAN_TEMPLATES } from './meal-plan-templates.js';
 const MAX_PORTION_MULTIPLIER = 4; // أي أقصى 400 جم من الصنف الواحد
 
 /**
+ * عتبة كثافة بروتين (جم/100جم) فوقها الصنف يُعتبَر "مكمّل مركّز" (بروتين
+ * مصل لبن/كازين/صويا معزول/بازلاء/أرز...) مش "طبق أساسي" — بيتاخد عادةً
+ * كشيك لوحده، مش كأساس لطبق "بروتين+كارب+خضار". أعلى كثافة بروتين واقعية
+ * لصنف طعام كامل (لحمة/سمك/بقوليات) بالمكتبة ~36 جم/100جم (فول الصويا
+ * الجاف)؛ المكملات بتوصل لـ66-83 جم/100جم. بدون الاستبعاد ده، المكمّلات
+ * (دهون شبه معدومة) بتدخل حوض "أساس الطبق" وتعتمد كليًا على مكمّل الدهون
+ * التلقائي عشان توصل لهدف الدهون — وده بيكشف باج تاني مستتر (توابل جافة
+ * زي الفلفل/الكركم/الكمون مصنَّفة "fat_oil" بدل "بهارات"، فمكمّل الدهون
+ * بيختارها كأفضل مرشَّح رغم إنها فقيرة دهون فعليًا) فتفشل كل التركيبات في
+ * تحقيق هامش الماكرو. الاستبعاد هنا نطاقه ضيق ومحدود (مكمّلات فقط) بدل ما
+ * نصلح تصنيف "fat_oil" بالكامل (نطاق أوسع بيحتاج مراجعة Audit منفصلة).
+ */
+const PROTEIN_SUPPLEMENT_THRESHOLD_G = 50;
+
+/**
  * S53-d (بطلب المستخدم بعد مراجعة فعلية لخطة يوم كامل): "305 جم تيمبه
  * العدس"، "154 جم شبت" كسناك كامل 3 مرات متتالية، و"دبس خروب" (شراب مكثّف
  * 300 سعرة/100جم) كـ"مشروب" — كل دي نتايج واقعية غير مقبولة رغم إنها مرّت
@@ -229,7 +244,7 @@ function buildMacroDrivenCandidates(foods, mealType, macroTargets, adherenceLeve
   const MAX_FAT_TOPPER_GRAMS = 30; // أقصى حصة واقعية لزيت/دهن مضاف (~ملعقتين كبيرتين)
   const poolSize = adherenceLevel === 'strict' ? STRICT_CANDIDATE_POOL_SIZE : CANDIDATE_POOL_SIZE;
 
-  const proteinFoodsAll = foods.filter((f) => (f.category === 'protein' || f.category === 'legume') && isSuitable(f) && f.macros.protein_g > 0);
+  const proteinFoodsAll = foods.filter((f) => (f.category === 'protein' || f.category === 'legume') && isSuitable(f) && f.macros.protein_g > 0 && f.macros.protein_g <= PROTEIN_SUPPLEMENT_THRESHOLD_G);
   const carbFoodsAll = foods.filter((f) => f.category === 'carb' && isSuitable(f) && f.macros.carbs_g > 0);
   const vegFoodsAll = foods.filter((f) => f.category === 'vegetable' && isSuitable(f));
   const fatFoodsAll = foods.filter((f) => f.category === 'fat_oil' && isSuitable(f) && f.macros.fat_g > 0);
