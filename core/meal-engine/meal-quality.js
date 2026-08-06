@@ -74,11 +74,27 @@ export function aggregateMealNutrients(mealItems) {
     categoriesSeen.add(food.category);
   }
 
+  // تصحيح تحيّز التنوع ضد الأطباق الجاهزة الحقيقية (composite_meal): طبق
+  // واحد زي "فول مدمس بالزيت الحار" أو "طاجن مسقعة باللحم المفروم" فعليًا
+  // متنوّع المكوّنات جوّاه (بروتين+كارب/خضار)، لكنه موسوم بفئة واحدة بس في
+  // السكيما (`ingredients` تفصيلي مش متاح لكل الأصناف) — فكان بياخد صفر من
+  // مكافأة التنوع (Math.min(1-1,2)*5=0) بينما تركيبة مُجمَّعة آليًا من 3
+  // أصناف خام منفصلة (بروتين+كارب+خضار) بتاخد المكافأة الكاملة (10). النتيجة
+  // العملية: طبق حقيقي كامل بيترتّب أوطى من "فول صويا جاف + برغل + ثوم"
+  // في نفس الوجبة رغم إن التركيبة التانية غير واقعية كوجبة فعلية. الحل:
+  // أي وجبة فيها صنف composite_meal تتعامل كأنها بلغت أدنى حد تنوع (3 فئات)
+  // فعلًا — بيتوافق مع الواقع (طبق منزلي جاهز أصلًا متوازن)، وبرضه بيسمح
+  // بمكافأة أعلى لو فعليًا اتضاف له صنف/صنفين حقيقيين تانيين لأن السقف
+  // (3 فئات = أقصى مكافأة) نفسه ما اتغيّرش، فمفيش أي ميزة غير عادلة زيادة.
+  const effectiveCategoryCount = categoriesSeen.has('composite_meal')
+    ? Math.max(categoriesSeen.size, 3)
+    : categoriesSeen.size;
+
   return {
     totals,
     averageGi: giWeightTotal > 0 ? weightedGiSum / giWeightTotal : -1,
     processingPenalty: weightedProcessingPenalty,
-    distinctCategoryCount: categoriesSeen.size,
+    distinctCategoryCount: effectiveCategoryCount,
   };
 }
 

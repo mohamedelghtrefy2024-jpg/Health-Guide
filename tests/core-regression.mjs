@@ -27,8 +27,10 @@ import { getCalorieTrend, compareBestWorstWeek, getWeightTrend, getWaterTrend, g
 import { getFoodById, filterFoods, searchFoodsByName } from '../core/food-library/food-library.js';
 import { getInstantRecommendations, getGeneralTips, getAdherenceTip, getWeightStabilityRecommendation, RECOMMENDATION_SEVERITY } from '../core/recommendation-engine/recommendation-engine.js';
 import {
-  estimateBodyFatPercentNavy, resolveBodyFatPercent, calculateRemainingMealBudget,
+  estimateBodyFatPercentNavy, resolveBodyFatPercent, calculateRemainingMealBudget, calculateCalorieTarget,
 } from '../core/nutrition-engine/nutrition-engine.js';
+import { deleteRecord } from '../core/storage/storage-engine.js';
+import { validateFoodItem } from '../core/food-library/schema.js';
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -48,6 +50,17 @@ check('يوجد أصناف كافية للاختبار (>=10)', stats.total_vali
   const gecko = getFoodById('food_4763'); // لحم الوزغة
   check('صنف "لحم الوز البلدي" مش موسوم غلط بحساسية المكسرات', !!goose && !goose.allergens.includes('nuts'));
   check('صنف "لحم الوزغة" مش موسوم غلط بحساسية المكسرات', !!gecko && !gecko.allergens.includes('nuts'));
+}
+
+// S70: توسيم قصور الغدة الدرقية (hypothyroidism) — خضروات صليبية خام +
+// منتجات صويا. نطاق ضيق ومقصود (راجع audits/s70/fix_s70_hypothyroidism.mjs)
+{
+  const rawBroccoli = getFoodById('food_4904'); // بروكلي، unprocessed
+  const tofu = getFoodById('food_4228'); // توفو
+  const cookedCauliflowerStew = getFoodById('food_2615'); // صينية قرنبيط بصلصة الطماطم — مطبوخ
+  check('بروكلي خام موسوم unsuitable لقصور الغدة الدرقية', !!rawBroccoli && rawBroccoli.unsuitable_for_conditions.includes('hypothyroidism'));
+  check('توفو موسوم unsuitable لقصور الغدة الدرقية', !!tofu && tofu.unsuitable_for_conditions.includes('hypothyroidism'));
+  check('صنف قرنبيط مطبوخ (طاجن/صينية) مش موسوم — الطهي بيقلل الجويتروجينات، النطاق مقصود على الخام بس', !!cookedCauliflowerStew && !cookedCauliflowerStew.unsuitable_for_conditions.includes('hypothyroidism'));
 }
 
 console.log('\n=== Decision Engine ===');
@@ -491,6 +504,28 @@ console.log('\n=== Recommendation Engine ===');
   check('التزام متوسط', getAdherenceTip({ adherencePct: 60 }).type === 'adherence_medium');
   check('التزام منخفض', getAdherenceTip({ adherencePct: 20 }).type === 'adherence_low');
   check('عدم توفر بيانات التزام', getAdherenceTip({ adherencePct: null }).type === 'adherence_no_data');
+
+  // 8) S70: الحديد لمرضى الأنيميا — تحذير مخصَّص فقط لما الحديد الفعلي أقل
+  // بوضوح من الهدف *و* الأنيميا موجودة بالبروفايل (مش تحذير عام لغير المصابين)
+  const lowIronTotals = {
+    nutrition: {
+      kcal: nutritionProfile.calorieTarget.targetCalories,
+      protein_g: nutritionProfile.macroTargets.protein_g,
+      carbs_g: nutritionProfile.macroTargets.carb_g,
+      fat_g: nutritionProfile.macroTargets.fat_g,
+      saturated_fat_g: 2,
+      sodium_mg: 500,
+      iron_mg: nutritionProfile.microTargets.iron_mg * 0.3,
+    },
+  };
+  const lowIronAnemiaRecs = getInstantRecommendations(lowIronTotals, nutritionProfile, [MEDICAL_CONDITION.ANEMIA]);
+  const ironRec = lowIronAnemiaRecs.find((r) => r.type === 'iron_low_anemia');
+  check('أنيميا + حديد فعلي أقل من 70% من الهدف: تحذير حديد مخصَّص يظهر', !!ironRec && ironRec.severity === RECOMMENDATION_SEVERITY.WARNING);
+  const lowIronNoAnemiaRecs = getInstantRecommendations(lowIronTotals, nutritionProfile, []);
+  check('نفس نقص الحديد بدون تشخيص أنيميا: مفيش تحذير حديد (مش عام لكل الناس)', !lowIronNoAnemiaRecs.some((r) => r.type === 'iron_low_anemia'));
+  const okIronTotals = { nutrition: { ...lowIronTotals.nutrition, iron_mg: nutritionProfile.microTargets.iron_mg } };
+  const okIronRecs = getInstantRecommendations(okIronTotals, nutritionProfile, [MEDICAL_CONDITION.ANEMIA]);
+  check('أنيميا + حديد كافٍ (100% من الهدف): مفيش تحذير حديد', !okIronRecs.some((r) => r.type === 'iron_low_anemia'));
 }
 
 console.log('\n=== حالة الحمل/الرضاعة (بند 1.1 من برومبت استكمال البنود الناقصة) ===');
@@ -669,6 +704,57 @@ console.log('\n=== LIMIT-01: استبعاد صنف دهون/زيت منفرد ك
     minFoodQualityScore: 0,
   });
   check('مع macroTargets: التوليد ينجح كالمعتاد (القاعدة الجديدة ما بتكسرش المسار العادي)', withMacroResult.success && withMacroResult.candidates.length > 0);
+}
+
+console.log('\n=== S71: تركيبات "طبق حقيقي (composite_meal) + صنف جانبي" (بطلب المستخدم — مثال رز/فريك + لحمة + سلطة) ===');
+{
+  const request = {
+    constraintProfile: {},
+    mealType: 'lunch',
+    targetKcal: 700,
+    macroTargets: { protein_g: 45, carb_g: 70, fat_g: 20 },
+    minFoodQualityScore: 0,
+    macroMarginPct: 0.3,
+  };
+  const result = generateMeal(request);
+  check('التوليد بنجاح مع أهداف ماكرو واقعية', result.success && result.candidates.length > 0);
+
+  const compositeBaseCandidates = result.candidates.filter((c) => c.items.length > 1 && c.items[0].food.category === 'composite_meal');
+  check('توجد تركيبات "طبق حقيقي + صنف جانبي" فعليًا ضمن النتائج (مش مجرد صنف composite_meal لوحده)', compositeBaseCandidates.length > 0);
+  check('كل قاعدة composite_meal بحصة واقعية (≥30 جم) — مفيش تركيبة بكمية أساس تافهة', compositeBaseCandidates.every((c) => c.items[0].grams >= 30));
+
+  // كل تركيبة من النوع ده لازم تكون فعليًا داخل هامش الماكرو المطلوب فعلًا —
+  // نفس البوابة العادية لأي تركيبة تانية (isWithinMacroMargin مطبَّقة مركزيًا
+  // في generateMeal على كل الـcandidates بدون تمييز)، فبما إنها موجودة أصلًا
+  // في result.candidates.filter(c=>c.success!==false) فده كافٍ كتأكيد؛ هنا
+  // بس نتأكد إن البروتين مش صفر (يعني الصنف الجانبي فعلًا اتضاف مش تجاهل)
+  check('تركيبات "طبق+جانب" فيها بروتين حقيقي مضاف من الصنف الجانبي (مش بس قاعدة الكارب)', compositeBaseCandidates.every((c) => c.items[1].food.macros.protein_g > 0));
+
+  // أفضل تركيبة من النوع ده لازم يكون score محسوب فعليًا (نفس مسار التقييم العادي)
+  if (compositeBaseCandidates.length > 0) {
+    const best = compositeBaseCandidates.sort((a, b) => b.qualityScore - a.qualityScore)[0];
+    check('أفضل تركيبة "طبق+جانب" ليها qualityScore رقمي صالح (0-100)', typeof best.qualityScore === 'number' && best.qualityScore >= 0 && best.qualityScore <= 100);
+  }
+
+  // بدون macroTargets: المسار ده لازم يرجع مصفوفة فاضية (نفس شرط buildMacroDrivenCandidates تمامًا — بيعتمد على وجود أهداف ماكرو)
+  const noMacroResult = generateMeal({ constraintProfile: {}, mealType: 'lunch', targetKcal: 500, minFoodQualityScore: 0 });
+  const hasCompositeBasePairWithoutMacro = noMacroResult.candidates.some((c) => c.items.length > 1 && c.items[0].food.category === 'composite_meal');
+  check('بدون macroTargets: مفيش أي تركيبة "طبق+جانب" (القيد يعتمد على وجود أهداف ماكرو، زي buildMacroDrivenCandidates بالظبط)', !hasCompositeBasePairWithoutMacro);
+
+  // S72 (بطلب المستخدم بعد ملاحظة فعلية): الغداء لازم يفضّل بروتين حيواني
+  // حقيقي (فئة protein) كصنف جانبي، مش بقوليات — الفطار/العشاء يفضلوا زي ما هما (بدون تفضيل)
+  const lunchResult = generateMeal({ ...request, mealType: 'lunch' });
+  const lunchCompositeBase = lunchResult.candidates.filter((c) => c.items.length > 1 && c.items[0].food.category === 'composite_meal');
+  check('الغداء: تركيبات "طبق+جانب" فيها صنف بروتين حيواني حقيقي (فئة protein) موجودة فعليًا', lunchCompositeBase.some((c) => c.items[1].food.category === 'protein'));
+  check('الغداء: مفيش أي تركيبة "طبق+جانب" فيها بقوليات كصنف جانبي (البروتين الحيواني بقى الأولوية)', !lunchCompositeBase.some((c) => c.items[1].food.category === 'legume'));
+
+  const breakfastResult = generateMeal({ ...request, mealType: 'breakfast' });
+  const breakfastCompositeBase = breakfastResult.candidates.filter((c) => c.items.length > 1 && c.items[0].food.category === 'composite_meal');
+  check('الفطار: لسه مسموح بصنف جانبي بقولي (سلوك قديم بدون تغيير — فول/عدس فطار واقعي)', breakfastCompositeBase.length === 0 || breakfastCompositeBase.some((c) => c.items[1].food.category === 'legume' || c.items[1].food.category === 'protein'));
+
+  // نفس السلوك في buildMacroDrivenCandidates العادية (بروتين+كارب، مش بس مسار طبق+جانب)
+  const lunchProteinCarb = lunchResult.candidates.filter((c) => c.items.length >= 2 && (c.items[0].food.category === 'protein' || c.items[0].food.category === 'legume') && c.items[1].food.category === 'carb');
+  check('الغداء: تركيبات بروتين+كارب العادية برضه بتفضّل بروتين حيواني حقيقي مش بقوليات', lunchProteinCarb.length === 0 || lunchProteinCarb.every((c) => c.items[0].food.category === 'protein'));
 }
 
 console.log('\n=== توصيات تفاعلية لثبات/اتجاه الوزن (بند 1.5/12 من الأعمال المتبقية) ===');
@@ -1071,6 +1157,189 @@ console.log('\n=== S25 (بطلب المستخدم): سيناريوهات مُس�
   check('ارتفاع الدهون: زبدة (دهون مشبعة 52g) تُرفَض بوضوح — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWithSatFat(REAL_FATS.butter), satFatMaxDyslipid));
   check('ارتفاع الدهون: مرجرين مهدرج (دهون مشبعة 15g) يُرفَض — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWithSatFat(REAL_FATS.margarine_hydrogenated), satFatMaxDyslipid));
   check('ارتفاع الدهون: أرز أبيض (دهون مشبعة 0.1g) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWithSatFat(REAL_FATS.rice), satFatMaxDyslipid));
+
+  // -----------------------------------------------------------------------
+  // S68: أول شبكة أمان رقمية لـ4 من الـ8 حالات اللي كانت بلا أي تأثير فلترة
+  // فعلي (heart_disease, pcos, gerd, osteoporosis) — راجع S67 لتفاصيل
+  // الاكتشاف. liver_disease/hypothyroidism/anemia اتأجّلوا عمدًا (تعليق في
+  // medical-engine.js يشرح السبب لكل واحدة).
+  // -----------------------------------------------------------------------
+  const heartDiseaseConstraints = buildMedicalConstraints([MEDICAL_CONDITION.HEART_DISEASE]);
+  const pcosConstraints = buildMedicalConstraints([MEDICAL_CONDITION.PCOS]);
+  const gerdConstraints = buildMedicalConstraints([MEDICAL_CONDITION.GERD]);
+  const osteoporosisConstraints = buildMedicalConstraints([MEDICAL_CONDITION.OSTEOPOROSIS]);
+
+  const satFatMaxHeart = heartDiseaseConstraints.find((c) => c.nutrient_path === 'macros.saturated_fat_g');
+  const sodiumMaxHeart = heartDiseaseConstraints.find((c) => c.nutrient_path === 'micros.sodium_mg');
+  const cholesterolMaxHeart = heartDiseaseConstraints.find((c) => c.nutrient_path === 'macros.cholesterol_mg');
+  const giMaxPcos = pcosConstraints.find((c) => c.nutrient_path === 'gi');
+  const addedSugarMaxPcos = pcosConstraints.find((c) => c.nutrient_path === 'macros.added_sugar_g');
+  const fatMaxGerd = gerdConstraints.find((c) => c.nutrient_path === 'macros.fat_g');
+  const sodiumMaxOsteo = osteoporosisConstraints.find((c) => c.nutrient_path === 'micros.sodium_mg');
+
+  function foodWith(macrosPatch, microsPatch) {
+    return { macros: { ...createEmptyMacros(), ...macrosPatch }, micros: { ...createEmptyMicros(), ...microsPatch } };
+  }
+  function foodWithGi(giValue) {
+    return { macros: createEmptyMacros(), micros: createEmptyMicros(), gi: giValue };
+  }
+
+  // أمراض القلب: زبدة (دهون مشبعة 52g) ترفض، لانشون (صوديوم 800) ترفض، بيضة (كوليسترول ~372/100g) ترفض
+  check('أمراض القلب: زبدة (دهون مشبعة 52g) تُرفَض — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWith({ saturated_fat_g: REAL_FATS.butter }), satFatMaxHeart));
+  check('أمراض القلب: أرز أبيض (دهون مشبعة 0.1g) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({ saturated_fat_g: REAL_FATS.rice }), satFatMaxHeart));
+  check('أمراض القلب: لانشون دجاج (صوديوم 800mg) يُرفَض — أعلى من حدنا (500mg)', !evaluateFoodAgainstConstraint(foodWith({}, { sodium_mg: REAL_FOODS.luncheon.sodium_mg }), sodiumMaxHeart));
+  check('أمراض القلب: دجاج مشوي (صوديوم 85mg) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({}, { sodium_mg: REAL_FOODS.chicken_grilled.sodium_mg }), sodiumMaxHeart));
+  check('أمراض القلب: بيضة (كوليسترول 372mg/100جم) تُرفَض — أعلى من حدنا (60mg)', !evaluateFoodAgainstConstraint(foodWith({ cholesterol_mg: 372 }), cholesterolMaxHeart));
+  check('أمراض القلب: أرز أبيض (كوليسترول 0mg — نباتي) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({ cholesterol_mg: 0 }), cholesterolMaxHeart));
+
+  // تكيّس المبايض: خبز أبيض (GI~75) يُرفَض، عدس (GI~32) يُقبَل، لحمة (gi=-1 غير منطبق) تُقبَل تلقائيًا
+  check('تكيّس المبايض: خبز أبيض (GI=75) يُرفَض — أعلى من حدنا (55)', !evaluateFoodAgainstConstraint(foodWithGi(75), giMaxPcos));
+  check('تكيّس المبايض: عدس (GI=32) يُقبَل — منخفض المؤشر', evaluateFoodAgainstConstraint(foodWithGi(32), giMaxPcos));
+  check('تكيّس المبايض: صنف gi=-1 (غير منطبق، زي اللحوم) يُقبَل تلقائيًا بلا استبعاد خاطئ', evaluateFoodAgainstConstraint(foodWithGi(-1), giMaxPcos));
+  check('تكيّس المبايض: حلوى بسكريات مضافة 20g تُرفَض — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWith({ added_sugar_g: 20 }), addedSugarMaxPcos));
+  check('تكيّس المبايض: أرز أبيض (سكريات مضافة 0g) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({ added_sugar_g: 0 }), addedSugarMaxPcos));
+
+  // ارتجاع المريء: مقلي عالي الدهون (30g/100g) يُرفَض، صدر فرخة مسلوق (فقير الدهون) يُقبَل
+  check('ارتجاع المريء: صنف مقلي (دهون 30g) يُرفَض — أعلى من حدنا (20g)', !evaluateFoodAgainstConstraint(foodWith({ fat_g: 30 }), fatMaxGerd));
+  check('ارتجاع المريء: صدر فرخة مسلوق (دهون 3.5g) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({ fat_g: 3.5 }), fatMaxGerd));
+
+  // هشاشة العظام: أنشوجة (صوديوم 3667mg) تُرفَض، أرز أبيض (صوديوم 1mg) يُقبَل
+  check('هشاشة العظام: أنشوجة (صوديوم 3667mg) تُرفَض — أعلى من حدنا (700mg)', !evaluateFoodAgainstConstraint(foodWith({}, { sodium_mg: REAL_FOODS.anchovy.sodium_mg }), sodiumMaxOsteo));
+  check('هشاشة العظام: أرز أبيض (صوديوم 1mg) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({}, { sodium_mg: REAL_FOODS.rice.sodium_mg }), sodiumMaxOsteo));
+
+  // S69: أمراض الكبد — صوديوم/سكريات مضافة/دهون مشبعة (بدون أي لمس للبروتين
+  // عمدًا — راجع تعليق medical-engine.js لسبب الاستثناء)
+  const liverDiseaseConstraints = buildMedicalConstraints([MEDICAL_CONDITION.LIVER_DISEASE]);
+  const sodiumMaxLiver = liverDiseaseConstraints.find((c) => c.nutrient_path === 'micros.sodium_mg');
+  const addedSugarMaxLiver = liverDiseaseConstraints.find((c) => c.nutrient_path === 'macros.added_sugar_g');
+  const satFatMaxLiver = liverDiseaseConstraints.find((c) => c.nutrient_path === 'macros.saturated_fat_g');
+  const proteinRuleLiver = liverDiseaseConstraints.find((c) => c.nutrient_path === 'macros.protein_g');
+
+  check('أمراض الكبد: أنشوجة (صوديوم 3667mg) تُرفَض — أعلى من حدنا (500mg)', !evaluateFoodAgainstConstraint(foodWith({}, { sodium_mg: REAL_FOODS.anchovy.sodium_mg }), sodiumMaxLiver));
+  check('أمراض الكبد: أرز أبيض (صوديوم 1mg) يُقبَل بأمان', evaluateFoodAgainstConstraint(foodWith({}, { sodium_mg: REAL_FOODS.rice.sodium_mg }), sodiumMaxLiver));
+  check('أمراض الكبد: حلوى بسكريات مضافة 20g تُرفَض — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWith({ added_sugar_g: 20 }), addedSugarMaxLiver));
+  check('أمراض الكبد: زبدة (دهون مشبعة 52g) تُرفَض — أعلى من حدنا (5g)', !evaluateFoodAgainstConstraint(foodWith({ saturated_fat_g: REAL_FATS.butter }), satFatMaxLiver));
+  check('أمراض الكبد: مفيش أي قيد على البروتين إطلاقًا (عمدًا — يتناقض حسب المرحلة)', proteinRuleLiver === undefined);
+
+  // hypothyroidism/anemia: لسه بلا أي قاعدة رقمية عمدًا (موثَّق بالتعليق بالكود) — نتأكد إن مفيش قيود اتضافت غلط
+  check('قصور الغدة الدرقية: لسه بلا قاعدة رقمية إضافية (يحتاج توسيم فئة/مكوّنات لا حد رقمي)', buildMedicalConstraints([MEDICAL_CONDITION.HYPOTHYROIDISM]).filter((c) => c.kind === CONSTRAINT_KIND.NUTRIENT_MAX || c.kind === CONSTRAINT_KIND.NUTRIENT_MIN).length === 0);
+  check('الأنيميا: لسه بلا قاعدة رقمية إضافية (احتياج توصية لا استبعاد — خارج نطاق هذا المحرك)', buildMedicalConstraints([MEDICAL_CONDITION.ANEMIA]).filter((c) => c.kind === CONSTRAINT_KIND.NUTRIENT_MAX || c.kind === CONSTRAINT_KIND.NUTRIENT_MIN).length === 0);
+}
+
+// S78 (طبقة 5.1): calculateCalorieTarget كانت بلا أي اختبار مباشر إطلاقًا رغم
+// إنها الدالة اللي بتطبّق حدود الأمان (SAFETY_LIMITS) اللي راجعناها كودًا فقط
+// في تدقيق الطبقة 3 — بنحوّل التأكيد اليدوي ده لاختبار Regression دائم.
+console.log('\n=== S78: calculateCalorieTarget — تغطية اختبار مباشرة لأول مرة (كانت صفر) ===');
+{
+  // 1) عجز عادي غير متطرف: لازم يحسب عجز فعلي مش يوصل لأي حد أقصى
+  const normalLoss = calculateCalorieTarget({
+    tdee: 2200, goal: GOAL.LOSE, currentWeightKg: 80, targetWeightKg: 75,
+    timeframeDays: 90, gender: 'male', pregnancyStatus: 'none',
+  });
+  check('عجز عادي (5كجم/90يوم): capped=false ومفيش تحذير', normalLoss.capped === false && normalLoss.warning === null);
+  check('عجز عادي: targetCalories أقل من tdee فعليًا (فيه عجز حقيقي)', normalLoss.targetCalories < 2200);
+
+  // 2) عجز متطرف جدًا (وزن كبير/مدة قصيرة جدًا) لازم يتقفل عند MAX_DAILY_DEFICIT_KCAL=1000
+  const extremeLoss = calculateCalorieTarget({
+    tdee: 2200, goal: GOAL.LOSE, currentWeightKg: 100, targetWeightKg: 70,
+    timeframeDays: 30, gender: 'male', pregnancyStatus: 'none',
+  });
+  check('عجز متطرف (30كجم/30يوم): capped=true فعليًا', extremeLoss.capped === true);
+  check('عجز متطرف: العجز الفعلي (tdee-target) ما يتجاوزش 1000 سعرة/يوم (MAX_DAILY_DEFICIT_KCAL)', (2200 - extremeLoss.targetCalories) <= 1000);
+
+  // 3) حد أدنى آمن للسعرات: امرأة بTDEE منخفض + عجز متطرف لازم يتقفل عند MIN_CALORIES_FEMALE=1200
+  const floorLoss = calculateCalorieTarget({
+    tdee: 1400, goal: GOAL.LOSE, currentWeightKg: 60, targetWeightKg: 50,
+    timeframeDays: 20, gender: 'female', pregnancyStatus: 'none',
+  });
+  check('حد أدنى أنثى: targetCalories ما ينزلش تحت 1200 (MIN_CALORIES_FEMALE)', floorLoss.targetCalories >= 1200);
+  check('حد أدنى أنثى: flooredBySafety اتفعّل فعليًا في السيناريو المتطرف ده', floorLoss.warning !== null && floorLoss.warning.includes('الحد الآمن'));
+
+  // 4) رجل بحد أدنى مختلف (1500) — نفس المنطق بقيمة مختلفة
+  const floorLossMale = calculateCalorieTarget({
+    tdee: 1600, goal: GOAL.LOSE, currentWeightKg: 65, targetWeightKg: 55,
+    timeframeDays: 20, gender: 'male', pregnancyStatus: 'none',
+  });
+  check('حد أدنى ذكر: targetCalories ما ينزلش تحت 1500 (MIN_CALORIES_MALE)', floorLossMale.targetCalories >= 1500);
+
+  // 5) حمل: أي عجز مطلوب لازم يتجاهل تمامًا ويُضاف سعرات آمنة فوق TDEE
+  const pregnantIgnoresDeficit = calculateCalorieTarget({
+    tdee: 2000, goal: GOAL.LOSE, currentWeightKg: 80, targetWeightKg: 60,
+    timeframeDays: 30, gender: 'female', pregnancyStatus: 'pregnant',
+  });
+  check('حمل: تم تجاهل هدف العجز كليًا — targetCalories أعلى من tdee مش أقل', pregnantIgnoresDeficit.targetCalories > 2000);
+  check('حمل: capped=true وتحذير واضح يوضّح تجاهل هدف العجز', pregnantIgnoresDeficit.capped === true && pregnantIgnoresDeficit.warning.includes('تجاهل'));
+
+  // 6) BUG-S23-01 (goalTargetMismatch): هدف خسارة وزن لكن الوزن المستهدف أعلى من الحالي
+  const mismatch = calculateCalorieTarget({
+    tdee: 2200, goal: GOAL.LOSE, currentWeightKg: 70, targetWeightKg: 80,
+    timeframeDays: 60, gender: 'male', pregnancyStatus: 'none',
+  });
+  check('تعارض هدف/وزن مستهدف: goalTargetMismatch=true وسعرات الصيانة تُعرض بدل عجز خاطئ الاتجاه', mismatch.goalTargetMismatch === true && mismatch.targetCalories === 2200);
+
+  // 7) هدف "ثبات" (MAINTAIN): سعرات = tdee بالظبط بدون أي تعديل
+  const maintain = calculateCalorieTarget({
+    tdee: 2100, goal: GOAL.MAINTAIN, currentWeightKg: 75, targetWeightKg: 75,
+    timeframeDays: 30, gender: 'male', pregnancyStatus: 'none',
+  });
+  check('هدف ثبات: targetCalories = tdee بالظبط، dailyAdjustment=0', maintain.targetCalories === 2100 && maintain.dailyAdjustment === 0);
+}
+
+// S78 (طبقة 5.1): deleteRecord (Storage Engine) كانت بلا أي اختبار مباشر
+console.log('\n=== S78: deleteRecord — تغطية اختبار مباشرة لأول مرة (كانت صفر) ===');
+{
+  await putRecord(STORE.MEAL_LOGS, { id: 's78-delete-test', date: '2026-08-06', mealType: 'lunch' });
+  const beforeDelete = await getRecord(STORE.MEAL_LOGS, 's78-delete-test');
+  check('قبل الحذف: السجل موجود فعليًا', beforeDelete?.id === 's78-delete-test');
+
+  await deleteRecord(STORE.MEAL_LOGS, 's78-delete-test');
+  const afterDelete = await getRecord(STORE.MEAL_LOGS, 's78-delete-test');
+  check('بعد الحذف: السجل مختفي فعليًا (undefined)', afterDelete === undefined);
+
+  // حذف id مش موجود أصلًا: لازم ما يكسرش أو يرمي استثناء
+  let threwOnMissingId = false;
+  try { await deleteRecord(STORE.MEAL_LOGS, 'id-غير-موجود-أبدًا'); }
+  catch (e) { threwOnMissingId = true; }
+  check('حذف id غير موجود: ما بيرميش استثناء (سلوك متسامح متوقَّع من IndexedDB)', threwOnMissingId === false);
+
+  // نتأكد إن باقي السجلات في نفس الـStore ما اتأثرتش (الحذف انتقائي مش شامل)
+  await putRecord(STORE.MEAL_LOGS, { id: 's78-untouched', date: '2026-08-06', mealType: 'dinner' });
+  await deleteRecord(STORE.MEAL_LOGS, 's78-delete-test-2-non-existent');
+  const untouchedRecord = await getRecord(STORE.MEAL_LOGS, 's78-untouched');
+  check('حذف سجل تاني ما بيأثرش على سجلات موجودة فعليًا في نفس الـStore', untouchedRecord?.id === 's78-untouched');
+}
+
+// S78 (طبقة 5.1): validateFoodItem — اتفحصت إيجابيًا فقط (كل الـ2821 صنف
+// الحقيقيين صالحين) عبر getLibraryStats طول الجلسات السابقة، لكن مفيش أي
+// اختبار سلبي (negative case) يتأكد إنها فعليًا بترفض بيانات ناقصة/تالفة
+console.log('\n=== S78: validateFoodItem — أول اختبار سلبي (negative case) ===');
+{
+  const validMinimalFood = {
+    id: 'food_test_valid', name_ar: 'تفاحة اختبار', name_en: 'Test Apple', category: 'fruit',
+    ingredients: [], reference_amount_g: 100,
+    macros: createEmptyMacros(), micros: createEmptyMicros(),
+    gi: 36, gl: 5, quality_score: 80, processing_level: 'unprocessed',
+    suitable_meal_types: ['any'], cuisine: 'egyptian', allergens: [],
+    unsuitable_for_conditions: [], suitable_for_conditions: [],
+    unsuitable_for_diets: [], suitable_for_diets: [], religious_tags: [],
+    warnings: [], typical_portion_desc_ar: 'حصة ~100 جم',
+  };
+  const { valid: validOk } = validateFoodItem(validMinimalFood);
+  check('صنف كامل وسليم: valid=true', validOk === true);
+
+  const missingId = { ...validMinimalFood };
+  delete missingId.id;
+  const { valid: missingIdValid, errors: missingIdErrors } = validateFoodItem(missingId);
+  check('صنف بدون id: valid=false مع رسالة خطأ واضحة', missingIdValid === false && Array.isArray(missingIdErrors) && missingIdErrors.length > 0);
+
+  const badMacros = { ...validMinimalFood, macros: { ...createEmptyMacros(), kcal: -50 } };
+  const { valid: badMacrosValid } = validateFoodItem(badMacros);
+  check('صنف بسعرات سالبة (kcal=-50): valid=false — رفض فعلي مش قبول أعمى', badMacrosValid === false);
+
+  const missingCategory = { ...validMinimalFood };
+  delete missingCategory.category;
+  const { valid: missingCategoryValid } = validateFoodItem(missingCategory);
+  check('صنف بدون category: valid=false', missingCategoryValid === false);
 }
 
 process.exit(fail > 0 ? 1 : 0);

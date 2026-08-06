@@ -1,0 +1,12 @@
+import { getAllFoods } from '../core/food-library/food-library.js';
+const all = getAllFoods();
+console.log('--- جوز البيكان (Pecan) ---');
+all.filter(f=>f.name_ar.includes('بيكان')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\tkcal=${f.macros.kcal}`));
+console.log('--- سالاك Snake Fruit ---');
+all.filter(f=>f.name_ar.includes('سالاك')||f.name_ar.includes('Snake')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\tkcal=${f.macros.kcal}`));
+console.log('--- حجل الرمال Sand Partridge ---');
+all.filter(f=>f.name_ar.includes('حجل')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\tkcal=${f.macros.kcal}`));
+console.log('--- بلح البحر الأخضر Green Mussel ---');
+all.filter(f=>f.name_ar.includes('بلح البحر الأخضر')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\tkcal=${f.macros.kcal}\tprotein=${f.macros.protein_g}`));
+console.log('--- Onion seeds nigella ---');
+all.filter(f=>f.name_en && f.name_en.includes('Nigella')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\tkcal=${f.macros.kcal}`));

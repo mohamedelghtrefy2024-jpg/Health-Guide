@@ -1,0 +1,13 @@
+import { getAllFoods } from '../core/food-library/food-library.js';
+const all = getAllFoods();
+console.log('--- أرز (كل الأنواع) ---');
+all.filter(f=>f.name_ar.includes('أرز') && !f.name_ar.includes('لبن')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t[${f.category}]\tchol=${f.macros.cholesterol_mg}\tb12=${f.micros.vitamin_b12_mcg}`));
+console.log('--- بصل (كل الأنواع) ---');
+all.filter(f=>f.name_ar.startsWith('بصل')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\tchol=${f.macros.cholesterol_mg}\tb12=${f.micros.vitamin_b12_mcg}`));
+console.log('--- جوز/بندق/فول سوداني (مقشر مقابل بقشرته) ---');
+all.filter(f=>f.name_ar.includes('جوز')||f.name_ar.includes('بندق')||f.name_ar.includes('فول سوداني')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t[${f.category}]\tchol=${f.macros.cholesterol_mg}`));
+console.log('--- نيجيلا / بصل حب (تحقق من التكرار) ---');
+all.filter(f=>f.name_en && f.name_en.toLowerCase().includes('nigella')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\t[${f.category}]`));
+all.filter(f=>f.name_ar.includes('حبة سوداء')||f.name_ar.includes('حبة البركة')).forEach(f=>console.log(`${f.id}\t${f.name_ar}\t${f.name_en}\t[${f.category}]`));
+console.log('--- بلح البحر مكرر ---');
+console.log(JSON.stringify(all.find(f=>f.id==='food_4723'),null,2));

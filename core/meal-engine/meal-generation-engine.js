@@ -93,10 +93,31 @@ const RAW_UNCOOKED_LEGUME_IDS = new Set([
   'food_4207', 'food_4208', 'food_4209', 'food_4210', 'food_4211', 'food_4213', 'food_4214',
   'food_4215', 'food_4217', 'food_4218', 'food_4219', 'food_4220', 'food_4221', 'food_4222',
   'food_4223', 'food_4224', 'food_4225', 'food_4226', 'food_4227', 'food_4231', 'food_4232',
-  'food_4233', 'food_4237', 'food_4238', 'food_4239', 'food_4240', 'food_4461', 'food_4462',
-  'food_4463', 'food_4513', 'food_4636', 'food_4637', 'food_4867', 'food_4997', 'food_5000',
+  'food_4233', 'food_4237', 'food_4238', 'food_4239', 'food_4240', 'food_4513', 'food_4636',
+  'food_4637', 'food_4867', 'food_4997', 'food_5000',
   'food_5001', 'food_5002', 'food_5003', 'food_5005', 'food_5006', 'food_5020', 'food_5021',
   'food_5030', 'food_5031', 'food_5032',
+]);
+
+/**
+ * S71 (بطلب المستخدم — "طبق حقيقي + صنف جانبي"): قائمة مُنسَّقة يدويًا
+ * (36 صنف) من `composite_meal` اللي وظيفتها الفعلية "قاعدة كارب" مش وجبة
+ * متكاملة قائمة بذاتها — أطباق رز/فريك/كسكسي/برغل/قلقاس/كشري تقليدية بروتين
+ * منخفض (≤6جم/100جم)، بدل ما تُستخدم بس كـ"وجبة كاملة" وحيدة عبر
+ * `buildSingleItemCandidates` (اللي غالبًا هتفشل هامش الماكرو لوحدها لنقص
+ * البروتين). القائمة اتبنت بفلترة آلية أولية (كلمات مفتاح + حد بروتين/سعرات)
+ * ثم **مراجعة يدوية** استبعدت كل نتيجة كاذبة ظهرت أثناء البناء: حلويات
+ * ومشروبات وقعت بالغلط بفلتر الكلمات المفتاحية (رز باللبن/بالحليب كحلوى،
+ * عصائر، "شاي كشري" اللي مش طبق أصلًا) — نفس أسلوب `RAW_UNCOOKED_LEGUME_IDS`
+ * فوق (قائمة صريحة بدل فلتر حي عرضة للأخطاء نفسها مستقبلًا).
+ */
+const COMPOSITE_CARB_BASE_IDS = new Set([
+  'food_2407', 'food_2422', 'food_2423', 'food_2530', 'food_2537', 'food_2539', 'food_2542',
+  'food_2611', 'food_2638', 'food_2643', 'food_2670', 'food_2724', 'food_2780', 'food_2844',
+  'food_2859', 'food_2890', 'food_2895', 'food_2956', 'food_2960', 'food_2961', 'food_2991',
+  'food_3010', 'food_3032', 'food_3035', 'food_3052', 'food_3159', 'food_3160', 'food_3164',
+  'food_3166', 'food_3181', 'food_3184', 'food_3245', 'food_3395', 'food_3414', 'food_3418',
+  'food_3430',
 ]);
 
 /**
@@ -148,6 +169,39 @@ const STRICT_CANDIDATE_POOL_SIZE = Object.freeze({ PROTEIN: 5, CARB: 5, VEGETABL
 /** يرتّب مصفوفة تنازليًا بمعيار مركّب ويُرجع أفضل N فقط — يحدّ حجم البحث بغض النظر عن حجم المكتبة */
 function selectTopCandidates(foods, scoreFn, limit) {
   return [...foods].sort((a, b) => scoreFn(b) - scoreFn(a)).slice(0, limit);
+}
+
+/**
+ * S72 (بطلب المستخدم بعد ملاحظة فعلية على نتائج S71): "البروتين من اللحوم
+ * هيكون مناسب للغدا... ملقيتش [اللحوم] بتظهر في الغدا [رغم إن الأصناف
+ * الجافة عالية البروتين زي العدس/الترمس بتاخد الأولوية دايمًا بنفس مجمّع
+ * الترشيح]، تتقبل [البقوليات] تظهر في الفطار والعشا، ماشي" — يعني: الغداء
+ * تحديدًا (الوجبة الرئيسية ثقافيًا في مصر) لازم يفضّل بروتين حيواني حقيقي
+ * (فئة `protein`: لحوم/دواجن/سمك/بيض) قبل البقوليات، والفطار/العشاء يفضلوا
+ * زي ما هما (مزيج بروتين+بقوليات، لأن فول/عدس فطار وعشا واقعي جدًا مصريًا).
+ *
+ * الحل: مجمّع البروتين بقى واعي بنوع الوجبة. للغداء تحديدًا: نرشّح من فئة
+ * `protein` بس أولًا؛ لو مفيش عدد كافٍ يغطي حجم المجمّع المطلوب (مكتبة ضيقة
+ * بعد قيود صحية/دينية معيّنة)، نكمّل الباقي من البقوليات كـfallback بدل ما
+ * نفشّل السلوت بالكامل. لأي وجبة تانية (فطار/عشاء/سناك): نفس السلوك القديم
+ * بالظبط (بروتين+بقوليات مُرتَّبين سوا بمعيار واحد، بدون تفضيل).
+ */
+function buildProteinPool(foods, mealType, isSuitable, poolSize) {
+  const eligible = (f) => isSuitable(f) && f.macros.protein_g > 0 && f.macros.protein_g <= PROTEIN_SUPPLEMENT_THRESHOLD_G;
+  const scoreFn = (f) => f.quality_score * 0.5 + f.macros.protein_g * 0.5;
+
+  if (mealType !== 'lunch') {
+    const mixed = foods.filter((f) => (f.category === 'protein' || f.category === 'legume') && eligible(f));
+    return selectTopCandidates(mixed, scoreFn, poolSize);
+  }
+
+  const meatOnly = foods.filter((f) => f.category === 'protein' && eligible(f));
+  const topMeat = selectTopCandidates(meatOnly, scoreFn, poolSize);
+  if (topMeat.length >= poolSize) return topMeat;
+
+  const legumeOnly = foods.filter((f) => f.category === 'legume' && eligible(f));
+  const fallback = selectTopCandidates(legumeOnly, scoreFn, poolSize - topMeat.length);
+  return [...topMeat, ...fallback];
 }
 
 /**
@@ -244,7 +298,6 @@ function buildMacroDrivenCandidates(foods, mealType, macroTargets, adherenceLeve
   const MAX_FAT_TOPPER_GRAMS = 30; // أقصى حصة واقعية لزيت/دهن مضاف (~ملعقتين كبيرتين)
   const poolSize = adherenceLevel === 'strict' ? STRICT_CANDIDATE_POOL_SIZE : CANDIDATE_POOL_SIZE;
 
-  const proteinFoodsAll = foods.filter((f) => (f.category === 'protein' || f.category === 'legume') && isSuitable(f) && f.macros.protein_g > 0 && f.macros.protein_g <= PROTEIN_SUPPLEMENT_THRESHOLD_G);
   const carbFoodsAll = foods.filter((f) => f.category === 'carb' && isSuitable(f) && f.macros.carbs_g > 0);
   const vegFoodsAll = foods.filter((f) => f.category === 'vegetable' && isSuitable(f));
   const fatFoodsAll = foods.filter((f) => f.category === 'fat_oil' && isSuitable(f) && f.macros.fat_g > 0);
@@ -252,7 +305,9 @@ function buildMacroDrivenCandidates(foods, mealType, macroTargets, adherenceLeve
   // ترشيح لأفضل N صنف لكل دور (معيار مركّب: نصف الجودة + نصف كثافة العنصر
   // المطلوب لهذا الدور تحديدًا) — يضمن حجم بحث محدود مهما كبرت المكتبة.
   // N نفسها تعتمد على مستوى الالتزام (poolSize): صارم = أضيق وأعلى جودة فقط.
-  const proteinFoods = selectTopCandidates(proteinFoodsAll, (f) => f.quality_score * 0.5 + f.macros.protein_g * 0.5, poolSize.PROTEIN);
+  // S72: مجمّع البروتين بقى واعي بنوع الوجبة (buildProteinPool) — لحوم حقيقية
+  // أولًا للغداء تحديدًا، بقوليات كـfallback فقط لو مش كفاية.
+  const proteinFoods = buildProteinPool(foods, mealType, isSuitable, poolSize.PROTEIN);
   const carbFoods = selectTopCandidates(carbFoodsAll, (f) => f.quality_score * 0.5 + f.macros.carbs_g * 0.5, poolSize.CARB);
   const vegFoods = selectTopCandidates(vegFoodsAll, (f) => f.quality_score, poolSize.VEGETABLE);
   const fatFoods = selectTopCandidates(fatFoodsAll, (f) => f.quality_score, poolSize.FAT);
@@ -337,6 +392,88 @@ function buildMacroDrivenCandidates(foods, mealType, macroTargets, adherenceLeve
             for (const variant of withOptionalFatTopper(withTwoVeg, totalFatWithTwoVeg)) {
               candidates.push({ items: variant, capped: cappedPair });
             }
+          }
+        }
+      }
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * S71: تركيبات "طبق حقيقي (قاعدة كارب) + صنف جانبي" — بطلب المستخدم بعد
+ * مثاله الصريح ("رز/فريك + قطعة لحمة + سلطة"). بخلاف `buildMacroDrivenCandidates`
+ * (بتبني من أصناف خام منفصلة بروتين+كارب+خضار)، هنا القاعدة نفسها طبق
+ * `composite_meal` حقيقي جاهز محدود بقائمة `COMPOSITE_CARB_BASE_IDS` (أطباق
+ * كارب-محورية بروتين منخفض)، بيتحجّم على هدف الكارب، وبعدين يتضاف له صنف
+ * بروتين جانبي يغطي الفرق المتبقي من هدف البروتين (زي "قطعة لحمة" جنب
+ * الرز/الفريك)، مع نسخ اختيارية بصنف خضار/سلطة جانبي ومكمّل دهون — نفس
+ * منطق `withOptionalFatTopper` والتنويع بأحجام حصص واقعية. النتايج بتتقيَّم
+ * لاحقًا بنفس Quality Score/هامش الماكرو زي أي تركيبة تانية، فمفيش مسار
+ * تفضيل مصطنع — لو التركيبة مش واقعية غذائيًا هتترفض زي أي تركيبة تانية.
+ */
+function buildCompositeBasePlusSideCandidates(foods, mealType, macroTargets, adherenceLevel = 'flexible') {
+  if (!macroTargets) return [];
+  const isSuitable = (f) => f.suitable_meal_types.includes(mealType) || f.suitable_meal_types.includes('any');
+  const maxGrams = 100 * MAX_PORTION_MULTIPLIER;
+  const MAX_FAT_TOPPER_GRAMS = 30;
+  const poolSize = adherenceLevel === 'strict' ? STRICT_CANDIDATE_POOL_SIZE : CANDIDATE_POOL_SIZE;
+
+  const baseFoods = foods.filter((f) => COMPOSITE_CARB_BASE_IDS.has(f.id) && isSuitable(f) && f.macros.carbs_g > 0);
+  const vegFoodsAll = foods.filter((f) => f.category === 'vegetable' && isSuitable(f));
+  const fatFoodsAll = foods.filter((f) => f.category === 'fat_oil' && isSuitable(f) && f.macros.fat_g > 0);
+
+  // S72: نفس مجمّع البروتين الواعي بنوع الوجبة (لحوم حقيقية أولًا للغداء)
+  const proteinFoods = buildProteinPool(foods, mealType, isSuitable, poolSize.PROTEIN);
+  const vegFoods = selectTopCandidates(vegFoodsAll, (f) => f.quality_score, poolSize.VEGETABLE);
+  const fatFoods = selectTopCandidates(fatFoodsAll, (f) => f.quality_score, poolSize.FAT);
+
+  function withOptionalFatTopper(baseItems, currentFatG) {
+    const variants = [baseItems];
+    const fatGap = (macroTargets.fat_g ?? 0) - currentFatG;
+    if (fatGap > 3 && fatFoods.length > 0) {
+      for (const fatFood of fatFoods) {
+        const rawGrams = (fatGap * 100) / fatFood.macros.fat_g;
+        const grams = Math.round(Math.min(rawGrams, MAX_FAT_TOPPER_GRAMS));
+        if (grams >= 3) variants.push([...baseItems, { food: fatFood, grams }]);
+      }
+    }
+    return variants;
+  }
+
+  const candidates = [];
+
+  for (const baseFood of baseFoods) {
+    const rawBaseGrams = (macroTargets.carb_g > 0 ? (macroTargets.carb_g * 100) / baseFood.macros.carbs_g : 0);
+    const baseGrams = Math.round(Math.min(rawBaseGrams, SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY.composite_meal));
+    if (baseGrams < 30) continue; // حصة أقل من كده مش واقعية كـ"طبق أساسي" جنب صنف جانبي
+    const cappedBase = rawBaseGrams > SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY.composite_meal;
+    const proteinFromBase = (baseFood.macros.protein_g * baseGrams) / 100;
+    const fatFromBase = (baseFood.macros.fat_g * baseGrams) / 100;
+    const baseItems = [{ food: baseFood, grams: baseGrams }];
+
+    for (const proteinFood of proteinFoods) {
+      const remainingProtein = Math.max(0, (macroTargets.protein_g ?? 0) - proteinFromBase);
+      const rawProteinGrams = remainingProtein > 0 ? (remainingProtein * 100) / proteinFood.macros.protein_g : 0;
+      const proteinGrams = Math.round(Math.min(rawProteinGrams, maxGrams));
+      if (proteinGrams < 15) continue; // صنف جانبي بكمية تافهة مش واقعي يُعرَض كـ"قطعة لحمة"
+
+      const pairItems = [...baseItems, { food: proteinFood, grams: proteinGrams }];
+      const cappedPair = cappedBase || rawProteinGrams > maxGrams;
+      const totalFatSoFar = fatFromBase + (proteinFood.macros.fat_g * proteinGrams) / 100;
+
+      for (const variant of withOptionalFatTopper(pairItems, totalFatSoFar)) {
+        candidates.push({ items: variant, capped: cappedPair });
+      }
+
+      // نسخة بصنف خضار/سلطة جانبي واحد (زي "سلطة" في مثال المستخدم) بأحجام واقعية متعددة
+      for (const vegFood of vegFoods) {
+        for (const vegGrams of VEG_PORTION_OPTIONS_G) {
+          const withVeg = [...pairItems, { food: vegFood, grams: vegGrams }];
+          const totalFatWithVeg = totalFatSoFar + (vegFood.macros.fat_g * vegGrams) / 100;
+          for (const variant of withOptionalFatTopper(withVeg, totalFatWithVeg)) {
+            candidates.push({ items: variant, capped: cappedPair });
           }
         }
       }
@@ -496,7 +633,8 @@ export function generateMeal(request) {
   // بأهداف الماكرو إن وُجدت)، مُحجَّمة على السعرات/الماكرو المستهدفة
   const singleCandidates = buildSingleItemCandidates(qualifiedFoods, mealType, targetKcal);
   const macroDrivenCandidates = buildMacroDrivenCandidates(qualifiedFoods, mealType, macroTargets, adherenceLevel);
-  const allCandidatesRaw = [...singleCandidates, ...macroDrivenCandidates];
+  const compositeBaseCandidates = buildCompositeBasePlusSideCandidates(qualifiedFoods, mealType, macroTargets, adherenceLevel);
+  const allCandidatesRaw = [...singleCandidates, ...macroDrivenCandidates, ...compositeBaseCandidates];
 
   // بند 1.4 (LIMIT-01): استبعاد صنف دهون/زيت منفرد كوجبة كاملة عند غياب أهداف الماكرو
   const allCandidates = allCandidatesRaw.filter((c) => passesStandaloneFatOilRule(c, macroTargets));

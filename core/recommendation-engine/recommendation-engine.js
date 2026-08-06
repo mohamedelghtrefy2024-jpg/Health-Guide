@@ -39,6 +39,11 @@ const CALORIE_OVER_WARNING_RATIO = 0.10; // لو اتجاوز الهدف بأك�
 const SAT_FAT_LIMIT_KCAL_RATIO = 0.10; // إرشاد WHO العام: أقل من 10% من السعرات من دهون مشبعة
 const SODIUM_HIGH_RISK_CONDITIONS = Object.freeze(['hypertension', 'ckd', 'ckd_dialysis']);
 const SAT_FAT_HIGH_RISK_CONDITIONS = Object.freeze(['dyslipidemia', 'heart_disease']);
+// S70: أنيميا — عكس باقي القيود (توصية "زوّد" مش "استبعد")، فمكانها الصح هنا
+// في Recommendation Engine مش Decision Engine. العتبة مبنية على هدف الحديد
+// المرجعي المحسوب فعليًا في Nutrition Engine (microTargets.iron_mg، بيختلف
+// حسب النوع/الحمل/الرضاعة) — مش رقم ثابت مقتطَع من مكان تاني.
+const IRON_LOW_RATIO_ANEMIA = 0.7; // أقل من 70% من الهدف اليومي يستاهل تنبيه مخصَّص لحالة الأنيميا
 
 /**
  * يبني توصيات فورية للوحة التحكم من إجماليات اليوم الفعلية مقابل أهداف
@@ -114,6 +119,17 @@ export function getInstantRecommendations(dailyTotals, nutritionProfile, medical
       message_ar: isHighRisk
         ? 'الدهون المشبعة اليوم أعلى من الموصى به — مهم جدًا مع حالتك، حاول تقلل المقلي والدهون الحيوانية الصلبة.'
         : `الدهون المشبعة اليوم أعلى شوية من الموصى به (الحد التقريبي ~${Math.round(satFatLimitG)} جم).`,
+    });
+  }
+
+  // 5) الحديد — تنبيه مخصَّص لمرضى الأنيميا فقط لو الفعلي أقل بوضوح من الهدف
+  // (مش تحذير عام لغير المصابين — نقص حديد بسيط شائع ومش كل الناس محتاجة
+  // تنبيه، لكن مع تشخيص أنيميا موجود بالبروفايل التنبيه ده فعليًا مفيد)
+  if (medicalConditions.includes('anemia') && totals.iron_mg < microTargets.iron_mg * IRON_LOW_RATIO_ANEMIA) {
+    recs.push({
+      type: 'iron_low_anemia',
+      severity: RECOMMENDATION_SEVERITY.WARNING,
+      message_ar: `الحديد اليوم أقل من هدفك (${Math.round(totals.iron_mg)} من ${microTargets.iron_mg} ملجم) — ده مهم مع الأنيميا، حاول تضيف مصادر حديد (لحوم حمراء، كبدة، عدس، سبانخ) مع فيتامين سي لتحسين الامتصاص.`,
     });
   }
 
