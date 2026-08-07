@@ -205,8 +205,30 @@ function buildProteinPool(foods, mealType, isSuitable, poolSize) {
 }
 
 /**
+ * S80-b (بطلب/ملاحظة المستخدم بعد BUG-S80-01: "فول صويا أخضر" — Edamame —
+ * طلع 336 جم كفطار قائم بذاته). المشكلة: `SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY`
+ * سقف عام لكل الفئة (350 جم لكل البقوليات مثلًا)، بينما كل صنف عنده أصلًا
+ * حصته الواقعية الموثَّقة في `typical_portion_desc_ar` (200 جم للإدامامي
+ * تحديدًا) — السقف العام لوحده ما بيمنعش صنف حصته الواقعية 200 جم من
+ * التمدد لـ336 جم (تحت سقف الفئة العام لسه). الحل: نقرأ الرقم من
+ * `typical_portion_desc_ar` (لو موجود بصيغة رقمية) ونحسب سقف إضافي = ذلك
+ * الرقم × 1.5 (هامش معقول لصنف قائم بذاته بسعرات أعلى من الحصة "المرجعية"
+ * العادية، من غير ما يوصل لضعف الحصة الواقعية أو أكتر). السقف الفعلي
+ * النهائي = الأصغر بين سقف الفئة العام وسقف الحصة الواقعية × 1.5. لو الوصف
+ * مش رقمي (زي "حسب الحاجة") بيتجاهل ويفضل سقف الفئة العام زي ما هو —
+ * صفر تغيير في السلوك القديم لأي صنف بدون رقم واضح.
+ */
+const TYPICAL_PORTION_CAP_MULTIPLIER = 1.5;
+function parseTypicalPortionGrams(desc) {
+  if (typeof desc !== 'string') return null;
+  const match = desc.match(/(\d+)\s*(?:جم|مل)/);
+  return match ? Number(match[1]) : null;
+}
+
+/**
  * يحجّم صنفًا (لكل 100 جم) لكمية جرامات تحقق سعرات مستهدفة معيّنة، بحد
- * أقصى واقعي (عام أو مخصَّص حسب الفئة عبر SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY)،
+ * أقصى واقعي (عام أو مخصَّص حسب الفئة عبر SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY،
+ * ومقيَّد كمان بحصة الصنف الواقعية الموثَّقة × 1.5 لو معروفة — S80-b)،
  * ويُرجع الجرامات الفعلية + هل تم قصّها عن الحد الواقعي.
  */
 function scaleFoodToCalories(food, targetKcal) {
@@ -216,7 +238,11 @@ function scaleFoodToCalories(food, targetKcal) {
   if (!Number.isFinite(targetKcal) || targetKcal <= 0) return { grams: 100, capped: false };
   if (food.macros.kcal <= 0) return { grams: 100, capped: false }; // صنف بلا سعرات (نادر) — حصة مرجعية ثابتة
   const rawGrams = (targetKcal / food.macros.kcal) * 100;
-  const maxGrams = SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY[food.category] ?? (100 * MAX_PORTION_MULTIPLIER);
+  const categoryMaxGrams = SINGLE_ITEM_MAX_GRAMS_BY_CATEGORY[food.category] ?? (100 * MAX_PORTION_MULTIPLIER);
+  const typicalGrams = parseTypicalPortionGrams(food.typical_portion_desc_ar);
+  const maxGrams = typicalGrams
+    ? Math.min(categoryMaxGrams, typicalGrams * TYPICAL_PORTION_CAP_MULTIPLIER)
+    : categoryMaxGrams;
   const grams = Math.min(rawGrams, maxGrams);
   return { grams: Math.round(grams), capped: rawGrams > maxGrams };
 }
@@ -849,14 +875,29 @@ export function generateDayPlan({
   const usedMainCategories = new Set(); // S79: تنويع فئة الصنف الأساسي بين الوجبات الرئيسية (فطار/غداء/عشاء)
 
   for (const slot of planSlots) {
+    const rawShareKcal = kcalForSharedSlots * slot.share;
     const targetKcal = slot.isBeverage
       ? slot.fixedKcal
-      : Math.max(MIN_SLOT_KCAL, Math.round(kcalForSharedSlots * slot.share));
+      : Math.max(MIN_SLOT_KCAL, Math.round(rawShareKcal));
+
+    // S80-c (بطلب/ملاحظة المستخدم: سناك بـ3 سناكس فشل بـ"صفر من 714 تركيبة
+    // ضمن هامش 25%"): لمّا نصيب السلوت بالسعرات صغير جدًا (زي 1/3 من نصيب
+    // السناكس 10% = ~3.3% من اليوم)، `targetKcal` بيتقصّ لأعلى لـMIN_SLOT_KCAL
+    // (80)، لكن `macroTargets` كانت بتفضل محسوبة من النصيب الخام الأصغر —
+    // يعني الوجبة المطلوبة بتستهدف 80 سعرة لكن بس 4 جم بروتين/7 جم كارب/2
+    // جم دهون (نسبة سعرات هدفها الخام ~55 سعرة بس) — تناقض داخلي بين هدف
+    // السعرات وهدف الماكرو لنفس السلوت يخلّي أي تركيبة واقعية (بتاخد سعراتها
+    // الـ80 من مصدر حقيقي) تتجاوز هامش 25% على الأقل في عنصر واحد دايمًا.
+    // الحل: لو `targetKcal` اتقصّ لأعلى (نسبة القصّ = targetKcal/rawShareKcal
+    // > 1)، نكبّر أهداف الماكرو بنفس النسبة عشان تفضل متسقة مع نسب اليوم
+    // الكلية بدل ما تفضل حابسة على النصيب الخام الأصغر. لو مفيش قصّ (الحالة
+    // العادية)، النسبة = 1 وصفر تغيير في السلوك القديم.
+    const kcalFloorRatio = (!slot.isBeverage && rawShareKcal > 0) ? targetKcal / rawShareKcal : 1;
 
     const macroTargets = slot.isBeverage ? null : {
-      protein_g: Math.round(dailyMacroTargets.protein_g * slot.share),
-      carb_g: Math.round(dailyMacroTargets.carb_g * slot.share),
-      fat_g: Math.round(dailyMacroTargets.fat_g * slot.share),
+      protein_g: Math.round(dailyMacroTargets.protein_g * slot.share * kcalFloorRatio),
+      carb_g: Math.round(dailyMacroTargets.carb_g * slot.share * kcalFloorRatio),
+      fat_g: Math.round(dailyMacroTargets.fat_g * slot.share * kcalFloorRatio),
     };
 
     const result = generateMeal({
