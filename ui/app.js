@@ -18,7 +18,7 @@ import {
   resolveBodyFatPercent, calculateRemainingMealBudget, DEFAULT_MEAL_SHARE,
   resolveSafeMacroRange, validateCustomMacroRatios, calculateMacroTargets,
 } from '../core/nutrition-engine/nutrition-engine.js';
-import { generateMeal, generateDayPlan, updateMealItemPortion, resolveMealPlanTemplateDay } from '../core/meal-engine/meal-generation-engine.js';
+import { generateMeal, generateDayPlan, updateMealItemPortion, resolveMealPlanTemplateDay, pickMealWithVariety } from '../core/meal-engine/meal-generation-engine.js';
 import { MEAL_PLAN_CALORIE_LEVELS, MEAL_PLAN_DAYS, nearestCalorieLevel } from '../core/meal-engine/meal-plan-templates.js';
 import { resolveDailyFastingStatus } from '../core/decision-engine/religious-calendar.js';
 import { classifyMealQualityScore, computeMealQualityScore } from '../core/meal-engine/meal-quality.js';
@@ -885,6 +885,13 @@ function wireMealGeneration() {
       minFoodQualityScore: 30,
       adherenceLevel: currentProfile.dietAdherence || 'flexible',
     });
+
+    // S80-d: تنويع عشوائي محكوم — بدل ما زرار "توليد" يرجّع نفس التركيبة
+    // الحتمية بالظبط كل مرة، بيختار من ضمن أفضل التركيبات المتقاربة بالجودة
+    if (result.success) {
+      const chosen = pickMealWithVariety(result.candidates);
+      result.candidates = [chosen, ...result.candidates.filter((c) => c !== chosen)];
+    }
 
     renderMealResult(result, mealType);
   });

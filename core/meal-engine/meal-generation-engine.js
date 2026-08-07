@@ -837,26 +837,52 @@ export function buildDayPlanSlots({ isFasting, mealSlotsHint, snacksCount = 0, d
  * @returns {{ slots: Array<Object>, successCount: number, totalCount: number, totals: Object, dailyCalorieTarget: number }}
  */
 /**
+ * S80-d (بطلب/ملاحظة المستخدم: "بدوس توليد تاني برضو نفس الوجبة، تقريبًا
+ * كل وجبة بتطلع زي ما ظهرت في التوليد المفرد نفسها"): `generateMeal` كانت
+ * (ولسه) بترجّع `candidates` مرتّبة بالكامل بالجودة بشكل حتمي 100% —
+ * صفر عشوائية في أي حتة، فنفس المدخلات (نفس السعرات/الماكرو/البروفايل)
+ * بترجع نفس أفضل تركيبة بالظبط كل مرة، مهما دُسْت "توليد" تاني. الحل: مش
+ * تغيير ترتيب/محتوى `candidates` نفسها (عشان الاختبارات اللي بتعتمد على
+ * `candidates[0]` كـ"الأفضل الحقيقي" تفضل شغالة زي ما هي بالظبط — 7
+ * اختبارات بتعتمد على كده)، لكن دالة جديدة منفصلة بتختار عشوائيًا من ضمن
+ * أفضل التركيبات المتقاربة بالجودة (مش أي تركيبة عشوائية بالكامل — تنويع
+ * من غير تضحية بالجودة)، تُستخدَم في نقطة العرض/الاختيار الفعلية (الواجهة
+ * لتوليد الوجبة المفردة، و`generateDayPlan` لكل سلوت) بدل الأخذ الأعمى
+ * لـ`candidates[0]`.
+ */
+export function pickMealWithVariety(candidates, { maxScoreDropPct = 0.08, maxPoolSize = 6 } = {}) {
+  if (!Array.isArray(candidates) || candidates.length === 0) return null;
+  const topScore = candidates[0].qualityScore;
+  const threshold = topScore * (1 - maxScoreDropPct);
+  const pool = candidates.filter((c) => c.qualityScore >= threshold).slice(0, maxPoolSize);
+  const idx = Math.floor(Math.random() * pool.length);
+  return pool[idx];
+}
+
+/**
  * S79 (بطلب/ملاحظة المستخدم على مخرجات "توليد اليوم" الفعلية: 3 وجبات
  * رئيسية بنفس فئة البروتين تقريبًا في نفس اليوم — فطار "تيمبه العدس"،
  * غداء "فول صويا + برغل"، عشاء "تيمبه الكينوا" — صفر تنويع فعلي، رغم إن
  * منع التكرار الوحيد الموجود (S53-d، usedFoodIds) بيمنع نفس الـid بالظبط
  * بس، مش نفس فئة الصنف الأساسي. `generateMeal` أصلًا بيرجّع `candidates`
  * مرتّبة بالكامل بترتيب الجودة (مش أفضل واحد بس) — فبدل ما `generateDayPlan`
- * ياخد `candidates[0]` عمياني، بيدوّر أول تركيبة في نفس الترتيب المُقيَّم
- * (يعني أفضل تركيبة متاحة أصلًا) اللي فئة صنفها الأساسي (items[0].category)
- * لسه ما استُخدمتش كصنف أساسي في وجبة رئيسية سابقة النهارده. فشل الدوران؟
- * (كل التركيبات بنفس الفئة المستخدَمة، زي مكتبة ضيقة بعد قيود صحية/دينية)
- * — يرجع لأفضل تركيبة عادي (تكرار الفئة أهون من سلوت أسوأ جودة بلا داعٍ).
- * السناكس/المشروبات برّه المنطق ده (طبيعي جدًا يتكرر زبادي في سناكين مثلًا).
+ * ياخد `candidates[0]` عمياني، بيفلتر نفس القائمة المرتّبة أصلًا (يعني من
+ * غير أي تنازل عن الجودة) لأي تركيبة فئة صنفها الأساسي (items[0].category)
+ * لسه ما استُخدمتش كصنف أساسي في وجبة رئيسية سابقة النهارده، وبعدين
+ * (S80-d) يختار من ضمن الفلتر ده بتنويع عشوائي محكوم عبر
+ * `pickMealWithVariety` بدل أول واحدة في القائمة دايمًا. فشل الفلتر؟ (كل
+ * التركيبات المتاحة بنفس الفئة المستخدَمة، زي مكتبة ضيقة بعد قيود صحية/
+ * دينية) — يرجع لتنويع من القائمة الكاملة الأصلية (تكرار فئة أهون من
+ * سلوت أسوأ جودة بلا داعٍ). السناكس/المشروبات برّه المنطق ده (طبيعي جدًا
+ * يتكرر زبادي في سناكين مثلًا).
  */
 function pickDiverseCandidate(candidates, usedMainCategories, isMainMeal) {
-  if (!isMainMeal || usedMainCategories.size === 0) return candidates[0];
-  const diverse = candidates.find((c) => {
+  if (!isMainMeal || usedMainCategories.size === 0) return pickMealWithVariety(candidates);
+  const diversePool = candidates.filter((c) => {
     const primaryCategory = c.items[0]?.food?.category;
     return !usedMainCategories.has(primaryCategory);
   });
-  return diverse || candidates[0];
+  return pickMealWithVariety(diversePool.length > 0 ? diversePool : candidates);
 }
 
 export function generateDayPlan({
