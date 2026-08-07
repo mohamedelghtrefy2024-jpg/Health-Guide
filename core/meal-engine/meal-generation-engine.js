@@ -810,6 +810,29 @@ export function buildDayPlanSlots({ isFasting, mealSlotsHint, snacksCount = 0, d
  * @param {number} [params.minFoodQualityScore=30]
  * @returns {{ slots: Array<Object>, successCount: number, totalCount: number, totals: Object, dailyCalorieTarget: number }}
  */
+/**
+ * S79 (بطلب/ملاحظة المستخدم على مخرجات "توليد اليوم" الفعلية: 3 وجبات
+ * رئيسية بنفس فئة البروتين تقريبًا في نفس اليوم — فطار "تيمبه العدس"،
+ * غداء "فول صويا + برغل"، عشاء "تيمبه الكينوا" — صفر تنويع فعلي، رغم إن
+ * منع التكرار الوحيد الموجود (S53-d، usedFoodIds) بيمنع نفس الـid بالظبط
+ * بس، مش نفس فئة الصنف الأساسي. `generateMeal` أصلًا بيرجّع `candidates`
+ * مرتّبة بالكامل بترتيب الجودة (مش أفضل واحد بس) — فبدل ما `generateDayPlan`
+ * ياخد `candidates[0]` عمياني، بيدوّر أول تركيبة في نفس الترتيب المُقيَّم
+ * (يعني أفضل تركيبة متاحة أصلًا) اللي فئة صنفها الأساسي (items[0].category)
+ * لسه ما استُخدمتش كصنف أساسي في وجبة رئيسية سابقة النهارده. فشل الدوران؟
+ * (كل التركيبات بنفس الفئة المستخدَمة، زي مكتبة ضيقة بعد قيود صحية/دينية)
+ * — يرجع لأفضل تركيبة عادي (تكرار الفئة أهون من سلوت أسوأ جودة بلا داعٍ).
+ * السناكس/المشروبات برّه المنطق ده (طبيعي جدًا يتكرر زبادي في سناكين مثلًا).
+ */
+function pickDiverseCandidate(candidates, usedMainCategories, isMainMeal) {
+  if (!isMainMeal || usedMainCategories.size === 0) return candidates[0];
+  const diverse = candidates.find((c) => {
+    const primaryCategory = c.items[0]?.food?.category;
+    return !usedMainCategories.has(primaryCategory);
+  });
+  return diverse || candidates[0];
+}
+
 export function generateDayPlan({
   constraintProfile, dailyCalorieTarget, dailyMacroTargets, microTargets = null,
   isFasting = false, mealSlotsHint = 'normal', snacksCount = 0, drinksCount = 0,
@@ -823,6 +846,7 @@ export function generateDayPlan({
   const totals = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
   let successCount = 0;
   const usedFoodIds = []; // S53-d: تفاديًا لتكرار نفس الصنف بالظبط في أكتر من سلوت في نفس اليوم (كان بيحصل: نفس الصنف في 3 سناكس متتالية)
+  const usedMainCategories = new Set(); // S79: تنويع فئة الصنف الأساسي بين الوجبات الرئيسية (فطار/غداء/عشاء)
 
   for (const slot of planSlots) {
     const targetKcal = slot.isBeverage
@@ -849,12 +873,17 @@ export function generateDayPlan({
 
     if (result.success) {
       successCount++;
-      const best = result.candidates[0];
+      const isMainMeal = !slot.isBeverage && (slot.type === 'breakfast' || slot.type === 'lunch' || slot.type === 'dinner');
+      const best = pickDiverseCandidate(result.candidates, usedMainCategories, isMainMeal);
       totals.kcal += best.totals.kcal;
       totals.protein_g += best.totals.protein_g;
       totals.carbs_g += best.totals.carbs_g;
       totals.fat_g += best.totals.fat_g;
       usedFoodIds.push(...best.items.map((i) => i.food.id));
+      if (isMainMeal) {
+        const primaryCategory = best.items[0]?.food?.category;
+        if (primaryCategory) usedMainCategories.add(primaryCategory);
+      }
       results.push({ slotType: slot.type, label_ar: slot.label_ar, isBeverage: slot.isBeverage, success: true, meal: best, diagnosis: null });
     } else {
       results.push({ slotType: slot.type, label_ar: slot.label_ar, isBeverage: slot.isBeverage, success: false, meal: null, diagnosis: result.diagnosis });
